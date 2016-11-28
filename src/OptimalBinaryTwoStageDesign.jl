@@ -26,6 +26,20 @@ function optimalDesign(params::PlanningAssumptions)
         end,
         params.n1range
     )
-    scores = map(design -> try params.score catch e Inf end, designs) # if score cannot be computed, probably infeasible > Inf
-    return designs, scores
+    scores = map(design -> try params.score(design) catch e Inf end, designs) # if score cannot be computed, probably infeasible > Inf
+    return designs[findmin(scores)[2]], Dict(
+        "n1"      => collect(params.n1range),
+        "scores"  => scores,
+        "designs" => designs
+    )
+end
+
+immutable OptimalBinaryTwoStageDesign <: BinaryTwoStageDesign
+    n
+    c
+    parameters
+    function BinaryTwoStageDesign(parameters::PlanningAssumptions)
+        design, res = optimalDesign(parameters)
+        new(design.n, design.c, parameters)
+    end
 end

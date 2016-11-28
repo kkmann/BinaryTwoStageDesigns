@@ -15,40 +15,40 @@ function show(io::IO, object::BinaryTwoStageDesign)
     println("Binary two-stage design:\n=================================")
     println("      x1  n(x1) c(x1)")
     println("    ----- ----- -----")
-    for x1 in 0:interimSampleSize(object)
-        println(@sprintf "    %5i %5i %5i" x1 finalSampleSize(object, x1) rejectionBoundary(object, x1))
+    for x1 in 0:getInterimSampleSize(object)
+        println(@sprintf "    %5i %5i %5i" x1 getSampleSize(object, x1) getRejectionBoundary(object, x1))
     end
     println("    ----- ----- -----")
 end
 
 function convert(::DataFrames.DataFrame, design::BinaryTwoStageDesign)
     df = DataFrames.DataFrame(
-        x1 = 0:interimSampleSize(design),
-        n  = finalSampleSize(design),
-        c  = rejectionBoundary(design)
+        x1 = 0:getInterimSampleSize(design),
+        n  = getSampleSize(design),
+        c  = getRejectionBoundary(design)
     )
     return df
 end
 
-function interimSampleSize(design::BinaryTwoStageDesign)
+function getInterimSampleSize(design::BinaryTwoStageDesign)
     return length(design.n) - 1
 end
 
-function finalSampleSize(design::BinaryTwoStageDesign)
+function getSampleSize(design::BinaryTwoStageDesign)
     return design.n
 end
-function finalSampleSize{T1<:Integer}(design::BinaryTwoStageDesign, x1::T1)
+function getSampleSize{T1<:Integer}(design::BinaryTwoStageDesign, x1::T1)
     @assert 0 <= x1
-    @assert x1 <= interimSampleSize(design)
+    @assert x1 <= getInterimSampleSize(design)
     return design.n[x1 + 1] # array indexing starts at 1, not 0
 end
 
-function rejectionBoundary(design::BinaryTwoStageDesign)
+function getRejectionBoundary(design::BinaryTwoStageDesign)
     return design.c
 end
-function rejectionBoundary{T1<:Integer}(design::BinaryTwoStageDesign, x1::T1)
+function getRejectionBoundary{T1<:Integer}(design::BinaryTwoStageDesign, x1::T1)
     @assert 0 <= x1
-    @assert x1 <= interimSampleSize(design)
+    @assert x1 <= getInterimSampleSize(design)
     return design.c[x1 + 1] # array indexing starts at 1, not 0
 end
 
@@ -61,11 +61,11 @@ responses (x1) and response probability p.
 function conditionalProbabilityToReject{T1<:Integer, T2<:Real}(design::BinaryTwoStageDesign, x1::Vector{T1}, p::T2)
     @assert 0.0 <= p
     @assert p   <= 1.0
-    n1 = interimSampleSize(design)
+    n1 = getInterimSampleSize(design)
     @assert 0   <= x1
     @assert x1  <= n1
-    c  = rejectionBoundary(design, x1)
-    n  = finalSampleSize(design, x1)
+    c  = getRejectionBoundary(design, x1)
+    n  = getSampleSize(design, x1)
     return _cpr(x1, n1, n, c, p) # defined in util.jl
 end
 
@@ -73,7 +73,7 @@ end
 Compute the rejection probability given response probability p.
 """
 function probabilityToReject{T<:Real}(design::BinaryTwoStageDesign, p::T)
-    n1      = interimSampleSize(design)
+    n1      = getInterimSampleSize(design)
     X1      = Distributions.Binomial(n1, p) # stage one responses
     x1range = collect(0:n1)
     return vecdot(Distributions.pdf(X1, x1range), conditionalProbabilityToReject.(design, x1, p))
@@ -82,54 +82,62 @@ end
 """
 Create random variable for the final sample size
 """
-type FinalSampleSize <: Distributions.DiscreteUnivariateDistribution
+type SampleSize <: Distributions.DiscreteUnivariateDistribution
     design
     p
-    function FinalSampleSize{T<:Real}(design::BinaryTwoStageDesign, p::T)
+    function SampleSize{T<:Real}(design::BinaryTwoStageDesign, p::T)
         @assert 0.0 <= p
         @assert p <= 1.0
         new(design, p)
     end
 end
 
-function rand(d::FinalSampleSize)
-    return d.design |> interimSampleSize |> n1 -> Distributions.Binomial(n1, p) |> rand |> x1 -> finalSampleSize(d.design, x1)
+function rand(d::SampleSize)
+    return d.design |> getInterimSampleSize |> n1 -> Distributions.Binomial(n1, d.p) |> rand |> x1 -> getSampleSize(d.design, x1)
 end
 
-function pdf(d::FinalSampleSize, n::Real)
+function pdf(d::SampleSize, n::Int)
     res = 0.0
-    for x1 in 0:interimSampleSize(d.design)
-        if finalSampleSize(d.design, x1) == n
-            res += Distributions.pdf(Binomial(interimSampleSize(d.design), p), x1)
+    for x1 in 0:getInterimSampleSize(d.design)
+        if getSampleSize(d.design, x1) == n
+            res += Distributions.pdf(Distributions.Binomial(getInterimSampleSize(d.design), d.p), x1)
         end
     end
     return res
 end
 
-function minimum(d::FinalSampleSize)
-    return interimSampleSize(d.design)
+function minimum(d::SampleSize)
+    return getInterimSampleSize(d.design)
 end
 
-function maximum(d::FinalSampleSize)
-    return maximum(finalSampleSize(d.design))
+function maximum(d::SampleSize)
+    return maximum(getSampleSize(d.design))
 end
 
-function cdf(d::FinalSampleSize, n::Real)
-    nrange = minimum(d):n
-    res    = 0.0
-    for n_ in nrange
-        res += Distributions.pdf(d, n_)
-    end
-    return res
-end
-
-function quantile(d::FinalSampleSize, q::Real)
+function quantile(d::SampleSize, q::Real)
     nrange = minimum(d):maximum(d)
     res    = 0
     while Distributions.cdf(d, res + 1) <= q
         res += 1
     end
     return res
+end
+
+function mean(d::SampleSize)
+    res = 0.0
+    for n in minimum(d):maximum(d)
+        res += pdf(d, n)*n
+    end
+    return(res)
+end
+
+function var(d::SampleSize)
+    res = 0.0
+    m   = mean(d)
+    for n in minimum(d):maximum(d)
+        res += pdf(d, n)*(n - m)^2
+    end
+    return(res)
 end
 
 
@@ -141,18 +149,18 @@ This method returns "true" iff the combination (n, x) is reachable with the
 given design.
 """
 function reachable{T<:Integer}(design::BinaryTwoStageDesign, n::T, x::T)
-    if x < 0 | x > n | !(n in finalSampleSize(design))
+    if x < 0 | x > n | !(n in getSampleSize(design))
         return false
     else
         res = false
-        n1 = interimSampleSize(design)
+        n1 = getInterimSampleSize(design)
         if n == n1 # only first stage
-            if finalSampleSize(design, x) == n1
+            if getSampleSize(design, x) == n1
                 res = true
             end
         else # also second stage
             for x1 in 0:(min(x, n1))
-                if (finalSampleSize(design, x1) == n) & (x - x1 <= finalSampleSize(design, x1) - n1)
+                if (getSampleSize(design, x1) == n) & (x - x1 <= getSampleSize(design, x1) - n1)
                     res = true
                 end
             end
@@ -168,11 +176,11 @@ This method returns "true" iff the combination (x1, x2) is reachable with the
 given design.
 """
 function reachableResponses{T<:Integer}(design::BinaryTwoStageDesign, x1::T, x2::T)
-    n1 = interimSampleSize(design)
+    n1 = getInterimSampleSize(design)
     if (x1 < 0) | (x1 > n1)
         return false
     end
-    if (x2 > finalSampleSize(design, x1) - n1) | x2 < 0
+    if (x2 > getSampleSize(design, x1) - n1) | x2 < 0
         return false
     else
         return true

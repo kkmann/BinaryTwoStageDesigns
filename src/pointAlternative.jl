@@ -23,7 +23,7 @@ type PointAlternative <: PlanningAssumptions
         @assert all([alpha; beta; p0; p1; pess] .>= 0.0)
         @assert all([alpha; beta; p0; p1; pess] .<= 1.0)
         @assert p0 < p1
-        new(n1range, nmax, alpha, beta, p0, p1, pess, design -> Distributions.mean(FinalSampleSize(design, pess)), solver)
+        new(n1range, nmax, alpha, beta, p0, p1, pess, design -> mean(SampleSize(design, pess)), solver)
     end
 end
 
@@ -83,7 +83,7 @@ function adaptToInterim{T<:Integer}(design::BinaryTwoStageDesign, n1obs::T, x1ob
     # recreate the same problem conditional on the observed stage one sample size
     m, y, n1obs, params = _createProblem(n1obs, params)
 
-    n1old = interimSampleSize(design)
+    n1old = getInterimSampleSize(design)
     # case distinction for n1 <=> n1observed
     if n1old == n1obs
         # nothing to do
@@ -158,11 +158,11 @@ function adaptToFinal{T<:Integer}(design::BinaryTwoStageDesign, x1obs::T, nna1::
     p1     = params.p1
     solver = params.solver
     @assert nobs <= nmax
-    n1 = interimSampleSize(design)
+    n1 = getInterimSampleSize(design)
     # recreate initial problem
     m, y, n1, params = _createProblem(n1, params)
     # case distinction for n <=> nobs
-    if nobs == finalSampleSize(design)
+    if nobs == getSampleSize(design)
         # nothing to do
         return(design)
     end
