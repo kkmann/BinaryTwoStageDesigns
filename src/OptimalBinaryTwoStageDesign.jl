@@ -1,45 +1,55 @@
+immutable OptimalBinaryTwoStageDesign <: AbstractBinaryTwoStageDesign
+    n
+    c
+    parameters
+    function OptimalBinaryTwoStageDesign(parameters::Parameters)
+        design, res = optimalDesign(parameters)
+        new(
+            design.n,
+            design.c,
+            parameters
+        )
+    end
+    function OptimalBinaryTwoStageDesign(design, parameters::Parameters)
+        new(
+            design.n,
+            design.c,
+            parameters
+        )
+    end
+end
+
 function optimalDesign(
     n1::Int64,      # stage one sample size
-    params::PlanningAssumptions
+    parameters::Parameters
 )
-    # for brevity, extract planning parameters:
-    @assert n1 in params.n1range
+    @assert n1 in parameters.n1range
     # define problem
-    m, y, n1, params = _createProblem(n1, params)
-    setsolver(m, params.solver)
+    m, y, n1, parameters = _createProblem(n1, parameters)
+    setsolver(m, parameters.solver)
     # solve
     status = solve(m)
     if !(status in (:Optimal, :UserLimit)) # no valid solution found!
         error("no feasible solution reached")
     end
     # extract solution
-    design = _extractSolution(y, n1, params.nmax) # c.f. util.jl
-    return design
+    design = _extractSolution(y, n1, parameters.nmax) # c.f. util.jl
+    return OptimalBinaryTwoStageDesign(design, parameters)
 end
 
-function optimalDesign(params::PlanningAssumptions)
+function optimalDesign(parameters::Parameters)
     designs = pmap(
         n1 -> try
-            optimalDesign(n1, params)
+            optimalDesign(n1, parameters)
         catch e
             println(e)
         end,
-        params.n1range
+        parameters.n1range
     )
-    scores = map(design -> try params.score(design) catch e Inf end, designs) # if score cannot be computed, probably infeasible > Inf
+    scores = map(design -> try parameters.score(design) catch e Inf end, designs) # if score cannot be computed, probably infeasible > Inf
     return designs[findmin(scores)[2]], Dict(
-        "n1"      => collect(params.n1range),
+        "n1"      => collect(parameters.n1range),
         "scores"  => scores,
         "designs" => designs
     )
-end
-
-immutable OptimalBinaryTwoStageDesign <: BinaryTwoStageDesign
-    n
-    c
-    parameters
-    function BinaryTwoStageDesign(parameters::PlanningAssumptions)
-        design, res = optimalDesign(parameters)
-        new(design.n, design.c, parameters)
-    end
 end

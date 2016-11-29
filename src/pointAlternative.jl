@@ -1,4 +1,4 @@
-type PointAlternative <: PlanningAssumptions
+type MinimalExpectedSampleSizePointAlternative <: PointAlternative
     n1range
     nmax
     alpha
@@ -8,7 +8,7 @@ type PointAlternative <: PlanningAssumptions
     pess
     score
     solver
-    function PointAlternative{T1<:Integer, T2<:Real}(
+    function MinimalExpectedSampleSizePointAlternative{T1<:Integer, T2<:Real}(
         n1range::Union{Range{T1}, Vector{T1}},
         nmax::T1,
         alpha::T2,
@@ -29,15 +29,15 @@ end
 
 function _createProblem(
     n1::Int64,      # stage one sample size
-    params::PointAlternative
+    parameters::MinimalExpectedSampleSizePointAlternative
 )
     # for brevity, extract planning parameters:
-    nmax   = params.nmax
-    alpha  = params.alpha
-    beta   = params.beta
-    p0     = params.p0
-    p1     = params.p1
-    solver = params.solver
+    nmax   = parameters.nmax
+    alpha  = parameters.alpha
+    beta   = parameters.beta
+    p0     = parameters.p0
+    p1     = parameters.p1
+    solver = parameters.solver
     # define base problem
     m, y, n1, nmax  = _createBaseProblem(n1, nmax) # c.f. util.jl
     # add type one error rate constraint
@@ -67,21 +67,27 @@ function _createProblem(
             c  = [-Inf; 0:(nmax - 1); Inf]
         }
     )
-    return m, y, n1, params
+    return m, y, n1, parameters
 end
 
 
-function adaptToInterim{T<:Integer}(design::BinaryTwoStageDesign, n1obs::T, x1obs::T, nna1::T, params::PointAlternative) # isnt x1obs!
+function adaptToInterim{T<:Integer}(
+    design::BinaryTwoStageDesign,
+    n1obs::T,
+    x1obs::T,
+    nna1::T,
+    parameters::MinimalExpectedSampleSizePointAlternative
+) # isnt x1obs!
     # for brevity, extract planning parameters:
-    nmax   = params.nmax
-    alpha  = params.alpha
-    beta   = params.beta
-    p0     = params.p0
-    p1     = params.p1
-    solver = params.solver
-    @assert n1obs <= maximum(params.n1range)
+    nmax   = parameters.nmax
+    alpha  = parameters.alpha
+    beta   = parameters.beta
+    p0     = parameters.p0
+    p1     = parameters.p1
+    solver = parameters.solver
+    @assert n1obs <= maximum(parameters.n1range)
     # recreate the same problem conditional on the observed stage one sample size
-    m, y, n1obs, params = _createProblem(n1obs, params)
+    m, y, n1obs, parameters = _createProblem(n1obs, parameters)
 
     n1old = getInterimSampleSize(design)
     # case distinction for n1 <=> n1observed
@@ -138,29 +144,29 @@ function adaptToInterim{T<:Integer}(design::BinaryTwoStageDesign, n1obs::T, x1ob
             end
         end
     end
-    setsolver(m, params.solver)
+    setsolver(m, parameters.solver)
     status = solve(m)
     if !(status in (:Optimal, :UserLimit)) # no valid solution found!
         error("no feasible solution reached")
     end
     # extract solution
-    design = _extractSolution(y, n1obs, params.nmax) # c.f. util.jl
+    design = _extractSolution(y, n1obs, parameters.nmax) # c.f. util.jl
     # TODO: check whether constraints also hold for p < p0!
     return design
 end
 
-function adaptToFinal{T<:Integer}(design::BinaryTwoStageDesign, x1obs::T, nna1::T, nobs::T, xobs::T, nna::T, params::PointAlternative)
+function adaptToFinal{T<:Integer}(design::BinaryTwoStageDesign, x1obs::T, nna1::T, nobs::T, xobs::T, nna::T, parameters::MinimalExpectedSampleSizePointAlternative)
     # for brevity, extract planning parameters:
-    nmax   = params.nmax
-    alpha  = params.alpha
-    beta   = params.beta
-    p0     = params.p0
-    p1     = params.p1
-    solver = params.solver
+    nmax   = parameters.nmax
+    alpha  = parameters.alpha
+    beta   = parameters.beta
+    p0     = parameters.p0
+    p1     = parameters.p1
+    solver = parameters.solver
     @assert nobs <= nmax
     n1 = getInterimSampleSize(design)
     # recreate initial problem
-    m, y, n1, params = _createProblem(n1, params)
+    m, y, n1, parameters = _createProblem(n1, parameters)
     # case distinction for n <=> nobs
     if nobs == getSampleSize(design)
         # nothing to do
@@ -243,6 +249,6 @@ function adaptToFinal{T<:Integer}(design::BinaryTwoStageDesign, x1obs::T, nna1::
         error("no feasible solution reached")
     end
     # get solution
-    design = _extractSolution(y, n1, params.nmax)
+    design = _extractSolution(y, n1, parameters.nmax)
     return design
 end

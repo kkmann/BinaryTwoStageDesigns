@@ -1,11 +1,4 @@
 """
-Any planning assumption must at least contain the fields n1range as the
-allowable range of n1 values, nmax as maximal final n and score(design) as
-function giving the score of a design (smaller = better).
-"""
-abstract PlanningAssumptions
-
-"""
 Creates a basline JuMP model
 with only minimal constraints (contiguous stopping, unimodal n(x1)) and
 functional constraint
@@ -115,4 +108,75 @@ function _cpr(x1, n1, n, c, p)
         return(0.0)
     end
     return 1 - Distributions.cdf(Distributions.Binomial(n - n1, p), convert(Int64, c - x1))
+end
+
+function _addConditionalTypeOneErrorRateStageOneConstraint{T<:Parameters}(m, y, n1obs, x1obs, nna1, design, parameters::T)
+    n1old = getInterimSampleSize(design)
+    nmax  = parameters.nmax
+    if n1old < n1obs
+        for x1 in x1obs:(x1obs + nna1)
+            @constraint(m,
+                sum{
+                    Distributions.pdf(Distributions.Binomial(n1obs - n1old, parameters.p0), j)*_cpr(x1 + j, n1obs, n, c, parameters.p0)*y[x1 + j, n, c],
+                    j = 0:(n1obs - n1old),
+                    n = n1obs:nmax,
+                    c = [-Inf; 0:(nmax - 1); Inf]
+                } <= _cpr(x1, n1old, getSampleSize(design, x1), getRejectionBoundary(design, x1), parameters.p0)
+            )
+        end
+    end
+    if n1old > n1obs
+        for x1 in x1obs:(x1obs + nna1)
+            @constraint(m,
+                sum{
+                    _cpr(x1, n1obs, n, c, parameters.p0)*y[x1, n, c],
+                    n = n1obs:nmax,
+                    c = [-Inf; 0:(nmax - 1); Inf]
+                } <= sum([Distributions.pdf(Distributions.Binomial(n1old - n1obs, parameters.p0), j)*_cpr(x1 + j, n1old, getSampleSize(design, x1 + j), getRejectionBoundary(design, x1 + j), parameters.p0) for j in 0:(n1old - n1obs)])
+            )
+        end
+    end
+    return m, y
+end
+function _addConditionalTypeTwoErrorRateStageOneConstraint{T<:PointAlternative}(m, y, n1obs, x1obs, nna1, design, parameters::T)
+    n1old = getInterimSampleSize(design)
+    nmax  = parameters.nmax
+    if n1old < n1obs
+        for x1 in x1obs:(x1obs + nna1)
+            @constraint(m,
+                sum{
+                    Distributions.pdf(Distributions.Binomial(n1obs - n1old, parameters.p1), j)*_cpr(x1 + j, n1obs, n, c, parameters.p1)*y[x1 + j, n, c],
+                    j = 0:(n1obs - n1old),
+                    n = n1obs:nmax,
+                    c = [-Inf; 0:(nmax - 1); Inf]
+                } >= _cpr(x1, n1old, getSampleSize(design, x1), getRejectionBoundary(design, x1), parameters.p1)
+            )
+        end
+    end
+    if n1old > n1obs
+        for x1 in x1obs:(x1obs + nna1)
+            @constraint(m,
+                sum{
+                    _cpr(x1, n1obs, n, c, parameters.p1)*y[x1, n, c],
+                    n = n1obs:nmax,
+                    c = [-Inf; 0:(nmax - 1); Inf]
+                } >= sum([Distributions.pdf(Distributions.Binomial(n1old - n1obs, parameters.p1), j)*_cpr(x1 + j, n1old, getSampleSize(design, x1 + j), getRejectionBoundary(design, x1 + j), parameters.p1) for j in 0:(n1old - n1obs)])
+            )
+        end
+    end
+    return m, y
+end
+
+function _addInvarianceUnderImputationStageOneConstraint{T<:Parameters}(m, y, n1obs, x1obs, nna1, design, parameters::T)
+    nmax  = parameters.nmax
+    if nna1 > 0
+        for x1 in (x1obs + 1):(x1obs + nna1)
+            for n in n1obs:nmax
+                @constraint(m,
+                    sum{y[x1, n, c], c = [-Inf; 0:(nmax - 1); Inf]} - sum{y[x1 - 1, n, c], c = [-Inf; 0:(nmax - 1); Inf]} == 0
+                )
+            end
+        end
+    end
+    return m, y
 end

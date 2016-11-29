@@ -7,22 +7,26 @@ import Base.convert
 import Distributions, Distributions.minimum, Distributions.maximum,
     Distributions.pdf, Distributions.cdf, Distributions.rand,
     Distributions.quantile, Distributions.mean, Distributions.var
-import DataFrames
+import DataFrames, DataFrames.DataFrame
+import DataArrays
 import MathProgBase
 
-export PlanningAssumptions, optimalDesign
+export Parameters, PointAlternative,
+    MinimalExpectedSampleSizePointAlternative, UncertainAlternative
 
-export BinaryTwoStageDesign
+export AbstractBinaryTwoStageDesign, BinaryTwoStageDesign,
     getInterimSampleSize, getSampleSize, SampleSize, getRejectionBoundary,
     conditionalProbabilityToReject, probabilityToReject
 
-export OptimalBinaryTwoStageDesign
+export optimalDesign, OptimalBinaryTwoStageDesign
 
-export PointAlternative
+export StageOneAdaptedOptimalBinaryTwoStageDesign, adaptToInterim
 
 include("BinaryTwoStageDesign.jl")
+include("Parameters.jl")
 include("util.jl")
 include("OptimalBinaryTwoStageDesign.jl")
 include("pointAlternative.jl")
+include("adaptDesign.jl")
 
 end # module
