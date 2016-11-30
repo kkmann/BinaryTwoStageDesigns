@@ -96,7 +96,12 @@ function _extractSolution(y, n1, nmax)
             end
         end
     end
-    return BinaryTwoStageDesign(n_func, c_func)
+    try
+        design = BinaryTwoStageDesign(n_func, c_func)
+    catch e
+        println(e)
+        error("could not create design from optimization result, consider changing solver or solver parameters to increase numerical accuracy.")
+    end
 end
 
 function _cpr(x1, n1, n, c, p)
@@ -238,4 +243,14 @@ function _addInvarianceUnderImputationStageOneConstraint{T<:Parameters}(m, y, n1
         end
     end
     return m, y
+end
+
+function _support(design::AbstractBinaryTwoStageDesign)
+    n1     = getInterimSampleSize(design)
+    nmax   = maximum(getSampleSize(design))
+    return [[x1, x2] for x1 in 0:n1, x2 in 0:(nmax - n1) if x2 <= getSampleSize(opt, x1)] |> x-> hcat(x...)'
+end
+
+function _isInSupport{T<:Integer}(supp::Array{Int64, 2}, x1::T, x2::T)
+    return any(map(i -> [x1; x2] == supp[i, :], 1:size(supp, 1)))
 end

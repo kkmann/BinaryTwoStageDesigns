@@ -23,11 +23,15 @@ export optimalDesign, OptimalBinaryTwoStageDesign
 export StageOneAdaptedOptimalBinaryTwoStageDesign,
     StageTwoAdaptedOptimalBinaryTwoStageDesign, adapt
 
+export
+
 include("BinaryTwoStageDesign.jl")
 include("Parameters.jl")
 include("util.jl")
 include("OptimalBinaryTwoStageDesign.jl")
 include("pointAlternative.jl")
 include("adaptDesign.jl")
+include("estimate.jl")
+include("mle.jl")
 
 end # module

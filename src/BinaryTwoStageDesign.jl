@@ -4,7 +4,11 @@ immutable BinaryTwoStageDesign <: AbstractBinaryTwoStageDesign # need T2 must be
     n
     c
     function BinaryTwoStageDesign{T1<:Integer, T2<:Real}(n::Vector{T1}, c::Vector{T2})
-        @assert all(n .>= length(n) - 1)
+        # @assert all(n .>= length(n) - 1)
+        if any(n .< length(n) - 1)
+            println(DataFrames.DataFrame(n = n, c = c))
+            error("n must be greater or equal to n1")
+        end
         @assert length(n) == length(c)
         new(n, c)
     end
@@ -51,7 +55,14 @@ function getRejectionBoundary{T1<:Integer}(design::AbstractBinaryTwoStageDesign,
     return design.c[x1 + 1] # array indexing starts at 1, not 0
 end
 
-
+function probability{T1<:Integer, T2<:Real}(design::AbstractBinaryTwoStageDesign, x1::T1, x2::T1, p::T2)::Float64
+    if (x1 < 0) | (x2 < 0)
+        return 0.0
+    end
+    n1 = getInterimSampleSize(design)
+    n  = getSampleSize(design, x1)
+    return p^(x1 + x2)*(1 - p)^(n - x1 - x2)*binomial(BigInt(n1), BigInt(x1))*binomial(BigInt(n - n1), BigInt(x2)) # is 0 if impossible
+end
 
 """
 Compute the conditional rejection probability given number of stage one
