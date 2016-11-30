@@ -138,6 +138,65 @@ function _addConditionalTypeOneErrorRateStageOneConstraint{T<:Parameters}(m, y, 
     end
     return m, y
 end
+function _addConditionalTypeOneErrorRateStageTwoConstraint{T<:Parameters}(m, y, n1, x1obs, nna1, xobs, nna, design, parameters::T)
+    n1old = getInterimSampleSize(design)
+    nmax  = parameters.nmax
+    function lhs(x1::Int64, l::Int64, n_x1::Int64, c_x1::Float64) # c must accept float for +- Inf
+        if l > min(n_x1, design.n[x1 + 1]) - n1 # not possible
+            return 0.0
+        end
+        if n_x1 <= design.n[x1 + 1] # new design has smaller value
+            if x1 + l <= c_x1
+                return 0.0
+            else
+                return 1.0
+            end
+        else
+            # catch c = +- Inf
+            if c_x1 == -Inf
+                return(1.0)
+            end
+            if c_x1 == Inf
+                return(0.0)
+            end
+            return 1 - Distributions.cdf(Distributions.Binomial(n_x1 - design.n[x1 + 1], design.parameters.p0), c_x1 - x1 - l) # TODO: replace
+        end
+    end
+    # rhs
+    function rhs(x1::Int64, l::Int64, n_x1::Int64, c_x1::Float64)
+        if l > min(n_x1, design.n[x1 + 1]) - n1 # not possible
+            return 0.0
+        end
+        if n_x1 < design.n[x1 + 1] # new design has smaller value
+            # catch c = +- Inf
+            if design.c[x1 + 1] == -Inf
+                return(1.0)
+            end
+            if design.c[x1 + 1] == Inf
+                return(0.0)
+            end
+            return 1 - Distributions.cdf(Distributions.Binomial(design.n[x1 + 1] - n_x1, design.parameters.p0), design.c[x1 + 1] - x1 - l) # TODO: replace
+        else
+            if x1 + l <= design.c[x1 + 1]
+                return 0.0
+            else
+                return 1.0
+            end
+        end
+    end
+    for x1 in x1obs:(x1obs + nna1)
+        for l in (xobs - x1obs):(xobs - x1obs + nna - nna1)
+            @constraint(m,
+                sum{
+                    y[x1, n, c]*(lhs(x1, l, n, c) - rhs(x1, l, n, c)),
+                    n = n1:nmax,
+                    c = [-Inf; 0:(nmax - 1); Inf]
+                } <= 0.0
+            )
+        end
+    end
+    return m, y
+end
 function _addConditionalTypeTwoErrorRateStageOneConstraint{T<:PointAlternative}(m, y, n1obs, x1obs, nna1, design, parameters::T)
     n1old = getInterimSampleSize(design)
     nmax  = parameters.nmax

@@ -20,7 +20,8 @@ export AbstractBinaryTwoStageDesign, BinaryTwoStageDesign,
 
 export optimalDesign, OptimalBinaryTwoStageDesign
 
-export StageOneAdaptedOptimalBinaryTwoStageDesign, adaptToInterim
+export StageOneAdaptedOptimalBinaryTwoStageDesign,
+    StageTwoAdaptedOptimalBinaryTwoStageDesign, adapt
 
 include("BinaryTwoStageDesign.jl")
 include("Parameters.jl")
