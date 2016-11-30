@@ -23,7 +23,9 @@ export optimalDesign, OptimalBinaryTwoStageDesign
 export StageOneAdaptedOptimalBinaryTwoStageDesign,
     StageTwoAdaptedOptimalBinaryTwoStageDesign, adapt
 
-export
+export BinaryTwoStageDesignEstimator, estimate, p, bias, rmse
+
+export MaximumLikelihoodEstimator
 
 include("BinaryTwoStageDesign.jl")
 include("Parameters.jl")
