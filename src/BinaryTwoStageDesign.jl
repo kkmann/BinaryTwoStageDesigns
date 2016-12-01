@@ -89,6 +89,15 @@ function probabilityToReject{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T
     return vecdot(Distributions.pdf(X1, x1range), conditionalProbabilityToReject.(design, x1, p))
 end
 
+function test{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T, x2::T)::Bool
+    supp = _support(design)
+    if !_isInSupport(supp, x1, x2)
+        error("observations are not in designs support")
+    else
+        return x1 + x2 > getRejectionBoundary(design, x1) ? true : false
+    end
+end
+
 """
 Create random variable for the final sample size
 """

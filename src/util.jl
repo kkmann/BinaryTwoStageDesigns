@@ -248,7 +248,7 @@ end
 function _support(design::AbstractBinaryTwoStageDesign)
     n1     = getInterimSampleSize(design)
     nmax   = maximum(getSampleSize(design))
-    return [[x1, x2] for x1 in 0:n1, x2 in 0:(nmax - n1) if x2 <= getSampleSize(opt, x1)] |> x-> hcat(x...)'
+    return [[x1, x2] for x1 in 0:n1, x2 in 0:(nmax - n1) if (x2 <= getSampleSize(design, x1) - n1) & ((getSampleSize(design, x1) > n1) | (x2 == 0))] |> x-> hcat(x...)'
 end
 
 function _isInSupport{T<:Integer}(supp::Array{Int64, 2}, x1::T, x2::T)

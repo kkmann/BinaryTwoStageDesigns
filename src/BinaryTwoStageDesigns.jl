@@ -16,24 +16,36 @@ export Parameters, PointAlternative,
 
 export AbstractBinaryTwoStageDesign, BinaryTwoStageDesign,
     getInterimSampleSize, getSampleSize, SampleSize, getRejectionBoundary,
-    conditionalProbabilityToReject, probabilityToReject
+    conditionalProbabilityToReject, probabilityToReject, test
 
 export optimalDesign, OptimalBinaryTwoStageDesign
 
 export StageOneAdaptedOptimalBinaryTwoStageDesign,
     StageTwoAdaptedOptimalBinaryTwoStageDesign, adapt
 
-export BinaryTwoStageDesignEstimator, estimate, p, bias, rmse
+export BinaryTwoStageDesignEstimator, getDesign, estimate, p, bias, rmse
 
 export MaximumLikelihoodEstimator
+
+export RaoBlackwellizedEstimator
+
+export CompatibleEstimator, jeffreysPrior
+
+export BinaryTwoStageDesignConfidenceInterval, limits, getConfidence
+
+export ClopperPearsonConfidenceInterval
 
 include("BinaryTwoStageDesign.jl")
 include("Parameters.jl")
 include("util.jl")
 include("OptimalBinaryTwoStageDesign.jl")
-include("pointAlternative.jl")
+include("designs/pointAlternative.jl")
 include("adaptDesign.jl")
 include("estimate.jl")
-include("mle.jl")
+include("estimation/mle.jl")
+include("estimation/rb.jl")
+include("estimation/CompatibleEstimator.jl")
+include("ConfidenceInterval.jl")
+include("confidenceintervals/ClopperPearsonConfidenceInterval.jl")
 
 end # module

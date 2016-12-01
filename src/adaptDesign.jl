@@ -38,7 +38,7 @@ function adapt(design::OptimalBinaryTwoStageDesign, stageOneData::DataArrays.Dat
     m, y, n1obs, params = _createProblem(n1obs, design.parameters)
     if (n1old == n1obs) & (nna1 == 0)
         # nothing to do
-        return(design)
+        return StageOneAdaptedOptimalBinaryTwoStageDesign(design, design, n1obs, x1obs, nna1)
     end
     m, y = _addConditionalTypeOneErrorRateStageOneConstraint(m, y, n1obs, x1obs, nna1, design, design.parameters)
     if CONDITIONALPOWER
@@ -80,7 +80,7 @@ function adapt(design::StageOneAdaptedOptimalBinaryTwoStageDesign, data::DataFra
     # case distinction for n <=> nobs
     if (nobs == getSampleSize(design, x1obs)) & (nna == 0)
         # nothing to do
-        return(design)
+        return StageTwoAdaptedOptimalBinaryTwoStageDesign(design, design, data)
     end
     m, y = _addConditionalTypeOneErrorRateStageTwoConstraint(m, y, n1, x1obs, nna1, xobs, nna, design, design.parameters)
     m, y = _addInvarianceUnderImputationStageOneConstraint(m, y, n1, x1obs, nna1, design, design.parameters)
