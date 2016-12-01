@@ -28,12 +28,12 @@ function bias{T<:Real}(estimator::BinaryTwoStageDesignEstimator, p::T)::Float64
     supp      = _support(estimator.design)
     estimates = estimate.([estimator], supp[:, 1], supp[:, 2])
     probs     = probability.([estimator.design], supp[:, 1], supp[:, 2])
-    return probs .* estimates - p
+    return dot(probs, estimates) - p
 end
 
 function rmse{T<:Real}(estimator::BinaryTwoStageDesignEstimator, p::T)::Float64
     supp   = _support(estimator.design)
     errors = estimate.([estimator], supp[:, 1], supp[:, 2]) .- p
     probs  = probability.([estimator.design], supp[:, 1], supp[:, 2])
-    return sqrt(probs .* errors^2)
+    return sqrt(dot(probs, errors^2))
 end
