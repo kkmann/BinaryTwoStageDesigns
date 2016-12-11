@@ -3,6 +3,10 @@ Abstract base type for estimators
 """
 abstract BinaryTwoStageDesignEstimator
 
+# these two enable array broadcasting of all methods!
+Base.size(::BinaryTwoStageDesignEstimator) = ()
+Base.getindex(estimator::BinaryTwoStageDesignEstimator, i) = estimator
+
 function getDesign(estimator::BinaryTwoStageDesignEstimator)
     try
         return estimator.design

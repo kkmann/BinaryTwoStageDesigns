@@ -1,4 +1,4 @@
-immutable StageOneAdaptedOptimalBinaryTwoStageDesign <: AbstractBinaryTwoStageDesign
+immutable StageOneAdaptedOptimalBinaryTwoStageDesign <: AbstractBinaryTwoStageDesign # TODO: make parametric type 
     n
     c
     parameters

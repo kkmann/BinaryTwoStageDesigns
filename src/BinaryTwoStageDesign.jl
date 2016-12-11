@@ -1,5 +1,9 @@
 abstract AbstractBinaryTwoStageDesign
 
+# these two enable array broadcasting of all methods!
+Base.size(::AbstractBinaryTwoStageDesign) = ()
+Base.getindex(design::AbstractBinaryTwoStageDesign, i) = design
+
 immutable BinaryTwoStageDesign <: AbstractBinaryTwoStageDesign # need T2 must be able to hold +/- infinity
     n
     c
