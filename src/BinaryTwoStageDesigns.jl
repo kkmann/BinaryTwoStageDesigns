@@ -16,7 +16,7 @@ export Parameters, PointAlternative,
 
 export AbstractBinaryTwoStageDesign, BinaryTwoStageDesign,
     getInterimSampleSize, getSampleSize, SampleSize, getRejectionBoundary,
-    conditionalProbabilityToReject, probabilityToReject, test
+    conditionalProbabilityToReject, probabilityToReject, test, probability
 
 export optimalDesign, OptimalBinaryTwoStageDesign
 
@@ -31,7 +31,8 @@ export RaoBlackwellizedEstimator
 
 export CompatibleEstimator, jeffreysPrior
 
-export BinaryTwoStageDesignConfidenceInterval, limits, getConfidence
+export BinaryTwoStageDesignConfidenceInterval, limits, getConfidence, getDesign,
+    coverage
 
 export ClopperPearsonConfidenceInterval
 

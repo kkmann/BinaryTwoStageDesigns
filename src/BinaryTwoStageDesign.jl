@@ -65,14 +65,19 @@ function probability{T1<:Integer, T2<:Real}(design::AbstractBinaryTwoStageDesign
     end
     n1 = getInterimSampleSize(design)
     n  = getSampleSize(design, x1)
-    return p^(x1 + x2)*(1 - p)^(n - x1 - x2)*binomial(BigInt(n1), BigInt(x1))*binomial(BigInt(n - n1), BigInt(x2)) # is 0 if impossible
+    try
+        return p^(x1 + x2)*(1 - p)^(n - x1 - x2)*binomial(n1, x1)*binomial(n - n1, x2) # is 0 if impossible
+    catch
+        return p^(x1 + x2)*(1 - p)^(n - x1 - x2)*binomial(BigInt(n1), BigInt(x1))*binomial(BigInt(n - n1), BigInt(x2)) # is 0 if impossible
+    end
+
 end
 
 """
 Compute the conditional rejection probability given number of stage one
 responses (x1) and response probability p.
 """
-function conditionalProbabilityToReject{T1<:Integer, T2<:Real}(design::AbstractBinaryTwoStageDesign, x1::Vector{T1}, p::T2)
+function conditionalProbabilityToReject{T1<:Integer, T2<:Real}(design::AbstractBinaryTwoStageDesign, x1::T1, p::T2)
     @assert 0.0 <= p
     @assert p   <= 1.0
     n1 = getInterimSampleSize(design)
@@ -90,7 +95,7 @@ function probabilityToReject{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T
     n1      = getInterimSampleSize(design)
     X1      = Distributions.Binomial(n1, p) # stage one responses
     x1range = collect(0:n1)
-    return vecdot(Distributions.pdf(X1, x1range), conditionalProbabilityToReject.(design, x1, p))
+    return vecdot(Distributions.pdf(X1, x1range), conditionalProbabilityToReject.(design, x1range, p))
 end
 
 function test{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T, x2::T)::Bool
