@@ -5,6 +5,9 @@ function giving the score of a design (smaller = better).
 """
 abstract Parameters # only guarantees p0, nmax, n1range, alpha # TODO: also score, expectedScore
 
+Base.size(::Parameters) = ()
+Base.getindex(par::Parameters, i) = par
+
 abstract PointAlternative <: Parameters # must also have p1 + beta
 
 abstract UncertainAlternative <: Parameters # must implement p0 + Beta prior on p1 but no beta
