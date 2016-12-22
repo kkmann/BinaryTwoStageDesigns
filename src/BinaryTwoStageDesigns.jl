@@ -13,8 +13,9 @@ import DataFrames, DataFrames.DataFrame
 import DataArrays
 import MathProgBase
 
-export Parameters, PointAlternative,
-    MinimalExpectedSampleSizePointAlternative, UncertainAlternative
+export Parameters, PointAlternative, VagueAlternative,
+    MinimalExpectedSampleSizePointAlternative,
+    MinimalExpectedSampleSizeVagueAlternative
 
 export AbstractBinaryTwoStageDesign, BinaryTwoStageDesign,
     getInterimSampleSize, getSampleSize, SampleSize, getRejectionBoundary,
