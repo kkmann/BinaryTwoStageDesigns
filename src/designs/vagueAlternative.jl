@@ -1,6 +1,6 @@
 function expected_sample_size(design::BinaryTwoStageDesign, prior::Function)::Float64
     @assert abs(quadgk(p -> prior(p), 0, 1, abstol = .001)[1] - 1.0) < .01
-    return quadgk(p -> mean(SampleSize(design, p)*prior(p), 0, 1, abstol = .001)[1]
+    return quadgk(p -> mean(SampleSize(design, p))*prior(p), 0, 1, abstol = .001)[1]
 end
 
 type MinimalExpectedSampleSizeVagueAlternative <: VagueAlternative
