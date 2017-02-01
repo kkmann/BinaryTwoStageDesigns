@@ -1,19 +1,15 @@
-"""
-Create random variable for the final sample size
-"""
 type SampleSize <: Distributions.DiscreteUnivariateDistribution
     design
     p
     function SampleSize{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
-        @assert 0.0 <= p
-        @assert p <= 1.0
+        checkp(p)
         new(design, p)
     end
 end
 
-function rand(d::SampleSize)
-    return d.design |> getInterimSampleSize |> n1 -> Distributions.Binomial(n1, d.p) |> rand |> x1 -> getSampleSize(d.design, x1)
-end
+
+rand(d::SampleSize) = d.design |> getInterimSampleSize |> n1 -> Distributions.Binomial(n1, d.p) |> rand |> x1 -> getSampleSize(d.design, x1)
+
 
 function pdf(d::SampleSize, n::Int)
     res = 0.0
@@ -25,13 +21,11 @@ function pdf(d::SampleSize, n::Int)
     return res
 end
 
-function minimum(d::SampleSize)
-    return getInterimSampleSize(d.design)
-end
 
-function maximum(d::SampleSize)
-    return maximum(getSampleSize(d.design))
-end
+minimum(d::SampleSize) = getInterimSampleSize(d.design)
+
+maximum(d::SampleSize) = maximum(getSampleSize(d.design))
+
 
 function quantile(d::SampleSize, q::Real)
     nrange = minimum(d):maximum(d)
@@ -42,6 +36,7 @@ function quantile(d::SampleSize, q::Real)
     return res
 end
 
+
 function mean(d::SampleSize)
     res = 0.0
     for n in minimum(d):maximum(d)
@@ -49,6 +44,7 @@ function mean(d::SampleSize)
     end
     return(res)
 end
+
 
 function var(d::SampleSize)
     res = 0.0
