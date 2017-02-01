@@ -6,7 +6,7 @@ Base.getindex(design::AbstractBinaryTwoStageDesign, i) = design
 
 immutable BinaryTwoStageDesign <: AbstractBinaryTwoStageDesign # need T2 must be able to hold +/- infinity
     n
-    c
+    c # rejected if x1 + x2 > c(x1)
     function BinaryTwoStageDesign{T1<:Integer, T2<:Real}(n::Vector{T1}, c::Vector{T2})
         # @assert all(n .>= length(n) - 1)
         if any(n .< length(n) - 1)
@@ -28,7 +28,7 @@ function show(io::IO, object::AbstractBinaryTwoStageDesign)
     println("    ----- ----- -----")
 end
 
-function convert(::DataFrames.DataFrame, design::AbstractBinaryTwoStageDesign)
+function convert(::Type{DataFrames.DataFrame}, design::AbstractBinaryTwoStageDesign)
     df = DataFrames.DataFrame(
         x1 = 0:getInterimSampleSize(design),
         n  = getSampleSize(design),
@@ -105,6 +105,32 @@ function test{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T, x2::T)::B
     else
         return x1 + x2 > getRejectionBoundary(design, x1) ? true : false
     end
+end
+
+function simulate{T1<:Integer, T2<:Real}(design::AbstractBinaryTwoStageDesign, p::T2, nsim::T1)
+    x2    = SharedArray(Int, nsim)
+    n     = SharedArray(Int, nsim)
+    c     = SharedArray(Float64, nsim)
+    rej   = SharedArray(Bool, nsim)
+    n1    = getInterimSampleSize(design)
+    rv_x1 = Distributions.Binomial(n1, p)
+    x1    = SharedArray(Int, nsim)
+    @sync @parallel for i in 1:nsim
+        x1[i]  = rand(rv_x1)
+        n2     = getSampleSize(design, x1[i]) - n1
+        n[i]   = n2 + n1
+        c[i]   = getRejectionBoundary(design, x1[i])
+        x2[i]  = rand(Distributions.Binomial(n2, p))
+        rej[i] = test(design, x1[i], x2[i])
+    end
+    # return x1, n, c, x2, rej
+    return DataFrames.DataFrame(
+        x1 = convert(Vector{Int}, x1),
+        n  = convert(Vector{Int}, n),
+        c  = convert(Vector{Float64}, c),
+        x2 = convert(Vector{Int}, x2),
+        rejectedH0 = convert(Vector{Bool}, rej)
+    )
 end
 
 """

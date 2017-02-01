@@ -18,7 +18,8 @@ export Parameters, PointAlternative,
 
 export AbstractBinaryTwoStageDesign, BinaryTwoStageDesign,
     getInterimSampleSize, getSampleSize, SampleSize, getRejectionBoundary,
-    conditionalProbabilityToReject, probabilityToReject, test, probability
+    conditionalProbabilityToReject, probabilityToReject, test, probability,
+    simulate
 
 export optimalDesign, OptimalBinaryTwoStageDesign
 
