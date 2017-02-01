@@ -104,16 +104,6 @@ function _extractSolution(y, n1, nmax)
     end
 end
 
-function _cpr(x1, n1, n, c, p)
-    # conditional probability to reject
-    if x1 > c
-        return(1.0)
-    end
-    if n - n1 + x1 <= c
-        return(0.0)
-    end
-    return 1 - Distributions.cdf(Distributions.Binomial(n - n1, p), convert(Int64, c - x1))
-end
 
 function _addConditionalTypeOneErrorRateStageOneConstraint{T<:Parameters}(m, y, n1obs, x1obs, nna1, design, parameters::T)
     n1old = getInterimSampleSize(design)
