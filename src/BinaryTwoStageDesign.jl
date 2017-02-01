@@ -19,13 +19,7 @@ immutable BinaryTwoStageDesign <: AbstractBinaryTwoStageDesign # need T2 must be
 end
 
 function show(io::IO, object::AbstractBinaryTwoStageDesign)
-    println("Binary two-stage design:\n=================================")
-    println("      x1  n(x1) c(x1)")
-    println("    ----- ----- -----")
-    for x1 in 0:getInterimSampleSize(object)
-        println(@sprintf "    %5i %5i %5i" x1 getSampleSize(object, x1) getRejectionBoundary(object, x1))
-    end
-    println("    ----- ----- -----")
+    println("Binary two-stage design")
 end
 
 function convert(::Type{DataFrames.DataFrame}, design::AbstractBinaryTwoStageDesign)
@@ -131,65 +125,4 @@ function simulate{T1<:Integer, T2<:Real}(design::AbstractBinaryTwoStageDesign, p
         x2 = convert(Vector{Int}, x2),
         rejectedH0 = convert(Vector{Bool}, rej)
     )
-end
-
-"""
-Create random variable for the final sample size
-"""
-type SampleSize <: Distributions.DiscreteUnivariateDistribution
-    design
-    p
-    function SampleSize{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
-        @assert 0.0 <= p
-        @assert p <= 1.0
-        new(design, p)
-    end
-end
-
-function rand(d::SampleSize)
-    return d.design |> getInterimSampleSize |> n1 -> Distributions.Binomial(n1, d.p) |> rand |> x1 -> getSampleSize(d.design, x1)
-end
-
-function pdf(d::SampleSize, n::Int)
-    res = 0.0
-    for x1 in 0:getInterimSampleSize(d.design)
-        if getSampleSize(d.design, x1) == n
-            res += Distributions.pdf(Distributions.Binomial(getInterimSampleSize(d.design), d.p), x1)
-        end
-    end
-    return res
-end
-
-function minimum(d::SampleSize)
-    return getInterimSampleSize(d.design)
-end
-
-function maximum(d::SampleSize)
-    return maximum(getSampleSize(d.design))
-end
-
-function quantile(d::SampleSize, q::Real)
-    nrange = minimum(d):maximum(d)
-    res    = 0
-    while Distributions.cdf(d, res + 1) <= q
-        res += 1
-    end
-    return res
-end
-
-function mean(d::SampleSize)
-    res = 0.0
-    for n in minimum(d):maximum(d)
-        res += pdf(d, n)*n
-    end
-    return(res)
-end
-
-function var(d::SampleSize)
-    res = 0.0
-    m   = mean(d)
-    for n in minimum(d):maximum(d)
-        res += pdf(d, n)*(n - m)^2
-    end
-    return(res)
 end

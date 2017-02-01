@@ -41,11 +41,11 @@ export BinaryTwoStageDesignConfidenceInterval, limits, getConfidence, getDesign,
 export ClopperPearsonConfidenceInterval
 
 include("BinaryTwoStageDesign.jl")
+include("SampleSize.jl")
 include("Parameters.jl")
 include("util.jl")
 include("OptimalBinaryTwoStageDesign.jl")
 include("designs/pointAlternative.jl")
-include("designs/vagueAlternative.jl")
 include("adaptDesign.jl")
 include("estimate.jl")
 include("estimation/mle.jl")
