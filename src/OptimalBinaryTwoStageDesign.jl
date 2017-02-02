@@ -10,7 +10,7 @@ immutable OptimalBinaryTwoStageDesign <: AbstractBinaryTwoStageDesign
             parameters
         )
     end
-    function OptimalBinaryTwoStageDesign(design, parameters::Parameters)
+    function OptimalBinaryTwoStageDesign(design, parameters::Parameters) #TODO should be private!
         new(
             design.n,
             design.c,
