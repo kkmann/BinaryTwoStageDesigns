@@ -12,6 +12,7 @@
     @test typeof(params) == SimpleMinimalExpectedSampleSize{SimpleSampleSpace{typeof(100)}, GroupSequential, StoppingForEfficacy}
     @test efficacy(params) == StoppingForEfficacy
     @test regularization(params) == GroupSequential
+    
 end
 
 # TODO test optimization

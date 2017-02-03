@@ -139,7 +139,8 @@ function _extractSolution(y, n1, params)
     try
         design = BinaryTwoStageDesign(nvec, cvec, params)
     catch e
-        println(e)
+        println(nvec)
+        println(cvec)
         error("could not create design from optimization result, consider changing solver or solver parameters to increase numerical accuracy.")
     end
 end
