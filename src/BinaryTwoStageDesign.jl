@@ -6,23 +6,30 @@ Base.size(::AbstractBinaryTwoStageDesign) = ()
 Base.getindex(design::AbstractBinaryTwoStageDesign, i) = design
 
 
-immutable BinaryTwoStageDesign{T1<:Integer, T2<:Real} <: AbstractBinaryTwoStageDesign
+immutable BinaryTwoStageDesign{T1<:Integer, T2<:Real, PType<:Parameters} <: AbstractBinaryTwoStageDesign
     n::Vector{T1}
     c::Vector{T2} # rejected if x1 + x2 > c(x1), must allow real to hold Infinity
+    params::PType
     function BinaryTwoStageDesign(n, c)
-        if any(n .< (length(n) - 1))
-            error("n must be greater or equal to n1")
-        end
-        if length(n) != length(c)
-            error("n and c must be of equal size")
-        end
-        new(n, c)
+        any(n .< (length(n) - 1)) ? throw(InexactError()) : nothing
+        length(n) != length(c) ? throw(InexactError()) : nothing
+        new(n, c, NoParameters())
+    end
+    function BinaryTwoStageDesign(n, c, params)
+        any(n .< (length(n) - 1)) ? throw(InexactError()) : nothing
+        length(n) != length(c) ? throw(InexactError()) : nothing
+        new(n, c, params)
     end
 end # BinaryTwoStageDesign
 BinaryTwoStageDesign{T1<:Integer, T2<:Real}(
     n::Vector{T1},
     c::Vector{T2}
-) = BinaryTwoStageDesign{T1, T2}(n, c)
+) = BinaryTwoStageDesign{T1, T2, NoParameters}(n, c)
+BinaryTwoStageDesign{T1<:Integer, T2<:Real, PType<:Parameters}(
+    n::Vector{T1},
+    c::Vector{T2},
+    params::PType
+) = BinaryTwoStageDesign{T1, T2, PType}(n, c, params)
 
 
 show(io::IO, object::AbstractBinaryTwoStageDesign) = println("Binary two-stage design")
@@ -124,6 +131,10 @@ function simulate{T1<:Integer, T2<:Real}(design::AbstractBinaryTwoStageDesign, p
         rejectedH0 = convert(Vector{Bool}, rej)
     )
 end
+
+
+score(design::AbstractBinaryTwoStageDesign, params::Parameters)::Real = error("not implemented")
+
 
 
 # utility functions

@@ -6,63 +6,34 @@ Base.size(::Parameters) = ()
 Base.getindex(par::Parameters, i) = par
 
 
-function get_null(par::Parameters)::Float64
-    try
-        return par.p0
-    catch
-        error("not implemented")
-    end
-end
-function get_n_stage_one(par::Parameters)
-    try
-        return par.n1range
-    catch
-        error("not implemented")
-    end
-end
-function get_n_max(par::Parameters)
-    try
-        return par.nmax
-    catch
-        error("not implemented")
-    end
-end
-function get_max_type_one_error(par::Parameters)
-    try
-        return par.alpha
-    catch
-        error("not implemented")
-    end
-end
+null(par::Parameters) = try par.p0 catch error("not implemented") end
+alpha(par::Parameters) = try par.alpha catch error("not implemented") end
 
-abstract PointAlternative <: Parameters # must also have p1 + beta
-function get_alternative(par::PointAlternative)
-    try
-        return par.p1
-    catch
-        error("not implemented")
-    end
-end
-function get_min_power(par::PointAlternative)
-    try
-        return par.beta
-    catch
-        error("not implemented")
-    end
-end
 
-abstract VagueAlternative <: Parameters # must implement p0 + Beta prior on p1 but no beta
-function get_alternative(par::VagueAlternative)
-    try
-        return par.prior
-    catch
-        error("not implemented")
-    end
+samplespace(par::Parameters) = try par.samplespace catch error("not implemeted") end
+maxsamplesize(par::Parameters) = error("not implemented")
+regularization(par::Parameters) = error("not implemented")
+efficacy(par::Parameters) = error("not implemented")
+
+
+
+
+type NoParameters <: Parameters
 end
-function get_min_power(par::VagueAlternative)
-    try
-        return par.beta
-    catch
-        error("not implemented")
-    end
-end
+null(par::NoParameters) = error("NoParameters do not have null hypothesis")
+alpha(par::NoParameters) = error("NoParameters do not have alpha")
+samplespace(par::NoParameters) = error("NoParameters do not have sample space")
+maxsamplesize(par::NoParameters) = error("NoParameters do not have maximal sample size")
+
+
+
+
+abstract PointAlternative <: Parameters
+alternative(par::PointAlternative) = try par.p1 catch error("not implemented") end
+beta(par::PointAlternative) = try par.beta catch error("not implemented") end
+
+
+
+
+abstract VagueAlternative <: Parameters
+prior{T<:Real}(par::VagueAlternative, p::T) = error("not implemented")

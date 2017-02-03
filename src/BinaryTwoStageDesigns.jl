@@ -14,7 +14,13 @@ import DataArrays
 import MathProgBase
 
 
-include("BinaryTwoStageDesign.jl")
+# include("Parameters.jl")
+export Parameters, samplespace, maxsamplesize, efficacy, regularization,
+    PointAlternative, null, alpha, alternative, beta,
+    VagueAlternative, prior
+
+
+# include("BinaryTwoStageDesign.jl")
 export AbstractBinaryTwoStageDesign,
     BinaryTwoStageDesign,
         interimsamplesize, samplesize, criticalvalue, getRejectionBoundary,
@@ -22,12 +28,35 @@ export AbstractBinaryTwoStageDesign,
         simulate
 
 
-include("SampleSize.jl")
+# include("SampleSize.jl")
 export SampleSize
 
 
-export Parameters, PointAlternative, VagueAlternative,
-    MinimalExpectedSampleSizePointAlternative,
+# include("SampleSpace.jl")
+export SampleSpace,
+    SimpleSampleSpace, interimsamplesizerange, maxsamplesize, possible
+
+
+abstract Regularization
+type GroupSequential <: Regularization
+end
+type Unimodal <: Regularization
+end
+abstract Efficacy
+type NoStoppingForEfficacy <: Efficacy
+end
+type StoppingForEfficacy <: Efficacy
+end
+export Regularization, GroupSequential, Unimodal,
+    Efficacy, NoStoppingForEfficacy, StoppingForEfficacy
+
+# include("SimpleMinimalExpectedSampleSize")
+export SimpleMinimalExpectedSampleSize
+
+# include optimal
+export getoptimaldesign
+
+export MinimalExpectedSampleSizePointAlternative,
     MinimalExpectedSampleSizeVagueAlternative
 
 
@@ -50,15 +79,20 @@ export BinaryTwoStageDesignConfidenceInterval, limits, getConfidence, getDesign,
 export ClopperPearsonConfidenceInterval
 
 include("Parameters.jl")
+include("BinaryTwoStageDesign.jl")
+include("SampleSize.jl")
+include("SampleSpace.jl")
+include("Parameters/SimpleMinimalExpectedSampleSize.jl")
+
 include("util.jl")
-include("OptimalBinaryTwoStageDesign.jl")
-include("designs/pointAlternative.jl")
-include("adaptDesign.jl")
-include("estimate.jl")
-include("estimation/mle.jl")
-include("estimation/rb.jl")
-include("estimation/CompatibleEstimator.jl")
-include("ConfidenceInterval.jl")
-include("confidenceintervals/ClopperPearsonConfidenceInterval.jl")
+include("getoptimaldesign.jl")
+# include("designs/pointAlternative.jl")
+# include("adaptDesign.jl")
+# include("estimate.jl")
+# include("estimation/mle.jl")
+# include("estimation/rb.jl")
+# include("estimation/CompatibleEstimator.jl")
+# include("ConfidenceInterval.jl")
+# include("confidenceintervals/ClopperPearsonConfidenceInterval.jl")
 
 end # module

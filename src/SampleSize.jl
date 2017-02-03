@@ -6,6 +6,8 @@ type SampleSize <: Distributions.DiscreteUnivariateDistribution
         new(design, p)
     end
 end
+Base.size(::SampleSize) = ()
+Base.getindex(ss::SampleSize, i) = ss
 
 
 rand(d::SampleSize) = d.design |> interimsamplesize |> n1 -> Distributions.Binomial(n1, d.p) |> rand |> x1 -> samplesize(d.design, x1)
