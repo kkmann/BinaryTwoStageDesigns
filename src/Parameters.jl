@@ -1,7 +1,11 @@
 abstract Parameters # only guarantees p0, nmax, n1range, alpha # TODO: also score, expectedScore
+
+
 # make parameters iterable for automatic broadcasting
 Base.size(::Parameters) = ()
 Base.getindex(par::Parameters, i) = par
+
+
 function get_null(par::Parameters)::Float64
     try
         return par.p0

@@ -8,23 +8,23 @@ type SampleSize <: Distributions.DiscreteUnivariateDistribution
 end
 
 
-rand(d::SampleSize) = d.design |> getInterimSampleSize |> n1 -> Distributions.Binomial(n1, d.p) |> rand |> x1 -> getSampleSize(d.design, x1)
+rand(d::SampleSize) = d.design |> interimsamplesize |> n1 -> Distributions.Binomial(n1, d.p) |> rand |> x1 -> samplesize(d.design, x1)
 
 
 function pdf(d::SampleSize, n::Int)
     res = 0.0
-    for x1 in 0:getInterimSampleSize(d.design)
-        if getSampleSize(d.design, x1) == n
-            res += Distributions.pdf(Distributions.Binomial(getInterimSampleSize(d.design), d.p), x1)
+    for x1 in 0:interimsamplesize(d.design)
+        if samplesize(d.design, x1) == n
+            res += Distributions.pdf(Distributions.Binomial(interimsamplesize(d.design), d.p), x1)
         end
     end
     return res
 end
 
 
-minimum(d::SampleSize) = getInterimSampleSize(d.design)
+minimum(d::SampleSize) = interimsamplesize(d.design)
 
-maximum(d::SampleSize) = maximum(getSampleSize(d.design))
+maximum(d::SampleSize) = maximum(samplesize(d.design))
 
 
 function quantile(d::SampleSize, q::Real)

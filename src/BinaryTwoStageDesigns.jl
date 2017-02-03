@@ -13,14 +13,23 @@ import DataFrames, DataFrames.DataFrame
 import DataArrays
 import MathProgBase
 
+
+include("BinaryTwoStageDesign.jl")
+export AbstractBinaryTwoStageDesign,
+    BinaryTwoStageDesign,
+        interimsamplesize, samplesize, criticalvalue, getRejectionBoundary,
+        conditionalpower, power, test, pdf,
+        simulate
+
+
+include("SampleSize.jl")
+export SampleSize
+
+
 export Parameters, PointAlternative, VagueAlternative,
     MinimalExpectedSampleSizePointAlternative,
     MinimalExpectedSampleSizeVagueAlternative
 
-export AbstractBinaryTwoStageDesign, BinaryTwoStageDesign,
-    getInterimSampleSize, getSampleSize, SampleSize, getRejectionBoundary,
-    conditionalProbabilityToReject, probabilityToReject, test, probability,
-    simulate
 
 export optimalDesign, OptimalBinaryTwoStageDesign
 
@@ -40,8 +49,6 @@ export BinaryTwoStageDesignConfidenceInterval, limits, getConfidence, getDesign,
 
 export ClopperPearsonConfidenceInterval
 
-include("BinaryTwoStageDesign.jl")
-include("SampleSize.jl")
 include("Parameters.jl")
 include("util.jl")
 include("OptimalBinaryTwoStageDesign.jl")

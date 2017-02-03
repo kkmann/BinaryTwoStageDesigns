@@ -6,9 +6,9 @@ Base.size(::AbstractBinaryTwoStageDesign) = ()
 Base.getindex(design::AbstractBinaryTwoStageDesign, i) = design
 
 
-immutable BinaryTwoStageDesign{T1<:Integer, T2<:Real} <: AbstractBinaryTwoStageDesign # need T2 must be able to hold +/- infinity
+immutable BinaryTwoStageDesign{T1<:Integer, T2<:Real} <: AbstractBinaryTwoStageDesign
     n::Vector{T1}
-    c::Vector{T2} # rejected if x1 + x2 > c(x1)
+    c::Vector{T2} # rejected if x1 + x2 > c(x1), must allow real to hold Infinity
     function BinaryTwoStageDesign(n, c)
         if any(n .< (length(n) - 1))
             error("n must be greater or equal to n1")
@@ -19,12 +19,10 @@ immutable BinaryTwoStageDesign{T1<:Integer, T2<:Real} <: AbstractBinaryTwoStageD
         new(n, c)
     end
 end # BinaryTwoStageDesign
-
 BinaryTwoStageDesign{T1<:Integer, T2<:Real}(
     n::Vector{T1},
     c::Vector{T2}
 ) = BinaryTwoStageDesign{T1, T2}(n, c)
-
 
 
 show(io::IO, object::AbstractBinaryTwoStageDesign) = println("Binary two-stage design")
@@ -32,47 +30,26 @@ show(io::IO, object::AbstractBinaryTwoStageDesign) = println("Binary two-stage d
 
 convert(::Type{DataFrames.DataFrame}, design::AbstractBinaryTwoStageDesign) =
     DataFrames.DataFrame(
-        x1 = 0:getInterimSampleSize(design),
-        n  = getSampleSize(design),
-        c  = getRejectionBoundary(design)
+        x1 = 0:interimsamplesize(design),
+        n  = samplesize(design),
+        c  = criticalvalue(design)
     )
 
 
-getInterimSampleSize(design::AbstractBinaryTwoStageDesign) = length(design.n) - 1
+interimsamplesize(design::AbstractBinaryTwoStageDesign) = length(design.n) - 1
 
 
-getSampleSize(design::AbstractBinaryTwoStageDesign) = design.n
-
-
-function checkx1{T<:Integer}(x1::T, design::AbstractBinaryTwoStageDesign)
-    x1 < 0 ? throw(InexactError("x1 must be non-negative")) : nothing
-    x1 > getInterimSampleSize(design) ? throw(InexactError("x1 smaller or equal to n1")) : nothing
-end
-
-
-getSampleSize{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T) =
+samplesize(design::AbstractBinaryTwoStageDesign) = design.n
+samplesize{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T) =
     (checkx1(x1, design); design.n[x1 + 1])
 
 
-getRejectionBoundary(design::AbstractBinaryTwoStageDesign) = design.c
-
-getRejectionBoundary{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T) =
+criticalvalue(design::AbstractBinaryTwoStageDesign) = design.c
+criticalvalue{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T) =
     (checkx1(x1, design); design.c[x1 + 1])
 
 
-function checkx1x2{T<:Integer}(x1::T, x2::T, design::AbstractBinaryTwoStageDesign)
-    checkx1(x1, design)
-    x2 < 0 ? throw(InexactError("x2 must be non-negative")) : nothing
-    n1 = getInterimSampleSize(design)
-    n2 = getSampleSize(design, x1) - n1
-    x2 > n2 ? throw(InexactError("x2 must be smaller or equal to n2")) : nothing
-end
-
-
-checkp{T<:Real}(p::T) = (0.0 > p) & (p > 1.0) ? throw(InexactError("p must be in [0, 1]")) : nothing
-
-
-function probability{T1<:Integer, T2<:Real}(
+function pdf{T1<:Integer, T2<:Real}(
     design::AbstractBinaryTwoStageDesign,
     x1::T1, x2::T1, p::T2
 )
@@ -82,8 +59,8 @@ function probability{T1<:Integer, T2<:Real}(
     catch
         return 0.0
     end
-    n1 = getInterimSampleSize(design)
-    n  = getSampleSize(design, x1)
+    n1 = interimsamplesize(design)
+    n  = samplesize(design, x1)
     try
         return p^(x1 + x2)*(1 - p)^(n - x1 - x2)*binomial(n1, x1)*binomial(n - n1, x2) # is 0 if impossible
     catch
@@ -92,44 +69,34 @@ function probability{T1<:Integer, T2<:Real}(
 
 end
 
-function _cpr{T1<:Integer, T2<:Real}(x1::T1, n1::T1, n::T1, c::T2, p::T2)::T2
-    # conditional probability to reject
-    if x1 > c
-        return(1.0)
-    end
-    if n - n1 + x1 <= c
-        return(0.0)
-    end
-    return 1 - Distributions.cdf(Distributions.Binomial(n - n1, p), convert(Int64, c - x1))
-end
 
-function conditionalProbabilityToReject{T1<:Integer, T2<:Real}(
+function conditionalpower{T1<:Integer, T2<:Real}(
     design::AbstractBinaryTwoStageDesign, x1::T1, p::T2
 )
     checkp(p)
     checkx1(x1, design)
     return _cpr(
         x1,
-        getInterimSampleSize(design),
-        getSampleSize(design, x1),
-        getRejectionBoundary(design, x1),
+        interimsamplesize(design),
+        samplesize(design, x1),
+        criticalvalue(design, x1),
         p
     )
 end
 
 
-function probabilityToReject{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
+function power{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
     checkp(p)
-    n1      = getInterimSampleSize(design)
+    n1      = interimsamplesize(design)
     X1      = Distributions.Binomial(n1, p) # stage one responses
     x1range = collect(0:n1)
-    return vecdot(Distributions.pdf(X1, x1range), conditionalProbabilityToReject.(design, x1range, p))
+    return vecdot(Distributions.pdf(X1, x1range), conditionalpower.(design, x1range, p))
 end
 
 
 function test{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T, x2::T)::Bool
     checkx1x2(x1, x2, design)
-    return x1 + x2 > getRejectionBoundary(design, x1) ? true : false
+    return x1 + x2 > criticalvalue(design, x1) ? true : false
 end
 
 
@@ -138,14 +105,14 @@ function simulate{T1<:Integer, T2<:Real}(design::AbstractBinaryTwoStageDesign, p
     n     = SharedArray(Int, nsim)
     c     = SharedArray(Float64, nsim)
     rej   = SharedArray(Bool, nsim)
-    n1    = getInterimSampleSize(design)
+    n1    = interimsamplesize(design)
     rv_x1 = Distributions.Binomial(n1, p)
     x1    = SharedArray(Int, nsim)
     @sync @parallel for i in 1:nsim
         x1[i]  = rand(rv_x1)
-        n2     = getSampleSize(design, x1[i]) - n1
+        n2     = samplesize(design, x1[i]) - n1
         n[i]   = n2 + n1
-        c[i]   = getRejectionBoundary(design, x1[i])
+        c[i]   = criticalvalue(design, x1[i])
         x2[i]  = rand(Distributions.Binomial(n2, p))
         rej[i] = test(design, x1[i], x2[i])
     end
@@ -156,4 +123,32 @@ function simulate{T1<:Integer, T2<:Real}(design::AbstractBinaryTwoStageDesign, p
         x2 = convert(Vector{Int}, x2),
         rejectedH0 = convert(Vector{Bool}, rej)
     )
+end
+
+
+# utility functions
+function checkx1{T<:Integer}(x1::T, design::AbstractBinaryTwoStageDesign)
+    x1 < 0 ? throw(InexactError("x1 must be non-negative")) : nothing
+    x1 > interimsamplesize(design) ? throw(InexactError("x1 smaller or equal to n1")) : nothing
+end
+
+function checkx1x2{T<:Integer}(x1::T, x2::T, design::AbstractBinaryTwoStageDesign)
+    checkx1(x1, design)
+    x2 < 0 ? throw(InexactError("x2 must be non-negative")) : nothing
+    n1 = interimsamplesize(design)
+    n2 = samplesize(design, x1) - n1
+    x2 > n2 ? throw(InexactError("x2 must be smaller or equal to n2")) : nothing
+end
+
+checkp{T<:Real}(p::T) = (0.0 > p) & (p > 1.0) ? throw(InexactError("p must be in [0, 1]")) : nothing
+
+function _cpr{T1<:Integer, T2<:Real}(x1::T1, n1::T1, n::T1, c::T2, p::T2)::T2
+    # conditional probability to reject
+    if x1 > c
+        return(1.0)
+    end
+    if n - n1 + x1 <= c
+        return(0.0)
+    end
+    return 1 - Distributions.cdf(Distributions.Binomial(n - n1, p), convert(Int64, c - x1))
 end
