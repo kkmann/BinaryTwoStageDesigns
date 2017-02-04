@@ -3,10 +3,10 @@ Creates a basline JuMP model
 with only minimal constraints (contiguous stopping, unimodal n(x1)) and
 functional constraint
 """
-function _createBaseProblem(n1, params)
+function _createBaseProblem(n1, params) # regularize by penalizing total variation  of c and n
     reg = regularization(params)
     eff = efficacy(params)
-    ss = samplespace(params)
+    ss  = samplespace(params)
     !possible(n1, ss) ? throw(InexactError()) : nothing
     nmax = maxsamplesize(ss)
     nvals = n1:nmax
@@ -19,6 +19,10 @@ function _createBaseProblem(n1, params)
     m = Model()
     @variable(m, # indicator variables y[x1, n, c] == 1 iff n(x1) = n, c(x1) = c
         y[x1 = 0:n1, n = nvals, c = cvals],
+        Bin
+    )
+    @variable(m, # dummy variables for unimodality of c
+        _is_mode_c[x1 = 0:n1],
         Bin
     )
     if reg == Unimodal
@@ -104,7 +108,26 @@ function _createBaseProblem(n1, params)
                 )
             end
         end
+        for x1_ in 1:x1
+            @constraint(m,
+                sum(c*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
+                    n in (n1 + 1):nmax,
+                    c in 0:(nmax - 1)
+                ) - 3*nmax*_is_mode_c[x1] >= -3*nmax
+            )
+        end
+        for x1_ in (x1 + 1):n1
+            @constraint(m,
+                sum(c*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
+                    n in (n1 + 1):nmax,
+                    c in 0:(nmax - 1)
+                ) + 3*nmax*_is_mode_c[x1] <= 3*nmax
+            )
+        end
     end
+    @constraint(m, # unimodality
+        sum(_is_mode_c[x1] for x1 in 0:n1) >= 1 # at least one mode (can be on boundary as well!)
+    )
     if reg == Unimodal
         @constraint(m, # unimodality
             sum(_is_mode[x1] for x1 in 0:n1) >= 1 # at least one mode (can be on boundary as well!)
