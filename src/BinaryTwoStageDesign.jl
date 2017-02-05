@@ -44,7 +44,7 @@ convert(::Type{DataFrames.DataFrame}, design::AbstractBinaryTwoStageDesign) =
 
 
 interimsamplesize(design::AbstractBinaryTwoStageDesign) = length(design.n) - 1
-
+parameters(design::AbstractBinaryTwoStageDesign) = design.params
 
 samplesize(design::AbstractBinaryTwoStageDesign) = design.n
 samplesize{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T) =

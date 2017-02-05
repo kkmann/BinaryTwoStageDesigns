@@ -24,7 +24,7 @@ export Parameters, samplespace, maxsamplesize, isgroupsequential, allowsstopping
 # include("BinaryTwoStageDesign.jl")
 export AbstractBinaryTwoStageDesign,
     BinaryTwoStageDesign,
-        interimsamplesize, samplesize, criticalvalue, getRejectionBoundary, power, test, pdf,
+        parameters, interimsamplesize, samplesize, criticalvalue, getRejectionBoundary, power, test, pdf,
         simulate
 
 
@@ -36,15 +36,18 @@ export SampleSize
 export SampleSpace,
     SimpleSampleSpace, interimsamplesizerange, maxsamplesize, possible
 
-# include("SimpleMinimalExpectedSampleSize")
+# include("SimpleMinimalExpectedSampleSize.jl")
 export SimpleMinimalExpectedSampleSize,
     IsGroupSequential, GroupSequential, NotGroupSequential,
     StoppingForEfficacy, AllowStoppingForEfficacy, NoStoppingForEfficacy,
     HasMonotoneConditionalPower, MonotoneConditionalPower, NoMonotoneConditionalPower,
     minconditionalpower
 
-# include optimal
+# include ("optimal.jl")
 export getoptimaldesign
+
+# include ("adapt.jl")
+export adapt
 
 
 include("Parameters.jl")
@@ -55,8 +58,7 @@ include("Parameters/SimpleMinimalExpectedSampleSize.jl")
 
 include("util.jl")
 include("getoptimaldesign.jl")
-# include("designs/pointAlternative.jl")
-# include("adaptDesign.jl")
+include("adapt.jl")
 # include("estimate.jl")
 # include("estimation/mle.jl")
 # include("estimation/rb.jl")
