@@ -20,11 +20,14 @@
     println(convert(DataFrames.DataFrame, design))
 
     outcome = DataArrays.@data(
-        [true; true; true; true; false;
-         false; false; false; false; false;
-         false; false; false; NA]
+        [true; true; true; true; true;
+         true; false; false; false; false;
+         false; false; false; NA;
+         true; false; true; false; false; false; false]
     )
-    stage = repmat([1], 14)
+    stage = [repmat([1], 14); repmat([2], 7)]
+    println(stage)
+    println(outcome)
     adapteddesign = adapt(design, outcome, stage, solver)
     println(convert(DataFrames.DataFrame, adapteddesign))
 

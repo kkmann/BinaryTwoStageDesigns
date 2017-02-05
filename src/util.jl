@@ -199,94 +199,78 @@ function _addconditionaltypeonestageoneconstraint(
     end
     return m, y
 end
-# function _addConditionalTypeOneErrorRateStageTwoConstraint{T<:Parameters}(m, y, n1, x1obs, nna1, xobs, nna, design, parameters::T)
-#     n1old = getInterimSampleSize(design)
-#     nmax  = parameters.nmax
-#     function lhs(x1::Int64, l::Int64, n_x1::Int64, c_x1::Float64) # c must accept float for +- Inf
-#         if l > min(n_x1, design.n[x1 + 1]) - n1 # not possible
-#             return 0.0
-#         end
-#         if n_x1 <= design.n[x1 + 1] # new design has smaller value
-#             if x1 + l <= c_x1
-#                 return 0.0
-#             else
-#                 return 1.0
-#             end
-#         else
-#             # catch c = +- Inf
-#             if c_x1 == -Inf
-#                 return(1.0)
-#             end
-#             if c_x1 == Inf
-#                 return(0.0)
-#             end
-#             return 1 - Distributions.cdf(Distributions.Binomial(n_x1 - design.n[x1 + 1], design.parameters.p0), c_x1 - x1 - l) # TODO: replace
-#         end
-#     end
-#     # rhs
-#     function rhs(x1::Int64, l::Int64, n_x1::Int64, c_x1::Float64)
-#         if l > min(n_x1, design.n[x1 + 1]) - n1 # not possible
-#             return 0.0
-#         end
-#         if n_x1 < design.n[x1 + 1] # new design has smaller value
-#             # catch c = +- Inf
-#             if design.c[x1 + 1] == -Inf
-#                 return(1.0)
-#             end
-#             if design.c[x1 + 1] == Inf
-#                 return(0.0)
-#             end
-#             return 1 - Distributions.cdf(Distributions.Binomial(design.n[x1 + 1] - n_x1, design.parameters.p0), design.c[x1 + 1] - x1 - l) # TODO: replace
-#         else
-#             if x1 + l <= design.c[x1 + 1]
-#                 return 0.0
-#             else
-#                 return 1.0
-#             end
-#         end
-#     end
-#     for x1 in x1obs:(x1obs + nna1)
-#         for l in (xobs - x1obs):(xobs - x1obs + nna - nna1)
-#             @constraint(m,
-#                 sum{
-#                     y[x1, n, c]*(lhs(x1, l, n, c) - rhs(x1, l, n, c)),
-#                     n = n1:nmax,
-#                     c = [-Inf; 0:(nmax - 1); Inf]
-#                 } <= 0.0
-#             )
-#         end
-#     end
-#     return m, y
-# end
-# function _addConditionalTypeTwoErrorRateStageOneConstraint{T<:PointAlternative}(m, y, n1obs, x1obs, nna1, design, parameters::T)
-#     n1old = getInterimSampleSize(design)
-#     nmax  = parameters.nmax
-#     if n1old < n1obs
-#         for x1 in x1obs:(x1obs + nna1)
-#             @constraint(m,
-#                 sum{
-#                     Distributions.pdf(Distributions.Binomial(n1obs - n1old, parameters.p1), j)*_cpr(x1 + j, n1obs, n, c, parameters.p1)*y[x1 + j, n, c],
-#                     j = 0:(n1obs - n1old),
-#                     n = n1obs:nmax,
-#                     c = [-Inf; 0:(nmax - 1); Inf]
-#                 } >= _cpr(x1, n1old, getSampleSize(design, x1), getRejectionBoundary(design, x1), parameters.p1)
-#             )
-#         end
-#     end
-#     if n1old > n1obs
-#         for x1 in x1obs:(x1obs + nna1)
-#             @constraint(m,
-#                 sum{
-#                     _cpr(x1, n1obs, n, c, parameters.p1)*y[x1, n, c],
-#                     n = n1obs:nmax,
-#                     c = [-Inf; 0:(nmax - 1); Inf]
-#                 } >= sum([Distributions.pdf(Distributions.Binomial(n1old - n1obs, parameters.p1), j)*_cpr(x1 + j, n1old, getSampleSize(design, x1 + j), getRejectionBoundary(design, x1 + j), parameters.p1) for j in 0:(n1old - n1obs)])
-#             )
-#         end
-#     end
-#     return m, y
-# end
-#
+function _addconditionaltypeonestagetwoconstraint(
+    m, y, n1, x1obs, nna1, xobs, nna, design
+)
+    params = parameters(design)
+    p0     = null(params)
+    n1old  = interimsamplesize(design)
+    nmax   = maxsamplesize(params)
+    nvals  = n1old:nmax
+    cvalsfinite = 0:(nmax - 1)
+    if allowsstoppingforefficacy(params)
+        cvals = [-Inf; cvalsfinite; Inf]
+        cvalsinfinite = [-Inf; Inf]
+    else
+        cvals = [cvalsfinite; Inf]
+        cvalsinfinite = [Inf]
+    end
+    function lhs(x1::Int64, l::Int64, n_x1::Int64, c_x1::Float64) # c must accept float for +- Inf
+        if l > min(n_x1, samplesize(design, x1)) - n1 # not possible
+            return 0.0
+        end
+        if n_x1 <= samplesize(design, x1) # new design has smaller value
+            if x1 + l <= c_x1
+                return 0.0
+            else
+                return 1.0
+            end
+        else
+            # catch c = +- Inf
+            if c_x1 == -Inf
+                return(1.0)
+            end
+            if c_x1 == Inf
+                return(0.0)
+            end
+            return 1 - Distributions.cdf(Distributions.Binomial(n_x1 - samplesize(design, x1), p0), c_x1 - x1 - l) # TODO: replace
+        end
+    end
+    # rhs
+    function rhs(x1::Int64, l::Int64, n_x1::Int64, c_x1::Float64)
+        if l > min(n_x1, samplesize(design, x1)) - n1 # not possible
+            return 0.0
+        end
+        if n_x1 < samplesize(design, x1) # new design has smaller value
+            # catch c = +- Inf
+            if samplesize(design, x1) == -Inf
+                return(1.0)
+            end
+            if criticalvalue(design, x1) == Inf
+                return(0.0)
+            end
+            return 1 - Distributions.cdf(Distributions.Binomial(samplesize(design, x1) - n_x1, p0), samplesize(design, x1) - x1 - l) # TODO: replace
+        else
+            if x1 + l <= samplesize(design, x1)
+                return 0.0
+            else
+                return 1.0
+            end
+        end
+    end
+    for x1 in x1obs:(x1obs + nna1)
+        for l in (xobs - x1obs):(xobs - x1obs + nna - nna1)
+            @constraint(m,
+                sum(y[x1, n, c]*(lhs(x1, l, n, c) - rhs(x1, l, n, c)) for
+                    n in nvals,
+                    c in cvals
+                ) <= 0.0
+            )
+        end
+    end
+    return m, y
+end
+
 function _addinvarianceimputationstageoneconstraint(
     m, y, n1obs, x1obs, nna1, design
 )
