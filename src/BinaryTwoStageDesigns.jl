@@ -40,6 +40,7 @@ export SampleSpace,
 export SimpleMinimalExpectedSampleSize,
     IsGroupSequential, GroupSequential, NotGroupSequential,
     StoppingForEfficacy, AllowStoppingForEfficacy, NoStoppingForEfficacy,
+    HasMonotoneConditionalPower, MonotoneConditionalPower, NoMonotoneConditionalPower,
     minconditionalpower
 
 # include optimal

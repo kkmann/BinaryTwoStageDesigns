@@ -21,7 +21,8 @@ end
 type SimpleMinimalExpectedSampleSize{
         T_samplespace<:SampleSpace,
         T_gs<:IsGroupSequential,
-        T_eff<:StoppingForEfficacy
+        T_eff<:StoppingForEfficacy,
+        T_mcp<:HasMonotoneConditionalPower
 } <: PointAlternative
     samplespace::T_samplespace
     p0
@@ -50,7 +51,8 @@ function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
     pess;
     minconditionalpower::Real = 0.0,
     GROUPSEQUENTIAL::Bool     = false,
-    STOPPINGFOREFFICACY::Bool = true
+    STOPPINGFOREFFICACY::Bool = true,
+    MONOTONECONDITIONALPOWER::Bool = false
 )
     T_gs = NotGroupSequential
     if GROUPSEQUENTIAL
@@ -60,14 +62,19 @@ function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
     if !STOPPINGFOREFFICACY
         T_eff = NoStoppingForEfficacy
     end
-    SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff}(
+    T_mcp = NoMonotoneConditionalPower
+    if MONOTONECONDITIONALPOWER
+        T_mcp = MonotoneConditionalPower
+    end
+    SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}(
         samplespace, p0, p1, alpha, beta, pess, minconditionalpower
     )
 end
 
 maxsamplesize(params::SimpleMinimalExpectedSampleSize) = maxsamplesize(params.samplespace)
-allowsstoppingforefficacy{T_samplespace, T_gs, T_eff}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff}) = T_eff == AllowStoppingForEfficacy ? true : false
-isgroupsequential{T_samplespace, T_gs, T_eff}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff}) = T_gs == GroupSequential ? true : false
+allowsstoppingforefficacy{T_samplespace, T_gs, T_eff, T_mcp}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}) = T_eff == AllowStoppingForEfficacy ? true : false
+isgroupsequential{T_samplespace, T_gs, T_eff, T_mcp}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}) = T_gs == GroupSequential ? true : false
+hasmonotoneconditionalpower{T_samplespace, T_gs, T_eff, T_mcp}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}) = T_mcp == MonotoneConditionalPower ? true : false
 minconditionalpower(params::SimpleMinimalExpectedSampleSize) = params.mincondpower
 
 function _createProblem{T<:Integer}(
@@ -111,6 +118,15 @@ function _createProblem{T<:Integer}(
     )
     # add conditional type two error rate constraint (power)
     for x1 in 0:n1
+        # ensure monotonicity if required
+        if x1 > 0 & hasmonotoneconditionalpower(params)
+            @constraint(m,
+                sum(_cpr(x1, n1, n, c, p1)*(y[x1, n, c] - y[x1, n, c]) for
+                    n  in nvals,
+                    c  in cvals
+                ) >= 0
+            )
+        end
         @constraint(m,
             sum(_cpr(x1, n1, n, c, p1)*y[x1, n, c] for
                 n  in nvals,

@@ -18,6 +18,14 @@
     )
     design = getoptimaldesign(15, params, solver)
     println(convert(DataFrames.DataFrame, design))
+    println(power.(design, 0:15, .4))
+
+    params = SimpleMinimalExpectedSampleSize(
+        ss, .2, .4, .05, .2, .4, MONOTONECONDITIONALPOWER = true
+    )
+    design = getoptimaldesign(15, params, solver)
+    println(convert(DataFrames.DataFrame, design))
+    println(power.(design, 0:15, .4))
 
     params = SimpleMinimalExpectedSampleSize(
         ss, .2, .4, .05, .2, .4, minconditionalpower = .7
