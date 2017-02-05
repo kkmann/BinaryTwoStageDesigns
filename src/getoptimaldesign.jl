@@ -12,6 +12,7 @@ function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
         error("no feasible solution reached")
     end
     design = _extractSolution(y, n1, parameters) # c.f. util.jl
+    _isfeasible(design, parameters) ? nothing : error("solution infeasible")        
     return design
 end
 

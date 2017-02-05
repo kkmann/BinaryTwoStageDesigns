@@ -9,15 +9,37 @@
         Heuristics = .25,
         NumericFocus = 3,
         Threads = 2,
-        MIPFocus = 1
-        #OutputFlag = 0 # TODO might not be a good idea...
+        MIPFocus = 1,
+        TimeLimit = 900
     )
+
     params = SimpleMinimalExpectedSampleSize(
-        ss, .2, .4, .05, .2, .4, Unimodal, StoppingForEfficacy
+        ss, .2, .4, .05, .2, .4
     )
-    m, y = BinaryTwoStageDesigns._createProblem(10, params)
     design = getoptimaldesign(15, params, solver)
     println(convert(DataFrames.DataFrame, design))
-    #getoptimaldesign(params, solver)
 
+    params = SimpleMinimalExpectedSampleSize(
+        ss, .2, .4, .05, .2, .4, minconditionalpower = .7
+    )
+    design = getoptimaldesign(15, params, solver)
+    println(convert(DataFrames.DataFrame, design))
+
+    params = SimpleMinimalExpectedSampleSize(
+        ss, .2, .4, .05, .2, .4, STOPPINGFOREFFICACY = false
+    )
+    design = getoptimaldesign(15, params, solver)
+    println(convert(DataFrames.DataFrame, design))
+
+    params = SimpleMinimalExpectedSampleSize(
+        ss, .2, .4, .05, .2, .4, GROUPSEQUENTIAL = true
+    )
+    design = getoptimaldesign(15, params, solver)
+    println(convert(DataFrames.DataFrame, design))
+
+    params = SimpleMinimalExpectedSampleSize(
+        ss, .2, .4, .05, .2, .4, GROUPSEQUENTIAL = true, STOPPINGFOREFFICACY = false
+    )
+    design = getoptimaldesign(15, params, solver)
+    println(convert(DataFrames.DataFrame, design))
 end

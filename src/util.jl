@@ -4,50 +4,41 @@ with only minimal constraints (contiguous stopping, unimodal n(x1)) and
 functional constraint
 """
 function _createBaseProblem(n1, params) # regularize by penalizing total variation  of c and n
-    reg = regularization(params)
-    eff = efficacy(params)
     ss  = samplespace(params)
     !possible(n1, ss) ? throw(InexactError()) : nothing
     nmax = maxsamplesize(ss)
     nvals = n1:nmax
-    if eff == StoppingForEfficacy
-        cvals = [-Inf; 0:(nmax - 1); Inf]
+    cvalsfinite = 0:(nmax - 1)
+    if allowsstoppingforefficacy(params)
+        cvals = [-Inf; cvalsfinite; Inf]
+        cvalsinfinite = [-Inf; Inf]
+    else
+        cvals = [cvalsfinite; Inf]
+        cvalsinfinite = [Inf]
     end
-    if eff == NoStoppingForEfficacy
-        cvals = [0:(nmax - 1); Inf]
-    end
+
     m = Model()
     @variable(m, # indicator variables y[x1, n, c] == 1 iff n(x1) = n, c(x1) = c
         y[x1 = 0:n1, n = nvals, c = cvals],
         Bin
     )
-    @variable(m, # dummy variables for unimodality of c
-        _is_mode_c[x1 = 0:n1],
-        Bin
-    )
-    if reg == Unimodal
+    if !isgroupsequential(params)
         @variable(m, # dummy variables for unimodality
             _is_mode[x1 = 0:n1],
             Bin
         )
-    end
-    if reg == GroupSequential
-        @variable(m, # dummy variables for sample size
-            samplesize[n = nvals],
+    else
+        @variable(m, # dummy variables for sample size and critical value
+            cont[x1 = 0:n1],
             Bin
-        )
-        @constraint(m,
-            sum(samplesize[n] for n in nvals) == 1
-        )
-        @variable(m, # dummy variables for critical value
-            criticalvalue[c = cvals],
-            Bin
-        )
-        @constraint(m,
-            sum(criticalvalue[c] for c in 0:(nmax - 1)) == 1
         )
     end
     for x1 in 0:n1
+        if isgroupsequential(params)
+            @constraint(m, # lhs is one if design continues at x1
+                sum(y[x1, n, c] for n in nvals, c in cvalsinfinite) - (1 - cont[x1]) == 0
+            )
+        end
         @constraint(m, # functional constraint: exactly one non-zero entry in (y) per x1
             sum(y[x1, n, c] for n in nvals, c in cvals) == 1
         )
@@ -59,7 +50,7 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
                 y[x1 - 1, n1, Inf] - y[x1, n1, Inf] >= 0
             )
         end
-        if (x1 < n1) & (eff == StoppingForEfficacy)
+        if (x1 < n1) & allowsstoppingforefficacy(params)
             # if y[x1, n1, -Inf] = 1 (stopping for eff at x1),
             # then y[x1 + 1, n1, -Inf] = 1 must hold too (for x1 = 0:(n1 - 1))
             # if y[x1, n1, -Inf] = 0 the constraint is trivially fulfilled
@@ -69,33 +60,52 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
         end
         for n in nvals
             for c in cvals
+                if isfinite(c)
+                    if c >= n
+                        @constraint(m, y[x1, n, c] == 0)
+                    end
+                    if !(isgroupsequential(params) & !allowsstoppingforefficacy(params))
+                        # we need this restriction as group sequential with
+                        # no stopping for efficacy otheriwse implies c >= n1
+                        # which is senseless
+                        if c - x1 >= n - n1 # x1 + x2 > c impossible
+                            @constraint(m, y[x1, n, c] == 0)
+                        end
+                    end
+                end
                 # no second stage but no early stopping or second stage but non-finite c or too low c
-                if (isfinite(c) & (n == n1)) | (!isfinite(c) & (n > n1)) | ((c < x1) & (n > n1))
-                    @constraint(m,
-                        y[x1, n, c] == 0
-                    )
+                if isfinite(c) & (n == n1)
+                    @constraint(m, y[x1, n, c] == 0)
+                end
+                if !isfinite(c) & (n > n1)
+                    @constraint(m, y[x1, n, c] == 0)
+                end
+                if ( (c < x1) & (n > n1) ) & !(isgroupsequential(params) & !allowsstoppingforefficacy(params))
+                    @constraint(m, y[x1, n, c] == 0)
                 end
                 if !possible(n1, n, ss) # sample space constraints
                     @constraint(m,
                         y[x1, n, c] == 0
                     )
                 end
-                if (reg == GroupSequential) & isfinite(c)
-                    @constraint(m, # n must equal the common sample size upon continuation
-                        y[x1, n, c] - samplesize[n] == 0
-                    )
-                    @constraint(m, # c must equal the common critical value upon continuation
-                        y[x1, n, c] - criticalvalue[c] == 0
-                    )
+                if isgroupsequential(params) & isfinite(c)
+                    if x1 < n1
+                        @constraint(m, # n, c must be equal for all x1 with finite c
+                            y[x1, n, c] - y[x1 + 1, n, c] - (2 - cont[x1] - cont[x1 + 1]) <= 0
+                        )
+                        @constraint(m, # n, c must be equal for all x1 with finite c
+                            y[x1, n, c] - y[x1 + 1, n, c] + (2 - cont[x1] - cont[x1 + 1]) >= 0
+                        )
+                    end
                 end
             end
         end
-        if reg == Unimodal
+        if !isgroupsequential(params)
             for x1_ in 1:x1
                 @constraint(m,
                     sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
                         n in (n1 + 1):nmax,
-                        c in 0:(nmax - 1)
+                        c in cvalsfinite
                     ) - 3*nmax*_is_mode[x1] >= -3*nmax
                 )
             end
@@ -103,32 +113,13 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
                 @constraint(m,
                     sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
                         n in (n1 + 1):nmax,
-                        c in 0:(nmax - 1)
+                        c in cvalsfinite
                     ) + 3*nmax*_is_mode[x1] <= 3*nmax
                 )
             end
         end
-        for x1_ in 1:x1
-            @constraint(m,
-                sum(c*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
-                    n in (n1 + 1):nmax,
-                    c in 0:(nmax - 1)
-                ) - 3*nmax*_is_mode_c[x1] >= -3*nmax
-            )
-        end
-        for x1_ in (x1 + 1):n1
-            @constraint(m,
-                sum(c*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
-                    n in (n1 + 1):nmax,
-                    c in 0:(nmax - 1)
-                ) + 3*nmax*_is_mode_c[x1] <= 3*nmax
-            )
-        end
     end
-    @constraint(m, # unimodality
-        sum(_is_mode_c[x1] for x1 in 0:n1) >= 1 # at least one mode (can be on boundary as well!)
-    )
-    if reg == Unimodal
+    if !isgroupsequential(params)
         @constraint(m, # unimodality
             sum(_is_mode[x1] for x1 in 0:n1) >= 1 # at least one mode (can be on boundary as well!)
         )
@@ -138,13 +129,11 @@ end
 
 function _extractSolution(y, n1, params)
     ss = samplespace(params)
-    eff = efficacy(params)
     nmax = maxsamplesize(ss)
     nvals = n1:nmax
-    if eff == StoppingForEfficacy
+    if allowsstoppingforefficacy(params)
         cvals = [-Inf; 0:(nmax - 1); Inf]
-    end
-    if eff == NoStoppingForEfficacy
+    else
         cvals = [0:(nmax - 1); Inf]
     end
     nvec = zeros(Int64, n1 + 1)

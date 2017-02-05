@@ -15,7 +15,8 @@ import MathProgBase
 
 
 # include("Parameters.jl")
-export Parameters, samplespace, maxsamplesize, efficacy, regularization,
+export Parameters, samplespace, maxsamplesize, isgroupsequential, allowsstoppingforefficacy,
+    NoParameters,
     PointAlternative, null, alpha, alternative, beta,
     VagueAlternative, prior
 
@@ -23,8 +24,7 @@ export Parameters, samplespace, maxsamplesize, efficacy, regularization,
 # include("BinaryTwoStageDesign.jl")
 export AbstractBinaryTwoStageDesign,
     BinaryTwoStageDesign,
-        interimsamplesize, samplesize, criticalvalue, getRejectionBoundary,
-        conditionalpower, power, test, pdf,
+        interimsamplesize, samplesize, criticalvalue, getRejectionBoundary, power, test, pdf,
         simulate
 
 
@@ -36,47 +36,15 @@ export SampleSize
 export SampleSpace,
     SimpleSampleSpace, interimsamplesizerange, maxsamplesize, possible
 
-
-abstract Regularization
-type GroupSequential <: Regularization
-end
-type Unimodal <: Regularization
-end
-abstract Efficacy
-type NoStoppingForEfficacy <: Efficacy
-end
-type StoppingForEfficacy <: Efficacy
-end
-export Regularization, GroupSequential, Unimodal,
-    Efficacy, NoStoppingForEfficacy, StoppingForEfficacy
-
 # include("SimpleMinimalExpectedSampleSize")
-export SimpleMinimalExpectedSampleSize
+export SimpleMinimalExpectedSampleSize,
+    IsGroupSequential, GroupSequential, NotGroupSequential,
+    StoppingForEfficacy, AllowStoppingForEfficacy, NoStoppingForEfficacy,
+    minconditionalpower
 
 # include optimal
 export getoptimaldesign
 
-export MinimalExpectedSampleSizePointAlternative,
-    MinimalExpectedSampleSizeVagueAlternative
-
-
-export optimalDesign, OptimalBinaryTwoStageDesign
-
-export StageOneAdaptedOptimalBinaryTwoStageDesign,
-    StageTwoAdaptedOptimalBinaryTwoStageDesign, adapt
-
-export BinaryTwoStageDesignEstimator, getDesign, estimate, p, bias, rmse
-
-export MaximumLikelihoodEstimator
-
-export RaoBlackwellizedEstimator
-
-export CompatibleEstimator, jeffreysPrior
-
-export BinaryTwoStageDesignConfidenceInterval, limits, getConfidence, getDesign,
-    coverage
-
-export ClopperPearsonConfidenceInterval
 
 include("Parameters.jl")
 include("BinaryTwoStageDesign.jl")

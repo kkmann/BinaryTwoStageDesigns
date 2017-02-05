@@ -20,6 +20,8 @@
         simonsDesign( 4,  6, 22, 27) # p0 = 0.7
     ]
 
+    @test typeof(sd[1]) == BinaryTwoStageDesign{typeof(1), typeof(Inf), NoParameters}
+
     @testset "show() and convert()" begin
         println("testing whether show() and convert() methods can be called ... ")
         originalSTDOUT = STDOUT

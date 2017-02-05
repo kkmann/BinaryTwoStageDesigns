@@ -12,10 +12,8 @@ alpha(par::Parameters) = try par.alpha catch error("not implemented") end
 
 samplespace(par::Parameters) = try par.samplespace catch error("not implemeted") end
 maxsamplesize(par::Parameters) = error("not implemented")
-regularization(par::Parameters) = error("not implemented")
-efficacy(par::Parameters) = error("not implemented")
-
-
+isgroupsequential(par::Parameters) = error("not implemented")
+allowsstoppingforfutility(par::Parameters) = error("not implemented")
 
 
 type NoParameters <: Parameters
@@ -24,7 +22,6 @@ null(par::NoParameters) = error("NoParameters do not have null hypothesis")
 alpha(par::NoParameters) = error("NoParameters do not have alpha")
 samplespace(par::NoParameters) = error("NoParameters do not have sample space")
 maxsamplesize(par::NoParameters) = error("NoParameters do not have maximal sample size")
-
 
 
 

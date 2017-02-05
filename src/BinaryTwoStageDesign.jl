@@ -77,7 +77,7 @@ function pdf{T1<:Integer, T2<:Real}(
 end
 
 
-function conditionalpower{T1<:Integer, T2<:Real}(
+function power{T1<:Integer, T2<:Real}(
     design::AbstractBinaryTwoStageDesign, x1::T1, p::T2
 )
     checkp(p)
@@ -90,14 +90,12 @@ function conditionalpower{T1<:Integer, T2<:Real}(
         p
     )
 end
-
-
 function power{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
     checkp(p)
     n1      = interimsamplesize(design)
     X1      = Distributions.Binomial(n1, p) # stage one responses
     x1range = collect(0:n1)
-    return vecdot(Distributions.pdf(X1, x1range), conditionalpower.(design, x1range, p))
+    return vecdot(Distributions.pdf(X1, x1range), power.(design, x1range, p))
 end
 
 
@@ -153,7 +151,7 @@ end
 
 checkp{T<:Real}(p::T) = (0.0 > p) & (p > 1.0) ? throw(InexactError("p must be in [0, 1]")) : nothing
 
-function _cpr{T1<:Integer, T2<:Real}(x1::T1, n1::T1, n::T1, c::T2, p::T2)::T2
+function _cpr(x1, n1, n, c, p)
     # conditional probability to reject
     if x1 > c
         return(1.0)
