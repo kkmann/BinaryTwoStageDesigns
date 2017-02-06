@@ -1,4 +1,4 @@
-@testset "BinaryTwoStageDesigns" begin
+@testset "testing binary two-stage design type" begin
 
     function simonsDesign(r1, n1, r, n)
         nvec = [[n1 for x1 in 0:r1]; [n for x1 in (r1 + 1):n1]]

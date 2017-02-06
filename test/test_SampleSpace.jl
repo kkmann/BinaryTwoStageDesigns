@@ -1,4 +1,4 @@
-@testset "SimpleSampleSpace" begin
+@testset "testing simple sample space type" begin
 
     ss = SimpleSampleSpace(collect(5:10), 25)
 

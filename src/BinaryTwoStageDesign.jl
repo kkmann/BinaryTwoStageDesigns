@@ -132,6 +132,7 @@ end
 
 
 score(design::AbstractBinaryTwoStageDesign, params::Parameters)::Real = error("not implemented")
+score(design::AbstractBinaryTwoStageDesign)::Real = score(design, parameters(design))
 
 
 

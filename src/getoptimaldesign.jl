@@ -1,8 +1,10 @@
 function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
     n1::T,
     parameters::Parameters,
-    solver::TS
+    solver::TS;
+    VERBOSE::Integer = 0
 )
+    VERBOSE > 0 ? tic() : nothing
     possible(n1, samplespace(parameters)) ? nothing : throw(InexactError())
     # define problem
     m, y = _createProblem(n1, parameters)
@@ -12,23 +14,30 @@ function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
         error("no feasible solution reached")
     end
     design = _extractSolution(y, n1, parameters) # c.f. util.jl
-    _isfeasible(design, parameters) ? nothing : error("solution infeasible")        
+    _isfeasible(design, parameters) ? nothing : error("solution infeasible")
+    VERBOSE > 0 ? toc() : nothing
+    VERBOSE > 0 ? println(status) : nothing
     return design
 end
 
-# function getoptimaldesign(parameters::Parameters)
-#     designs = pmap(
-#         n1 -> try
-#             getoptimaldesign(n1, parameters)
-#         catch e
-#             println(e)
-#         end,
-#         interimsamplesizerange(samplespace(parameters))
-#     )
-#     scores = map(design -> try parameters.score(design) catch e Inf end, designs) # if score cannot be computed, probably infeasible > Inf
-#     return designs[findmin(scores)[2]], Dict(
-#         "n1"      => collect(parameters.n1range),
-#         "scores"  => scores,
-#         "designs" => designs
-#     )
-# end
+function getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}(
+    parameters::Parameters,
+    solver::TS;
+    VERBOSE::Integer = 1
+)
+    n1range = interimsamplesizerange(samplespace(parameters))
+    designs = pmap(
+        n1 -> try
+            getoptimaldesign(n1, parameters, solver, VERBOSE = VERBOSE)
+        catch e
+            println(e)
+        end,
+        n1range
+    )
+    scores = map(design -> try score(design) catch e Inf end, designs) # if score cannot be computed, probably infeasible > Inf
+    return designs[findmin(scores)[2]], Dict(
+        "n1"      => n1range,
+        "scores"  => scores,
+        "designs" => designs
+    )
+end

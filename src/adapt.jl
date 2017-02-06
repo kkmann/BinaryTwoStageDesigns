@@ -17,7 +17,7 @@ function adapt{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
     # check that stage is only 1, 2 (cannot be missing)
     all([s in [1 2] for s in stage]) ? nothing : throw(InexactError())
     n1planned = interimsamplesize(design)
-    nmax   = maxsamplesize(params)
+    nmax      = maxsamplesize(params)
     n1obs     = length(stage[stage .== 1])
     n1min     = min(n1planned, n1obs)
     x1obs     = outcome[stage .== 1] |> x -> x[!DataArrays.isna(x)] |> sum

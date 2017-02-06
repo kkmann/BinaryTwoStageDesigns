@@ -72,10 +72,19 @@ function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
 end
 
 maxsamplesize(params::SimpleMinimalExpectedSampleSize) = maxsamplesize(params.samplespace)
+
 allowsstoppingforefficacy{T_samplespace, T_gs, T_eff, T_mcp}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}) = T_eff == AllowStoppingForEfficacy ? true : false
+
 isgroupsequential{T_samplespace, T_gs, T_eff, T_mcp}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}) = T_gs == GroupSequential ? true : false
+
 hasmonotoneconditionalpower{T_samplespace, T_gs, T_eff, T_mcp}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}) = T_mcp == MonotoneConditionalPower ? true : false
+
 minconditionalpower(params::SimpleMinimalExpectedSampleSize) = params.mincondpower
+
+function score{T_P<:SimpleMinimalExpectedSampleSize}(design::AbstractBinaryTwoStageDesign, params::T_P)
+    n = SampleSize(design, params.pess)
+    return mean(n)
+end
 
 function _createProblem{T<:Integer}(
     n1::T,      # stage one sample size
@@ -139,7 +148,7 @@ function _createProblem{T<:Integer}(
     end
     # add optimality criterion
     @objective(m, Min,
-        sum(dbinom(x1, n1, p1)*n*y[x1, n, c] for
+        sum(dbinom(x1, n1, params.pess)*n*y[x1, n, c] for
             x1 in 0:n1,
             n  in nvals,
             c  in cvals
