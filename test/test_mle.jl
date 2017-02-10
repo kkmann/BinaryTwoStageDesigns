@@ -25,7 +25,10 @@
             (supp[:, 1] + supp[:, 2])./samplesize.(design, supp[:, 1])
     )
     @test_approx_eq_eps(maximum(abs(bias.(ube, linspace(0, 1)))), 0.0, 1e-10)
-    prinln("how do i test this?")
+    println("how do i test this?")
     println(bias.(cpe, linspace(0, 1, 10)))
     println(rmse.(cpe, linspace(0, 1, 10)))
+    println(incompatibleoutcomes(mle))
+    println(incompatibleoutcomes(ube))
+    println(incompatibleoutcomes(cpe))
 end

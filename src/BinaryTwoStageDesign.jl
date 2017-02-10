@@ -101,7 +101,7 @@ end
 
 function test{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T, x2::T)::Bool
     checkx1x2(x1, x2, design)
-    return x1 + x2 > criticalvalue(design, x1) ? true : false
+    return x1 + x2 > criticalvalue(design, x1)
 end
 
 

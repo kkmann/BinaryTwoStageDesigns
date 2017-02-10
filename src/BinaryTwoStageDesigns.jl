@@ -51,17 +51,16 @@ export adapt
 
 # include ("estimate.jl")
 export BinaryTwoStageDesignEstimator,
-    design, estimate, p, bias, rmse,
+    design, estimate, p, bias, rmse, incompatibleoutcomes,
     MaximumLikelihoodEstimator, # include("Estimators/mle.jl")
     RaoBlackwellizedEstimator, # inlcude("Estimators/rbe.jl")
-    jeffreysPrior, CompatibleEstimator
+    jeffreysprior, CompatibleEstimator
 
 include("Parameters.jl")
 include("BinaryTwoStageDesign.jl")
 include("SampleSize.jl")
 include("SampleSpace.jl")
 include("Parameters/SimpleMinimalExpectedSampleSize.jl")
-
 include("util.jl")
 include("getoptimaldesign.jl")
 include("adapt.jl")
