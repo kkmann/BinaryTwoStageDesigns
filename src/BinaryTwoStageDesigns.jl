@@ -41,7 +41,8 @@ export SimpleMinimalExpectedSampleSize,
     IsGroupSequential, GroupSequential, NotGroupSequential,
     StoppingForEfficacy, AllowStoppingForEfficacy, NoStoppingForEfficacy,
     HasMonotoneConditionalPower, MonotoneConditionalPower, NoMonotoneConditionalPower,
-    minconditionalpower
+    minconditionalpower,
+    MinimalMinimalExpectedSampleSize
 
 # include ("optimal.jl")
 export getoptimaldesign
@@ -65,6 +66,7 @@ include("Parameters.jl")
 include("BinaryTwoStageDesign.jl")
 include("SampleSize.jl")
 include("SampleSpace.jl")
+include("Parameters/MinimalMinimalExpectedSampleSize.jl")
 include("Parameters/SimpleMinimalExpectedSampleSize.jl")
 include("util.jl")
 include("getoptimaldesign.jl")

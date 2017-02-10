@@ -157,7 +157,6 @@ function _createProblem{T<:Integer}(
     return m, y
 end
 
-# TODO: expand and make compulsory!
 function _isfeasible(design::BinaryTwoStageDesign, params::SimpleMinimalExpectedSampleSize)
     all(power.(design, linspace(0, null(params))) .<= alpha(params) + .001) ? nothing : throw(InexactError())
     all(power.(design, linspace(alternative(params), 1)) .>= 1 - beta(params) - .001) ? nothing : throw(InexactError())

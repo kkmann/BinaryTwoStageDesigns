@@ -15,4 +15,6 @@ using Base.Test
 
 # include("test_mle.jl")
 
-include("test_ci.jl")
+# include("test_ci.jl")
+
+include("test_tmp.jl")
