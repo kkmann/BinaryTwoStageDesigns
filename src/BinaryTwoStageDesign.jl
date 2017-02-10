@@ -135,6 +135,29 @@ score(design::AbstractBinaryTwoStageDesign, params::Parameters)::Real = error("n
 score(design::AbstractBinaryTwoStageDesign)::Real = score(design, parameters(design))
 
 
+function jeffreysprior(design::AbstractBinaryTwoStageDesign)
+    function sqrtfi(p::Float64)::Float64
+        res  = 0.0
+        n1   = interimsamplesize(design)
+        nmax = maximum(samplesize(design))
+        supp = support(design)
+        for i in 1:size(supp, 1)
+            x1, x2 = supp[i, 1], supp[i, 2]
+            x   = x1 + x2
+            n   = samplesize(design, x1)
+            res += binomial(BigInt(n1), BigInt(x1))*binomial(BigInt(n - n1), BigInt(x2))*BigFloat(p^x*(1 - p)^(n - x)*(x/p - (n - x)/(1 - p))^2)
+        end
+        return sqrt(res)
+    end
+    z = quadgk(sqrtfi, 0, 1, abstol = 0.001)[1] # exact integration from 0 to 1 is expensive!
+    function prior{T<:Real}(p::T)::Float64
+        checkp(p)
+        return sqrtfi(p)/z
+    end
+    return prior
+end
+
+
 
 # utility functions
 function checkx1{T<:Integer}(x1::T, design::AbstractBinaryTwoStageDesign)
@@ -148,6 +171,21 @@ function checkx1x2{T<:Integer}(x1::T, x2::T, design::AbstractBinaryTwoStageDesig
     n1 = interimsamplesize(design)
     n2 = samplesize(design, x1) - n1
     x2 > n2 ? throw(InexactError("x2 must be smaller or equal to n2")) : nothing
+end
+
+function ispossible{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T, x2::T)
+    res = x1 < 0 ? false : true
+    res = x1 > interimsamplesize(design) ? false : true
+    res = x2 < 0 ? false : true
+    res = x2 > samplesize(design, x1) - interimsamplesize(design) ? false : true
+end
+
+function support(design::AbstractBinaryTwoStageDesign)
+    n1     = interimsamplesize(design)
+    nmax   = maximum(samplesize(design))
+    return [[x1, x2] for x1 in 0:n1, x2 in 0:(nmax - n1) if
+        (x2 <= samplesize(design, x1) - n1) & ((samplesize(design, x1) > n1) | (x2 == 0))
+    ] |> x-> hcat(x...)'
 end
 
 checkp{T<:Real}(p::T) = (0.0 > p) & (p > 1.0) ? throw(InexactError("p must be in [0, 1]")) : nothing

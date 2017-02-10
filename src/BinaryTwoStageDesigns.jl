@@ -24,8 +24,8 @@ export Parameters, samplespace, maxsamplesize, isgroupsequential, allowsstopping
 # include("BinaryTwoStageDesign.jl")
 export AbstractBinaryTwoStageDesign,
     BinaryTwoStageDesign,
-        parameters, interimsamplesize, samplesize, criticalvalue, getRejectionBoundary, power, test, pdf,
-        simulate
+        parameters, interimsamplesize, samplesize, criticalvalue, power, test, pdf,
+        simulate, support, ispossible
 
 
 # include("SampleSize.jl")
@@ -49,6 +49,12 @@ export getoptimaldesign
 # include ("adapt.jl")
 export adapt
 
+# include ("estimate.jl")
+export BinaryTwoStageDesignEstimator,
+    design, estimate, p, bias, rmse,
+    MaximumLikelihoodEstimator, # include("Estimators/mle.jl")
+    RaoBlackwellizedEstimator, # inlcude("Estimators/rbe.jl")
+    jeffreysPrior, CompatibleEstimator
 
 include("Parameters.jl")
 include("BinaryTwoStageDesign.jl")
@@ -59,10 +65,10 @@ include("Parameters/SimpleMinimalExpectedSampleSize.jl")
 include("util.jl")
 include("getoptimaldesign.jl")
 include("adapt.jl")
-# include("estimate.jl")
-# include("estimation/mle.jl")
-# include("estimation/rb.jl")
-# include("estimation/CompatibleEstimator.jl")
+include("estimate.jl")
+include("Estimators/mle.jl")
+include("Estimators/rbe.jl")
+include("Estimators/CompatibleEstimator.jl")
 # include("ConfidenceInterval.jl")
 # include("confidenceintervals/ClopperPearsonConfidenceInterval.jl")
 
