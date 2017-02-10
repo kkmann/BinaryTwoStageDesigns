@@ -1,4 +1,4 @@
-type ClopperPearsonConfidenceInterval <: BinaryTwoStageDesignConfidenceInterval
+type ClopperPearsonConfidenceInterval <: ConfidenceInterval
     estimator::BinaryTwoStageDesignEstimator
     confidence::Float64
 
@@ -6,35 +6,33 @@ type ClopperPearsonConfidenceInterval <: BinaryTwoStageDesignConfidenceInterval
         estimator::BinaryTwoStageDesignEstimator;
         confidence::T = .9
     )
-        @assert 0 < confidence
-        @assert confidence < 1
+        checkp(confidence)
         new(estimator, confidence)
     end
 end
 
+estimator(ci::ClopperPearsonConfidenceInterval) = ci.estimator
+
+design(ci::ClopperPearsonConfidenceInterval) = ci |> estimator |> design
+
+
 function limits{T<:Integer}(ci::ClopperPearsonConfidenceInterval, x1::T, x2::T; k::Integer = 1001)
-    @assert _isInSupport(_support(ci.estimator.design), x1, x2)
-    n1     = getInterimSampleSize(ci.estimator.design)
-    nmax   = maximum(getInterimSampleSize(ci.estimator.design))
+    ispossible(design(ci), x1, x2) ? nothing : throw(InexactError())
+    n1     = interimsamplesize(design(ci))
+    nmax   = maximum(samplesize(design(ci)))
     grid   = collect(linspace(0, 1, k))
-    # it is faster to compute the pvalues by hand...
-    supp = BinaryTwoStageDesigns._support(getDesign(ci))
-    tmp = zeros(Float64, size(supp, 1), k)
-    estimates = zeros(Float64, size(supp, 1))
-    prange = linspace(0, 1, k)
+    supp   = support(design(ci)) # compute p values by hand is faster than calling p()
+    tmp    = zeros(Float64, size(supp, 1), k)
+    estimates = estimate.(estimator(ci), supp[:, 1], supp[:, 2])
     for i in 1:size(supp, 1)
-        estimates[i] = estimate(ci.estimator, supp[i, 1], supp[i, 2])
-        for j in 1:k
-            tmp[i, j] = probability(getDesign(ci), supp[i, 1], supp[i, 2], prange[j])
-        end
+        tmp[i, :] = pdf.(design(ci), supp[i, 1], supp[i, 2], linspace(0, 1, k))
     end
-    probs = [supp getSampleSize.(getDesign(ci), supp[:, 1]) estimates tmp]
+    probs = [supp samplesize.(design(ci), supp[:, 1]) estimates tmp]
     probs = sortrows(probs, by = x -> x[4], rev = true) # sort in descending order of estimates
-    # compute pvals for H0: p < p0
+    # compute p vals for H0: p < p0
     pvals_leq = probs |> x -> cumsum(x, 1)
     pvals_leq[:, 1:4] = probs[:, 1:4]
     pvals_leq = pvals_leq[(pvals_leq[:, 1] .== x1) & (pvals_leq[:, 2] .== x2), 5:(k + 4)][1, :]
-
     # compute pvals for H0: p > p0
     pvals_geq = sortrows(probs, by = x -> x[4]) |> x -> cumsum(x, 1)
     pvals_geq[:, 1:4] = sortrows(probs, by = x -> x[4])[:, 1:4]
@@ -55,52 +53,8 @@ function limits{T<:Integer}(ci::ClopperPearsonConfidenceInterval, x1::T, x2::T; 
     if x1 + x2 == 0
         limits[1] = 0.0
     end
-    if x1 + x2 == getSampleSize(ci.estimator.design, x1)
+    if x1 + x2 == samplesize(design(ci), x1)
         limits[2] = 1.0
     end
     return limits
-end
-
-function coverage{T<:Integer}(
-    ci::BinaryTwoStageDesignConfidenceInterval; k::T = 1001
-)
-    design = getDesign(ci)
-    n1     = getInterimSampleSize(design)
-    nmax   = maximum(getSampleSize(design))
-    # construct array of possible outcomes
-    supp   = _support(design)
-    supp = BinaryTwoStageDesigns._support(getDesign(ci))
-    tmp = zeros(Float64, size(supp, 1), k)
-    estimates = zeros(Float64, size(supp, 1))
-    prange = linspace(0, 1, k)
-    for i in 1:size(supp, 1)
-        estimates[i] = estimate(ci.estimator, supp[i, 1], supp[i, 2])
-        for j in 1:k
-            tmp[i, j] = probability(getDesign(ci), supp[i, 1], supp[i, 2], prange[j])
-        end
-    end
-    probs = [supp getSampleSize.(getDesign(ci), supp[:, 1]) estimates tmp]
-    probs = sortrows(probs, by = x -> x[4], rev = true) # sort in descending order of estimates
-    # compute pvals for H0: p < p0
-    pvals_leq = probs |> x -> cumsum(x, 1)
-    pvals_leq[:, 1:4] = probs[:, 1:4]
-    # compute pvals for H0: p > p0
-    pvals_geq = sortrows(probs, by = x -> x[4]) |> x -> cumsum(x, 1)
-    pvals_geq[:, 1:4] = sortrows(probs, by = x -> x[4])[:, 1:4]
-    pvals_geq = sortrows(pvals_geq, by = x -> x[4], rev = true)
-    #
-    tmp2 = (
-        ((pvals_leq[:, 5:(k + 4)] .>= .05) & (pvals_geq[:, 5:(k + 4)] .>= .05)) |
-        ((pvals_leq[:, 5:(k + 4)] .>= .05) & repmat(sum(pvals_leq[:, 1:2], 2) .== 0, 1, k)) |
-        ((pvals_geq[:, 5:(k + 4)] .>= .05) & repmat(sum(pvals_geq[:, 1:2], 2) .== pvals_geq[:, 3], 1, k))
-    )  .* probs[:, 5:(k + 4)] |> x -> sum(x, 1)
-    return DataFrame(presp = linspace(0, 1, k), coverage = tmp2[1, :])
-end
-
-function getEstimator(ci::ClopperPearsonConfidenceInterval)
-    return ci.estimator
-end
-
-function getDesign(ci::ClopperPearsonConfidenceInterval)
-    return ci.estimator.design
 end

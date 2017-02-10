@@ -13,4 +13,6 @@ using Base.Test
 
 # include("test_adaptation.jl")
 
-include("test_mle.jl")
+# include("test_mle.jl")
+
+include("test_ci.jl")

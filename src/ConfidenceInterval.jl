@@ -1,48 +1,29 @@
-abstract BinaryTwoStageDesignConfidenceInterval
+abstract ConfidenceInterval
 
 # these two enable array broadcasting of all methods!
-Base.size(::BinaryTwoStageDesignConfidenceInterval) = ()
-Base.getindex(ci::BinaryTwoStageDesignConfidenceInterval, i) = ci
+Base.size(::ConfidenceInterval) = ()
+Base.getindex(ci::ConfidenceInterval, i) = ci
 
-function limits{T<:Integer}(ci::BinaryTwoStageDesignConfidenceInterval, x1::T, x2::T)
-    error("confidence interval is not implemented!")
-end
+limits{T<:Integer}(ci::ConfidenceInterval, x1::T, x2::T) = error("not implemented!")
 
-function getConfidence(ci::BinaryTwoStageDesignConfidenceInterval)
-    try
-        return ci.confidence
-    catch
-        error("not implemented")
-    end
-end
+confidence(ci::ConfidenceInterval) = try return ci.confidence catch error("not implemented") end
 
-function getDesign(ci::BinaryTwoStageDesignConfidenceInterval)
-    try
-        return ci.design
-    catch
-        error("not implemented")
-    end
-end
+design(ci::ConfidenceInterval) = try return ci.design catch error("not implemented") end
 
-function coverage{T<:Real}(
-    ci::BinaryTwoStageDesignConfidenceInterval,
-    p::T
-)
-    @assert 0 <= p
-    @assert p <= 1
-    design = getDesign(ci)
-    n1     = getInterimSampleSize(design)
-    nmax   = maximum(getSampleSize(design))
-    # construct array of possible outcomes
-    supp   = _support(design)
-    nposs  = size(supp, 1)
+
+function coverage{T<:Real}(ci::ConfidenceInterval, p::T; orientation = "overall") # or upper or lower
+    checkp(p)
+    supp   = support(design(ci))
     res    = 0.0
-    for i in 1:nposs
-        x1 = supp[i, 1]
-        x2 = supp[i, 2]
+    for i in 1:size(supp, 1)
+        x1, x2 = supp[i, :]
         lim = limits(ci, x1, x2)
-        if (lim[1] <= p) & (lim[2] >= p)
-            res += probability(design, x1, x2, p)
+        if (orientation == "overall") & (lim[1] <= p) & (lim[2] >= p)
+            res += pdf(design(ci), x1, x2, p)
+        elseif (orientation == "upper") & (lim[2] >= p)
+            res += pdf(design(ci), x1, x2, p)
+        elseif (orientation == "lower") & (lim[1] <= p)
+            res += pdf(design(ci), x1, x2, p)
         end
     end
     return res

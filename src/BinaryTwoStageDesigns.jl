@@ -56,6 +56,11 @@ export BinaryTwoStageDesignEstimator,
     RaoBlackwellizedEstimator, # inlcude("Estimators/rbe.jl")
     jeffreysprior, CompatibleEstimator
 
+# include("")
+export ConfidenceInterval,
+    limits, confidence, design, coverage,
+    ClopperPearsonConfidenceInterval, estimator
+
 include("Parameters.jl")
 include("BinaryTwoStageDesign.jl")
 include("SampleSize.jl")
@@ -68,7 +73,7 @@ include("estimate.jl")
 include("Estimators/mle.jl")
 include("Estimators/rbe.jl")
 include("Estimators/CompatibleEstimator.jl")
-# include("ConfidenceInterval.jl")
-# include("confidenceintervals/ClopperPearsonConfidenceInterval.jl")
+include("ConfidenceInterval.jl")
+include("ConfidenceIntervals/ClopperPearsonConfidenceInterval.jl")
 
 end # module
