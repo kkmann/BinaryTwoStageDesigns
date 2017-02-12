@@ -1,24 +1,4 @@
-# define types for options
-abstract IsGroupSequential
-type GroupSequential <: IsGroupSequential
-end
-type NotGroupSequential <: IsGroupSequential
-end
-
-abstract StoppingForEfficacy
-type NoStoppingForEfficacy <: StoppingForEfficacy
-end
-type AllowStoppingForEfficacy <: StoppingForEfficacy
-end
-
-abstract HasMonotoneConditionalPower
-type NoMonotoneConditionalPower <: HasMonotoneConditionalPower
-end
-type MonotoneConditionalPower <: HasMonotoneConditionalPower
-end
-
-
-type SimpleMinimalExpectedSampleSize{
+type PoweSampleSizeTradeOff{
         T_samplespace<:SampleSpace,
         T_gs<:IsGroupSequential,
         T_eff<:StoppingForEfficacy,
@@ -29,9 +9,9 @@ type SimpleMinimalExpectedSampleSize{
     p1
     alpha
     beta
-    pess
+    prior
     mincondpower
-    function SimpleMinimalExpectedSampleSize(
+    function PoweSampleSizeTradeOff(
         samplespace,
         p0, p1,
         alpha, beta,
@@ -44,7 +24,7 @@ type SimpleMinimalExpectedSampleSize{
         new(samplespace, p0, p1, alpha, beta, pess, mincondpower)
     end
 end
-function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
+function PoweSampleSizeTradeOff{T_samplespace<:SampleSpace}(
     samplespace::T_samplespace,
     p0, p1,
     alpha, beta,
@@ -66,29 +46,29 @@ function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
     if MONOTONECONDITIONALPOWER
         T_mcp = MonotoneConditionalPower
     end
-    SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}(
+    PoweSampleSizeTradeOff{T_samplespace, T_gs, T_eff, T_mcp}(
         samplespace, p0, p1, alpha, beta, pess, minconditionalpower
     )
 end
 
-maxsamplesize(params::SimpleMinimalExpectedSampleSize) = maxsamplesize(params.samplespace)
+maxsamplesize(params::PoweSampleSizeTradeOff) = maxsamplesize(params.samplespace)
 
-allowsstoppingforefficacy{T_samplespace, T_gs, T_eff, T_mcp}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}) = T_eff == AllowStoppingForEfficacy ? true : false
+allowsstoppingforefficacy{T_samplespace, T_gs, T_eff, T_mcp}(params::PoweSampleSizeTradeOff{T_samplespace, T_gs, T_eff, T_mcp}) = T_eff == AllowStoppingForEfficacy ? true : false
 
-isgroupsequential{T_samplespace, T_gs, T_eff, T_mcp}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}) = T_gs == GroupSequential ? true : false
+isgroupsequential{T_samplespace, T_gs, T_eff, T_mcp}(params::PoweSampleSizeTradeOff{T_samplespace, T_gs, T_eff, T_mcp}) = T_gs == GroupSequential ? true : false
 
-hasmonotoneconditionalpower{T_samplespace, T_gs, T_eff, T_mcp}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}) = T_mcp == MonotoneConditionalPower ? true : false
+hasmonotoneconditionalpower{T_samplespace, T_gs, T_eff, T_mcp}(params::PoweSampleSizeTradeOff{T_samplespace, T_gs, T_eff, T_mcp}) = T_mcp == MonotoneConditionalPower ? true : false
 
-minconditionalpower(params::SimpleMinimalExpectedSampleSize) = params.mincondpower
+minconditionalpower(params::PoweSampleSizeTradeOff) = params.mincondpower
 
-function score{T_P<:SimpleMinimalExpectedSampleSize}(design::AbstractBinaryTwoStageDesign, params::T_P)
+function score{T_P<:PoweSampleSizeTradeOff}(design::AbstractBinaryTwoStageDesign, params::T_P)
     n = SampleSize(design, params.pess)
     return mean(n)
 end
 
 function _createProblem{T<:Integer}(
     n1::T,      # stage one sample size
-    params::SimpleMinimalExpectedSampleSize
+    params::PoweSampleSizeTradeOff
 )
     ss = samplespace(params)
     nmax = maxsamplesize(ss)
@@ -157,7 +137,7 @@ function _createProblem{T<:Integer}(
     return m, y
 end
 
-function _isfeasible(design::BinaryTwoStageDesign, params::SimpleMinimalExpectedSampleSize)
+function _isfeasible(design::BinaryTwoStageDesign, params::PoweSampleSizeTradeOff)
     all(power.(design, linspace(0, null(params))) .<= alpha(params) + .001) ? nothing : throw(InexactError())
     all(power.(design, linspace(alternative(params), 1)) .>= 1 - beta(params) - .001) ? nothing : throw(InexactError())
     return true

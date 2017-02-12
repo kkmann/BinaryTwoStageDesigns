@@ -15,8 +15,10 @@ function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
     end
     design = _extractSolution(y, n1, parameters) # c.f. util.jl
     _isfeasible(design, parameters) ? nothing : error("solution infeasible")
-    VERBOSE > 0 ? toc() : nothing
-    VERBOSE > 0 ? println(status) : nothing
+    if VERBOSE > 0
+        toc()
+        println(@sprintf("n1: %i", n1)) 
+    end
     return design
 end
 

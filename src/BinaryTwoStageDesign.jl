@@ -197,6 +197,18 @@ function _cpr(x1, n1, n, c, p)
     end
     if n - n1 + x1 <= c
         return(0.0)
-    end
+    end # TODO: simplify
     return 1 - Distributions.cdf(Distributions.Binomial(n - n1, p), convert(Int64, c - x1))
+end
+
+function _cprprior(x1, n1, n, c, p0, prior)
+    if x1 > c
+        return 1.0
+    end
+    if n - n1 + x1 <= c
+        return 0.0
+    end
+    z = QuadGK.quadgk(p -> prior(p)*dbinom(c - x1, n - n1, p), p0, 1.0, abstol = 1e-4)[1]
+    cposterior(p) = prior(p)*dbinom(c - x1, n - n1, p)/z
+    return QuadGK.quadgk(p -> cposterior(p)*_cpr(x1, n1, n, c, p), p0, 1.0, abstol = 1e-4)[1]
 end
