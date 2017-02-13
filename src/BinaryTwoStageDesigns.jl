@@ -3,6 +3,7 @@ __precompile__()
 module BinaryTwoStageDesigns
 
 using JuMP
+using QuadGK
 
 import Base.show
 import Base.convert
@@ -41,8 +42,11 @@ export SimpleMinimalExpectedSampleSize,
     IsGroupSequential, GroupSequential, NotGroupSequential,
     StoppingForEfficacy, AllowStoppingForEfficacy, NoStoppingForEfficacy,
     HasMonotoneConditionalPower, MonotoneConditionalPower, NoMonotoneConditionalPower,
-    minconditionalpower,
-    MinimalMinimalExpectedSampleSize
+    minconditionalpower
+
+export MinimalMinimalExpectedSampleSize
+
+export LiuScore
 
 # include ("optimal.jl")
 export getoptimaldesign
@@ -68,6 +72,7 @@ include("SampleSize.jl")
 include("SampleSpace.jl")
 include("Parameters/MinimalMinimalExpectedSampleSize.jl")
 include("Parameters/SimpleMinimalExpectedSampleSize.jl")
+include("Parameters/LiuScore.jl")
 include("util.jl")
 include("getoptimaldesign.jl")
 include("adapt.jl")

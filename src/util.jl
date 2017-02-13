@@ -306,6 +306,6 @@ end
 #     return any(map(i -> [x1; x2] == supp[i, :], 1:size(supp, 1)))
 # end
 
-function dbinom{T1<:Integer, T2<:Real}(k::T1, n::T1, p::T2)::T2
-    return Distributions.pdf(Distributions.Binomial(n, p), k)
-end
+dbinom(k, n, p) = Distributions.pdf(Distributions.Binomial(n, p), k)
+
+qnorm(p) = Distributions.quantile(Distributions.Normal(0, 1), p)
