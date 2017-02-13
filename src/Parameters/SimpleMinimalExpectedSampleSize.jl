@@ -55,7 +55,7 @@ function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
     minconditionalpower::Real      = 0.0,
     GROUPSEQUENTIAL::Bool          = false,
     STOPPINGFOREFFICACY::Bool      = true,
-    MONOTONECONDITIONALPOWER::Bool = false
+    MONOTONECONDITIONALPOWER::Bool = true
 )
     T_gs = NotGroupSequential
     if GROUPSEQUENTIAL

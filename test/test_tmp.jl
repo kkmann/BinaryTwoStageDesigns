@@ -11,37 +11,33 @@
         TimeLimit = 900,
         OutputFlag = 0
     )
-    # params = MinimalMinimalExpectedSampleSize(
-    #     ss, .2, .4, .05, .2, .4
-    # )
-    # design, res = getoptimaldesign(params, solver, VERBOSE = 0)
-    # println(convert(DataFrames.DataFrame, design))
-    # params = SimpleMinimalExpectedSampleSize(
-    #     ss, .2, .4, .05, .2, .4
-    # )
-    # design, res = getoptimaldesign(params, solver, VERBOSE = 0)
-    # println(convert(DataFrames.DataFrame, design))
+    params = SimpleMinimalExpectedSampleSize(
+        ss, .2, .4, .05, .2, .4; minconditionalpower = .7
+    )
+    design, res = getoptimaldesign(params, solver, VERBOSE = 1)
+    println(convert(DataFrames.DataFrame, design))
+    println(score(design))
+
+    params = SimpleMinimalExpectedSampleSize(
+        ss, .2, .4, .05, .2, .4, GROUPSEQUENTIAL = true, minconditionalpower = .7
+    )
+    design, res = getoptimaldesign(params, solver, VERBOSE = 1)
+    println(convert(DataFrames.DataFrame, design))
+    println(score(design))
 
     # params = SimpleMinimalExpectedSampleSize(
-    #     ss, .2, .4, .05, .2, .4, GROUPSEQUENTIAL = true
+    #     ss, .2, .4, .05, .2, .4, GROUPSEQUENTIAL = true, minstoppingforfutility = .75
     # )
     # design, res = getoptimaldesign(params, solver, VERBOSE = 1)
     # println(convert(DataFrames.DataFrame, design))
     # println(stoppingforfutility(design, .2))
-
-    params = SimpleMinimalExpectedSampleSize(
-        ss, .2, .4, .05, .2, .4, GROUPSEQUENTIAL = true, minstoppingforfutility = .75
-    )
-    design, res = getoptimaldesign(params, solver, VERBOSE = 1)
-    println(convert(DataFrames.DataFrame, design))
-    println(stoppingforfutility(design, .2))
-    println(score(design))
-
-    params = SimpleMinimalExpectedSampleSize(
-        ss, .2, .4, .05, .2, .4, minstoppingforfutility = .75
-    )
-    design2, res = getoptimaldesign(params, solver, VERBOSE = 1)
-    println(convert(DataFrames.DataFrame, design2))
-    println(stoppingforfutility(design2, .2))
-    println(score(design2))
+    # println(score(design))
+    #
+    # params = SimpleMinimalExpectedSampleSize(
+    #     ss, .2, .4, .05, .2, .4, minstoppingforfutility = .75
+    # )
+    # design2, res = getoptimaldesign(params, solver, VERBOSE = 1)
+    # println(convert(DataFrames.DataFrame, design2))
+    # println(stoppingforfutility(design2, .2))
+    # println(score(design2))
 end
