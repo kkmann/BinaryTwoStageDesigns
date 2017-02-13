@@ -99,6 +99,21 @@ function power{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
 end
 
 
+function stoppingforfutility{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
+    checkp(p)
+    n1  = interimsamplesize(design)
+    X1  = Distributions.Binomial(n1, p) # stage one responses
+    res = 0.0
+    c   = criticalvalue(design)
+    for x1 in 0:n1
+        if c[x1 + 1] == Inf
+            res += Distributions.pdf(X1, x1)
+        end
+    end
+    return res
+end
+
+
 function test{T<:Integer}(design::AbstractBinaryTwoStageDesign, x1::T, x2::T)::Bool
     checkx1x2(x1, x2, design)
     return x1 + x2 > criticalvalue(design, x1)

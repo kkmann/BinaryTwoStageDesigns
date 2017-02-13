@@ -4,6 +4,7 @@ function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
     solver::TS;
     VERBOSE::Integer = 0
 )
+    VERBOSE > 0 ? println(n1) : nothing
     VERBOSE > 0 ? tic() : nothing
     possible(n1, samplespace(parameters)) ? nothing : throw(InexactError())
     # define problem
@@ -17,6 +18,8 @@ function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
     _isfeasible(design, parameters) ? nothing : error("solution infeasible")
     VERBOSE > 0 ? toc() : nothing
     VERBOSE > 0 ? println(status) : nothing
+    VERBOSE > 0 ? println(score(design)) : nothing
+    VERBOSE > 0 ? println() : nothing
     return design
 end
 

@@ -25,7 +25,7 @@ export Parameters, samplespace, maxsamplesize, isgroupsequential, allowsstopping
 export AbstractBinaryTwoStageDesign,
     BinaryTwoStageDesign,
         parameters, interimsamplesize, samplesize, criticalvalue, power, test, pdf,
-        simulate, support, ispossible
+        simulate, support, ispossible, stoppingforfutility, score
 
 
 # include("SampleSize.jl")

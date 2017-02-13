@@ -31,17 +31,19 @@ type SimpleMinimalExpectedSampleSize{
     beta
     pess
     mincondpower
+    minstoppingforfutility
     function SimpleMinimalExpectedSampleSize(
         samplespace,
         p0, p1,
         alpha, beta,
         pess,
-        mincondpower
+        mincondpower,
+        minstoppingforfutility
     )
         any(!([alpha; beta; p0; p1; pess; mincondpower] .>= 0.0)) ? throw(InexactError()) : nothing
         any(!([alpha; beta; p0; p1; pess; mincondpower] .<= 1.0)) ? throw(InexactError()) : nothing
         p0 >= p1 ? throw(InexactError()) : nothing
-        new(samplespace, p0, p1, alpha, beta, pess, mincondpower)
+        new(samplespace, p0, p1, alpha, beta, pess, mincondpower, minstoppingforfutility)
     end
 end
 function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
@@ -49,9 +51,10 @@ function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
     p0, p1,
     alpha, beta,
     pess;
-    minconditionalpower::Real = 0.0,
-    GROUPSEQUENTIAL::Bool     = false,
-    STOPPINGFOREFFICACY::Bool = true,
+    minstoppingforfutility::Real   = 0.0,
+    minconditionalpower::Real      = 0.0,
+    GROUPSEQUENTIAL::Bool          = false,
+    STOPPINGFOREFFICACY::Bool      = true,
     MONOTONECONDITIONALPOWER::Bool = false
 )
     T_gs = NotGroupSequential
@@ -67,7 +70,7 @@ function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
         T_mcp = MonotoneConditionalPower
     end
     SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}(
-        samplespace, p0, p1, alpha, beta, pess, minconditionalpower
+        samplespace, p0, p1, alpha, beta, pess, minconditionalpower, minstoppingforfutility
     )
 end
 
@@ -146,6 +149,12 @@ function _createProblem{T<:Integer}(
             ) >= minconditionalpower(params)
         )
     end
+    # add constraint for minimal stopping-for-futility probability
+    @constraint(m,
+        sum(dbinom(x1, n1, p0)*y[x1, n1, Inf] for
+            x1 in 0:n1
+        ) >= params.minstoppingforfutility
+    )
     # add optimality criterion
     @objective(m, Min,
         sum(dbinom(x1, n1, params.pess)*n*y[x1, n, c] for
