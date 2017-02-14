@@ -83,7 +83,7 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
                 if ( (c < x1) & (n > n1) ) & !(isgroupsequential(params) & !allowsstoppingforefficacy(params))
                     @constraint(m, y[x1, n, c] == 0)
                 end
-                if !possible(n1, n, ss) # sample space constraints
+                if !possible(n1, n, c, ss) # sample space constraints
                     @constraint(m,
                         y[x1, n, c] == 0
                     )
