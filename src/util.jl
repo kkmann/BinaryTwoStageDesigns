@@ -1,7 +1,7 @@
 """
 Creates a basline JuMP model
 with only minimal constraints (contiguous stopping, unimodal n(x1)) and
-functional constraint
+functional constraint TODO make samplespace restriction more effective by using maxsamplesize(ss, n1)
 """
 function _createBaseProblem(n1, params) # regularize by penalizing total variation  of c and n
     ss  = samplespace(params)
