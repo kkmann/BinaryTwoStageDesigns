@@ -80,7 +80,7 @@ function _createProblem{T<:Integer}(
                 if !isfinite(c) & (n > n1)
                     @constraint(m, y[x1, n, c] == 0)
                 end
-                if !possible(n1, n, ss) # sample space constraints
+                if !possible(n1, n, c, ss) # sample space constraints
                     @constraint(m,
                         y[x1, n, c] == 0
                     )

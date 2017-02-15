@@ -32,7 +32,7 @@ maximum(d::SampleSize) = maximum(samplesize(d.design))
 function quantile(d::SampleSize, q::Real)
     nrange = minimum(d):maximum(d)
     res    = 0
-    while Distributions.cdf(d, res + 1) <= q
+    while Distributions.cdf(d, res) <= q
         res += 1
     end
     return res
