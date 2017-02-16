@@ -42,7 +42,7 @@ export SimpleMinimalExpectedSampleSize,
     IsGroupSequential, GroupSequential, NotGroupSequential,
     StoppingForEfficacy, AllowStoppingForEfficacy, NoStoppingForEfficacy,
     HasMonotoneConditionalPower, MonotoneConditionalPower, NoMonotoneConditionalPower,
-    minconditionalpower
+    minconditionalpower, smoothness
 
 export MinimalMinimalExpectedSampleSize
 

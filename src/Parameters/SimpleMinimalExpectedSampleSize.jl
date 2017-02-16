@@ -32,18 +32,20 @@ type SimpleMinimalExpectedSampleSize{
     pess
     mincondpower
     minstoppingforfutility
+    smoothness
     function SimpleMinimalExpectedSampleSize(
         samplespace,
         p0, p1,
         alpha, beta,
         pess,
         mincondpower,
-        minstoppingforfutility
+        minstoppingforfutility,
+        smoothness
     )
         any(!([alpha; beta; p0; p1; pess; mincondpower] .>= 0.0)) ? throw(InexactError()) : nothing
         any(!([alpha; beta; p0; p1; pess; mincondpower] .<= 1.0)) ? throw(InexactError()) : nothing
         p0 >= p1 ? throw(InexactError()) : nothing
-        new(samplespace, p0, p1, alpha, beta, pess, mincondpower, minstoppingforfutility)
+        new(samplespace, p0, p1, alpha, beta, pess, mincondpower, minstoppingforfutility, smoothness)
     end
 end
 function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
@@ -51,6 +53,7 @@ function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
     p0, p1,
     alpha, beta,
     pess;
+    smoothness::Real               = Inf,
     minstoppingforfutility::Real   = 0.0,
     minconditionalpower::Real      = 0.0,
     GROUPSEQUENTIAL::Bool          = false,
@@ -70,7 +73,7 @@ function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
         T_mcp = MonotoneConditionalPower
     end
     SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}(
-        samplespace, p0, p1, alpha, beta, pess, minconditionalpower, minstoppingforfutility
+        samplespace, p0, p1, alpha, beta, pess, minconditionalpower, minstoppingforfutility, smoothness
     )
 end
 
@@ -83,6 +86,9 @@ isgroupsequential{T_samplespace, T_gs, T_eff, T_mcp}(params::SimpleMinimalExpect
 hasmonotoneconditionalpower{T_samplespace, T_gs, T_eff, T_mcp}(params::SimpleMinimalExpectedSampleSize{T_samplespace, T_gs, T_eff, T_mcp}) = T_mcp == MonotoneConditionalPower ? true : false
 
 minconditionalpower(params::SimpleMinimalExpectedSampleSize) = params.mincondpower
+
+smoothness(params::SimpleMinimalExpectedSampleSize) = params.smoothness
+
 
 function score{T_P<:SimpleMinimalExpectedSampleSize}(design::AbstractBinaryTwoStageDesign, params::T_P)
     n = SampleSize(design, params.pess)
@@ -100,6 +106,8 @@ function _createProblem{T<:Integer}(
     b  = beta(params)
     p0 = null(params)
     p1 = alternative(params)
+    maxdiff = min(2*nmax, smoothness(params)) # make finite!
+
     # define base problem
     m, y = _createBaseProblem(n1, params) # c.f. util.jl
     nvals = n1:nmax
@@ -155,6 +163,18 @@ function _createProblem{T<:Integer}(
             x1 in 0:n1
         ) >= params.minstoppingforfutility
     )
+    # add constraints for smoothness (maxmial difference between successive
+    # values of n on the continuation set)
+    @variable(m, absdiff[x1 = 0:(n1 - 1)])
+    for x1 in 0:(n1 - 1)
+        @constraint(m,
+            absdiff[x1] >= sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in cvalsfinite) - sum(2*nmax*y[x1, n, c] for n in nvals, c in cvalsinfinite) - sum(2*nmax*y[x1 + 1, n, c] for n in nvals, c in cvalsinfinite)
+        )
+        @constraint(m,
+            -absdiff[x1] <= -sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in cvalsfinite) + sum(2*nmax*y[x1, n, c] for n in nvals, c in cvalsinfinite) + sum(2*nmax*y[x1 + 1, n, c] for n in nvals, c in cvalsinfinite)
+        )
+        @constraint(m, absdiff[x1] <= maxdiff)
+    end
     # add optimality criterion
     @objective(m, Min,
         sum(dbinom(x1, n1, params.pess)*n*y[x1, n, c] for
