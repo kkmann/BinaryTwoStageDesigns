@@ -70,9 +70,13 @@ function ros{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p
     powerreq = 1 - beta(params)
     n1 = interimsamplesize(design)
     nreq__(p, powerreq) = nreq_(p, powerreq, params.p0, params.alpha)
+    denom = nreq__(p1, powerreq)
+    if denom == 0
+        return Inf
+    end
     ros = 0.0
     for x1 in 0:n1
-        ros += dbinom(x1, n1, p1)*max(0.0, samplesize(design, x1)/nreq__(p1, powerreq) - 1)
+        ros += dbinom(x1, n1, p1)*max(0.0, samplesize(design, x1)/denom - 1)
     end
     return 100/(1 - params.fs)*ros
 end
@@ -80,7 +84,16 @@ function rup{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p
     powerreq = 1 - beta(params)
     n1 = interimsamplesize(design)
     nreq__(p, powerreq) = nreq_(p, powerreq, params.p0, params.alpha)
-    return max(0, nreq__(p1, powerreq) - nreq__(p1, power(design, p1))) / (nreq__(p1, powerreq) - nreq__(p1, (1 - params.fp)*powerreq))
+    nom   = max(0, nreq__(p1, powerreq) - nreq__(p1, power(design, p1)))
+    denom = nreq__(p1, powerreq) - nreq__(p1, (1 - params.fp)*powerreq)
+    if (denom == 0.0) & (nom > 0)
+        return Inf
+    end
+    if (denom == 0.0) & (nom == 0)
+        return 0.0
+    end
+    res = 100 * nom / denom
+    return res
 end
 
 score{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p1::Real) = ros(design, params, p1) + rup(design, params, p1)
@@ -88,7 +101,7 @@ score{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p1::Real
 function score{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P)
     function f(p)
         res = params.prior(p)*score(design, params, p)
-        return !isfinite(res) ? 0 : res
+        return res
     end
     return quadgk(f, null(params), 1, reltol = .001, maxevals = 1e5)[1]
 end
@@ -96,7 +109,9 @@ end
 
 function _createProblem{T<:Integer}(
     n1::T,      # stage one sample size
-    params::LiuScore
+    params::LiuScore;
+    npivots      = 15,
+    npriorpivots = 25
 )
     ss = samplespace(params)
     nmax = maxsamplesize(ss)
@@ -116,14 +131,13 @@ function _createProblem{T<:Integer}(
         cvals = [cvalsfinite; Inf]
         cvalsinfinite = [Inf]
     end
-    priorpivots = collect(linspace(p0, 1.0, 22))[2:21]
-    dp = priorpivots[2] - priorpivots[1]
+    priorpivots = collect(linspace(p0, 1.0, npriorpivots + 2))[2:(npriorpivots + 1)] # leave out boundary values!
+    dp          = priorpivots[2] - priorpivots[1]
+    priorvals   = prior.(priorpivots) ./ sum(prior.(priorpivots) .* dp) # normalize to 1
     # add type one error rate constraint
     @constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
-            x1 in 0:n1,
-            n  in nvals,
-            c  in cvals
+            x1 in 0:n1, n  in nvals, c  in cvals
         ) <= a
     )
     # add conditional type two error rate constraint (power)
@@ -150,31 +164,56 @@ function _createProblem{T<:Integer}(
     # add optimality criterion
     nreq__(p, powerreq) = nreq_(p, powerreq, p0, a)
     # construct expressions for ROS, upper bound necessary to guarantee finteness!
+    println(1-b)
+    println(priorpivots)
+    println(nreq__.(priorpivots, 1 - b))
     @expression(m, ros[p in priorpivots],
-        100/(1 - params.fs)*sum(dbinom(x1, n1, p)*min(99999, max(0, n / nreq__(p, 1 - b) - 1 ))*y[x1, n, c] for
+        100/(1 - params.fs) * sum(
+            dbinom(x1, n1, p) * max(0, min(10000.0, (n / nreq__(p, 1 - b) - 1))) * y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
     # construct expressions for power
     @expression(m, designpower[p in priorpivots],
-        sum(dbinom(x1, n1, p)*_cpr(x1, n1, n, c, p)*y[x1, n, c] for
+        sum(dbinom(x1, n1, p) * _cpr(x1, n1, n, c, p) * y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    pivots = collect(linspace(0, 1, 13))[2:12]
+    pivots = collect(linspace(0, 1, npivots + 2))[2:(npivots + 1)]
     @variable(m, 0 <= lambda[priorpivots, pivots] <= 1)
-    f(power, p) = 100*max(0, nreq__(p, 1 - b) - nreq__(p, power)) / (nreq__(p, 1 - b) - nreq__(p, (1 - params.fp)*(1 - b)))
+    function frup(power, p; rupmax = 10000.0)
+        nom   = max(0, nreq__(p, 1 - b) - nreq__(p, power))
+        denom = nreq__(p, 1 - b) - nreq__(p, (1 - params.fp)*(1 - b))
+        if (denom == 0.0) & (nom > 0)
+            return rupmax
+        end
+        if (denom == 0.0) & (nom == 0)
+            return 0.0
+        end
+        res = 100 * nom / denom
+        res = res > rupmax ? rupmax : res
+        if res < 0
+            println(res)
+        end
+        return res
+    end
     @variable(m, rup[priorpivots])
     for p in priorpivots
         addSOS2(m, [lambda[p, piv] for piv in pivots])
         @constraint(m, sum(lambda[p, piv] for piv in pivots) == 1)
         @constraint(m, sum(lambda[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
-        @constraint(m, sum(lambda[p, piv]*f(piv, p) for piv in pivots) == rup[p])
+        @constraint(m, sum(lambda[p, piv]*frup(piv, p) for piv in pivots) == rup[p])
+    end
+    @variable(m, tmpros[p in priorpivots])
+    @variable(m, tmprup[p in priorpivots])
+    for p in priorpivots
+        @constraint(m, tmpros[p] == ros[p])
+        @constraint(m, tmprup[p] == rup[p])
     end
     @objective(m, Min,
-        sum(prior(p)*(rup[p] + ros[p])*dp for p in priorpivots)
+        sum(priorvals[i]*(rup[priorpivots[i]] + ros[priorpivots[i]])*dp for i in 1:npriorpivots) # normalized version
     )
-    return m, y
+    return m, y, tmpros, tmprup
 end
 
 function _isfeasible(design::BinaryTwoStageDesign, params::LiuScore)
@@ -183,10 +222,13 @@ end
 
 
 # utility
-function nreq_(p, power, p0, alpha)
-    if power > alpha
-        return (1 - p)*p*( (qnorm(1 - alpha) + qnorm(power)) / (p0 - p) )^2
-    else
-        return 0.0
+function nreq_(p, power, p0, alpha; nmax = 10000.0)
+    if alpha >= 1 - power
+        return 0.0 # qnorm(1 - alpha) + qnorm(power) < 0 ....
     end
+    if p < p0
+        return 0.0 # no effect
+    end
+    res = max(5, (1 - p)*p*( (qnorm(1 - alpha) + qnorm(power)) / (p0 - p) )^2)
+    return isfinite(res) ? res : nmax
 end

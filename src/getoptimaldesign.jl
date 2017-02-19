@@ -8,7 +8,7 @@ function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
     VERBOSE > 0 ? tic() : nothing
     possible(n1, samplespace(parameters)) ? nothing : throw(InexactError())
     # define problem
-    m, y = _createProblem(n1, parameters)
+    m, y, tmpros, tmprup = _createProblem(n1, parameters)
     setsolver(m, solver)
     status = solve(m)
     if !(status in (:Optimal, :UserLimit)) # no valid solution found!
@@ -17,6 +17,8 @@ function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
     try
         design = _extractSolution(y, n1, parameters) # c.f. util.jl
         _isfeasible(design, parameters) ? nothing : error("solution infeasible")
+        println(getvalue(tmpros))
+        println(getvalue(tmprup))
         VERBOSE > 0 ? toc() : nothing
         VERBOSE > 0 ? println(status) : nothing
         VERBOSE > 0 ? println(score(design)) : nothing

@@ -53,6 +53,7 @@
     design = getoptimaldesign(15, params, solver)
     # design, res = getoptimaldesign(params, solver, VERBOSE = 1)
     println(convert(DataFrames.DataFrame, design))
+    println(power.(design, linspace(.2, .6, 15)))
     println(score(design))
     println(score.(design, params, linspace(.2, .6, 15)))
     println(rup.(design, params, linspace(.2, .6, 15)))
