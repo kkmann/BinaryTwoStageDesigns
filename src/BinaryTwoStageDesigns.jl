@@ -46,7 +46,7 @@ export SimpleMinimalExpectedSampleSize,
 
 export MinimalMinimalExpectedSampleSize
 
-export LiuScore
+export LiuScore, ros, rup
 
 # include ("optimal.jl")
 export getoptimaldesign
