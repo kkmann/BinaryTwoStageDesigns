@@ -125,10 +125,10 @@ function _createProblem{T<:Integer}(
     nvals = n1:nmax
     cvalsfinite = 0:(nmax - 1)
     if allowsstoppingforefficacy(params)
-        cvals = [-Inf; cvalsfinite; Inf]
+        cvals         = [-Inf; cvalsfinite; Inf]
         cvalsinfinite = [-Inf; Inf]
     else
-        cvals = [cvalsfinite; Inf]
+        cvals         = [cvalsfinite; Inf]
         cvalsinfinite = [Inf]
     end
     priorpivots = collect(linspace(p0, 1.0, npriorpivots + 2))[2:(npriorpivots + 1)] # leave out boundary values!
@@ -137,36 +137,36 @@ function _createProblem{T<:Integer}(
     # add type one error rate constraint
     @constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
-            x1 in 0:n1, n  in nvals, c  in cvals
+            x1 in 0:n1, n in nvals, c in cvals
         ) <= a
     )
     # add conditional type two error rate constraint (power)
-    # for x1 in 0:n1
-    #     # ensure monotonicity if required
-    #     if x1 > 0 & hasmonotoneconditionalpower(params)
-    #         @constraint(m,
-    #             sum(_cpr(x1, n1, n, c, p1)*(y[x1, n, c] - y[x1, n, c]) for
-    #                 n  in nvals,
-    #                 c  in cvals
-    #             ) >= 0
-    #         )
-    #     end
-    #     @constraint(m,
-    #         sum(_cpr(x1, n1, n, c, p1)*y[x1, n, c] for
-    #             n  in nvals,
-    #             c  in cvalsfinite
-    #         ) + sum(y[x1, n, c] for
-    #             n  in nvals,
-    #             c  in cvalsinfinite
-    #         ) >= minconditionalpower(params)
-    #     )
-    # end
+    for x1 in 0:n1
+        z1 = quadgk(p -> prior(p)*dbinom(x1, n1, p), p0, 1, abstol = .0001)[1]
+        posterior1(p) = p > p0 ? prior(p)*dbinom(x1, n1, p)/z1 : 0
+        # ensure monotonicity if required
+        if x1 >= 1 & hasmonotoneconditionalpower(params)
+            z2 = quadgk(p -> prior(p)*dbinom(x1 - 1, n1, p), p0, 1, abstol = .0001)[1]
+            posterior2(p) = p > p0 ? prior(p)*dbinom(x1 - 1, n1, p)/z2 : 0
+            @constraint(m,
+                sum(_cpr(x1, n1, n, c, .4)*y[x1, n, c] - _cpr(x1 - 1, n1, n, c, .4)*y[x1 - 1, n, c] for
+                    n  in nvals, c  in cvals
+                ) >= 0
+            )
+        end
+        @constraint(m,
+            sum(quadgk(p -> posterior1(p)*_cpr(x1, n1, n, c, p), p0, 1, abstol = .0001)[1] * y[x1, n, c] for
+                n  in nvals,
+                c  in cvalsfinite
+            ) + sum(y[x1, n, c] for
+                n  in nvals,
+                c  in cvalsinfinite
+            ) >= minconditionalpower(params)
+        )
+    end
     # add optimality criterion
     nreq__(p, powerreq) = nreq_(p, powerreq, p0, a)
     # construct expressions for ROS, upper bound necessary to guarantee finteness!
-    println(1-b)
-    println(priorpivots)
-    println(nreq__.(priorpivots, 1 - b))
     @expression(m, ros[p in priorpivots],
         100/(1 - params.fs) * sum(
             dbinom(x1, n1, p) * max(0, min(10000.0, (n / nreq__(p, 1 - b) - 1))) * y[x1, n, c] for
@@ -213,7 +213,7 @@ function _createProblem{T<:Integer}(
     @objective(m, Min,
         sum(priorvals[i]*(rup[priorpivots[i]] + ros[priorpivots[i]])*dp for i in 1:npriorpivots) # normalized version
     )
-    return m, y, tmpros, tmprup
+    return m, y
 end
 
 function _isfeasible(design::BinaryTwoStageDesign, params::LiuScore)
