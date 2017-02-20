@@ -119,7 +119,6 @@ function _createProblem{T<:Integer}(
         cvals = [cvalsfinite; Inf]
         cvalsinfinite = [Inf]
     end
-
     # add type one error rate constraint
     @constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
@@ -139,11 +138,10 @@ function _createProblem{T<:Integer}(
     # add conditional type two error rate constraint (power)
     for x1 in 0:n1
         # ensure monotonicity if required
-        if x1 > 0 & hasmonotoneconditionalpower(params)
+        if x1 >= 1 & hasmonotoneconditionalpower(params)
             @constraint(m,
-                sum(_cpr(x1, n1, n, c, p1)*(y[x1, n, c] - y[x1, n, c]) for
-                    n  in nvals,
-                    c  in cvals
+                sum(_cpr(x1, n1, n, c, p1)*y[x1, n, c] - _cpr(x1 - 1, n1, n, c, p1)*y[x1 - 1, n, c] for
+                    n  in nvals, c in cvals
                 ) >= 0
             )
         end

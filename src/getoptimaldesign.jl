@@ -14,16 +14,21 @@ function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
     if !(status in (:Optimal, :UserLimit)) # no valid solution found!
         error("no feasible solution reached")
     end
-    design = _extractSolution(y, n1, parameters) # c.f. util.jl
-    _isfeasible(design, parameters) ? nothing : error("solution infeasible")
-    VERBOSE > 0 ? toc() : nothing
-    VERBOSE > 0 ? println(status) : nothing
-    VERBOSE > 0 ? println(score(design)) : nothing
-    VERBOSE > 0 ? println() : nothing
-    return design
+    try
+        design = _extractSolution(y, n1, parameters) # c.f. util.jl
+        _isfeasible(design, parameters) ? nothing : error("solution infeasible")
+        VERBOSE > 0 ? toc() : nothing
+        VERBOSE > 0 ? println(status) : nothing
+        VERBOSE > 0 ? println(score(design)) : nothing
+        VERBOSE > 0 ? println() : nothing
+        return design
+    catch e
+         println(e)
+         error("could not extract solution")
+    end
 end
 
-function getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}(
+function getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}( # TODO: Idea: pass previous solution as upper bound on objective -> becomes infeasible and can be cancelled early!
     parameters::Parameters,
     solver::TS;
     VERBOSE::Integer = 1
