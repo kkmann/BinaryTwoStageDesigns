@@ -111,7 +111,6 @@ function _createProblem{T<:Integer}(
         cvals = [cvalsfinite; Inf]
         cvalsinfinite = [Inf]
     end
-
     # add type one error rate constraint
     @constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for

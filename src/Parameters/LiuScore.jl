@@ -78,21 +78,23 @@ function ros{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p
     for x1 in 0:n1
         ros += dbinom(x1, n1, p1)*max(0.0, samplesize(design, x1)/denom - 1)
     end
-    return 100/(1 - params.fs)*ros
+    return ros/(1 - params.fs)
 end
 function rup{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p1::Real)
-    powerreq = 1 - beta(params)
+    powerreq = 1 - beta(params) # we can minimize this if we set power to zero!
     n1 = interimsamplesize(design)
     nreq__(p, powerreq) = nreq_(p, powerreq, params.p0, params.alpha)
     nom   = max(0, nreq__(p1, powerreq) - nreq__(p1, power(design, p1)))
     denom = nreq__(p1, powerreq) - nreq__(p1, (1 - params.fp)*powerreq)
+    println([p1 nreq__(p1, powerreq) nreq__(p1, power(design, p1))])
+    println([p1 nom denom])
     if (denom == 0.0) & (nom > 0)
         return Inf
     end
     if (denom == 0.0) & (nom == 0)
         return 0.0
     end
-    res = 100 * nom / denom
+    res = nom / denom
     return res
 end
 
@@ -142,34 +144,33 @@ function _createProblem{T<:Integer}(
     )
     # add conditional type two error rate constraint (power)
     for x1 in 0:n1
-        z1 = quadgk(p -> prior(p)*dbinom(x1, n1, p), p0, 1, abstol = .0001)[1]
-        posterior1(p) = p > p0 ? prior(p)*dbinom(x1, n1, p)/z1 : 0
+        posterior1 = priorvals .* dbinom.(x1, n1, priorpivots) .* dp
+        z1 = sum(posterior1)
+        @constraint(m,
+            sum(sum(posterior1 .* _cpr.(x1, n1, n, c, priorpivots))/z1*y[x1, n, c] for
+                n in nvals, c in cvalsfinite
+            ) + sum(y[x1, n, c] for
+                n in nvals, c in cvalsinfinite
+            ) >= minconditionalpower(params)
+        )
         # ensure monotonicity if required
         if x1 >= 1 & hasmonotoneconditionalpower(params)
-            z2 = quadgk(p -> prior(p)*dbinom(x1 - 1, n1, p), p0, 1, abstol = .0001)[1]
-            posterior2(p) = p > p0 ? prior(p)*dbinom(x1 - 1, n1, p)/z2 : 0
+            posterior2 = priorvals .* dbinom.(x1 - 1, n1, priorpivots) .* dp
+            z2 = sum(posterior2)
             @constraint(m,
-                sum(_cpr(x1, n1, n, c, .4)*y[x1, n, c] - _cpr(x1 - 1, n1, n, c, .4)*y[x1 - 1, n, c] for
-                    n  in nvals, c  in cvals
+                sum(sum(posterior1 .* _cpr.(x1, n1, n, c, priorpivots))/z1*y[x1, n, c]
+                        - sum(posterior2 .* _cpr.(x1 - 1, n1, n, c, priorpivots))/z2*y[x1 - 1, n, c] for
+                    n in nvals, c in cvals
                 ) >= 0
             )
         end
-        @constraint(m,
-            sum(quadgk(p -> posterior1(p)*_cpr(x1, n1, n, c, p), p0, 1, abstol = .0001)[1] * y[x1, n, c] for
-                n  in nvals,
-                c  in cvalsfinite
-            ) + sum(y[x1, n, c] for
-                n  in nvals,
-                c  in cvalsinfinite
-            ) >= minconditionalpower(params)
-        )
     end
     # add optimality criterion
     nreq__(p, powerreq) = nreq_(p, powerreq, p0, a)
     # construct expressions for ROS, upper bound necessary to guarantee finteness!
     @expression(m, ros[p in priorpivots],
-        100/(1 - params.fs) * sum(
-            dbinom(x1, n1, p) * max(0, min(10000.0, (n / nreq__(p, 1 - b) - 1))) * y[x1, n, c] for
+        1/(1 - params.fs) * sum(
+            dbinom(x1, n1, p) * max(0, min(100.0, (n / nreq__(p, 1 - b) - 1))) * y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
@@ -179,9 +180,9 @@ function _createProblem{T<:Integer}(
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    pivots = collect(linspace(0, 1, npivots + 2))[2:(npivots + 1)]
+    pivots = collect(linspace(0, 1, npivots)) # lambda formulaion requires edges!
     @variable(m, 0 <= lambda[priorpivots, pivots] <= 1)
-    function frup(power, p; rupmax = 10000.0)
+    function frup(power, p; rupmax = 100.0)
         nom   = max(0, nreq__(p, 1 - b) - nreq__(p, power))
         denom = nreq__(p, 1 - b) - nreq__(p, (1 - params.fp)*(1 - b))
         if (denom == 0.0) & (nom > 0)
@@ -190,11 +191,7 @@ function _createProblem{T<:Integer}(
         if (denom == 0.0) & (nom == 0)
             return 0.0
         end
-        res = 100 * nom / denom
-        res = res > rupmax ? rupmax : res
-        if res < 0
-            println(res)
-        end
+        res = max(0, min(rupmax, nom / denom))
         return res
     end
     @variable(m, rup[priorpivots])
@@ -204,14 +201,11 @@ function _createProblem{T<:Integer}(
         @constraint(m, sum(lambda[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
         @constraint(m, sum(lambda[p, piv]*frup(piv, p) for piv in pivots) == rup[p])
     end
-    @variable(m, tmpros[p in priorpivots])
-    @variable(m, tmprup[p in priorpivots])
-    for p in priorpivots
-        @constraint(m, tmpros[p] == ros[p])
-        @constraint(m, tmprup[p] == rup[p])
-    end
     @objective(m, Min,
-        sum(priorvals[i]*(rup[priorpivots[i]] + ros[priorpivots[i]])*dp for i in 1:npriorpivots) # normalized version
+        sum(priorvals[i]*(
+            rup[priorpivots[i]] +
+            ros[priorpivots[i]]
+            )*dp for i in 1:npriorpivots) # normalized version
     )
     return m, y
 end
@@ -223,12 +217,23 @@ end
 
 # utility
 function nreq_(p, power, p0, alpha; nmax = 10000.0)
-    if alpha >= 1 - power
+    if alpha >= power
         return 0.0 # qnorm(1 - alpha) + qnorm(power) < 0 ....
     end
-    if p < p0
+    if p <= p0
         return 0.0 # no effect
     end
-    res = max(5, (1 - p)*p*( (qnorm(1 - alpha) + qnorm(power)) / (p0 - p) )^2)
-    return isfinite(res) ? res : nmax
+    if power == 0
+        return 0.0
+    end
+    if abs(power - 1.0) < 5*eps(Float64) 
+        return nmax
+    end
+    try
+        res = (1 - p)*p*( (qnorm(1 - alpha) + qnorm(power)) / (p0 - p) )^2
+    catch
+        println([p p0 power 1 - alpha])
+    end
+    res = min(nmax, max(5, res))
+    return res
 end
