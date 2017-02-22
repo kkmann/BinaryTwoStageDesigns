@@ -48,6 +48,8 @@ export MinimalMinimalExpectedSampleSize
 
 export LiuScore, ros, rup
 
+export KunzmannScore, expectedcost, underpowerpenalty
+
 # include ("optimal.jl")
 export getoptimaldesign
 
@@ -73,6 +75,7 @@ include("SampleSpace.jl")
 include("Parameters/MinimalMinimalExpectedSampleSize.jl")
 include("Parameters/SimpleMinimalExpectedSampleSize.jl")
 include("Parameters/LiuScore.jl")
+include("Parameters/KunzmannScore.jl")
 include("util.jl")
 include("getoptimaldesign.jl")
 include("adapt.jl")

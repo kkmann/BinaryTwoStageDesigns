@@ -1,5 +1,5 @@
 @testset "tmp" begin
-    ss = SimpleSampleSpace(5:25, 75)
+    ss = SimpleSampleSpace(20:35, 75)
     using Gurobi
     solver = GurobiSolver(
         IntFeasTol = 1e-9,
@@ -8,7 +8,7 @@
         Heuristics = .25,
         NumericFocus = 3,
         MIPFocus = 1,
-        TimeLimit = 60,
+        TimeLimit = 120,
         OutputFlag = 1,
         InfUnbdInfo = 1
     )
@@ -50,12 +50,17 @@
     params = LiuScore(
         ss, .2, prior, .05, .2, .5, .5, minconditionalpower = .7
     )
-    design = getoptimaldesign(15, params, solver)
-    # design, res = getoptimaldesign(params, solver, VERBOSE = 1)
+    # design = getoptimaldesign(15, params, solver)
+    design, res = getoptimaldesign(params, solver, VERBOSE = 1)
     println(convert(DataFrames.DataFrame, design))
     # println(score(design))
-    println(score.(design, params, linspace(.2, .6, 15)))
-    println(  rup.(design, params, linspace(.2, .6, 15)))
-    println(  ros.(design, params, linspace(.2, .6, 15)))
-    println(power.(design, 0:15, .4))
+    # priorpivots = collect(linspace(.2, 1.0, 250 + 2))[2:(250 + 1)] # leave out boundary values!
+    # dp          = priorpivots[2] - priorpivots[1]
+    # priorvals   = prior.(priorpivots) ./ sum(prior.(priorpivots) .* dp) # normalize to 1
+    # println(score.(design, params, priorpivots))
+    # println(  rup.(design, params, priorpivots))
+    # println(  ros.(design, params, priorpivots))
+    # println(sum(score.(design, params, priorpivots) .* priorvals .* dp))
+    println(score(design))
+    println(power.(design, 0:interimsamplesize(design), .4))
 end
