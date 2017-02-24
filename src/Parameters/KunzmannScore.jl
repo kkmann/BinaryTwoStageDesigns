@@ -15,6 +15,7 @@ type KunzmannScore{
     minpow
     maxpow
     smoothness
+    riskpremium
     function KunzmannScore(
         samplespace,
         p0, pmcrv, prior,
@@ -22,19 +23,21 @@ type KunzmannScore{
         mincondpower,
         gamma, lambda,
         minpow, maxpow,
-        smoothness
+        smoothness,
+        riskpremium
     )
         any(!([alpha; minpow; maxpow; p0; pmcrv; mincondpower] .>= 0.0)) ? throw(InexactError()) : nothing
         any(!([alpha; minpow; maxpow; p0; pmcrv; mincondpower] .<= 1.0)) ? throw(InexactError()) : nothing
         abs(quadgk(prior, 0, 1)[1] - 1) <= .001 ? nothing: throw(InexactError())
         minpow >= maxpow ? throw(InexactError()) : nothing
-        new(samplespace, p0, pmcrv, prior, alpha, mincondpower, gamma, lambda, minpow, maxpow, smoothness)
+        new(samplespace, p0, pmcrv, prior, alpha, mincondpower, gamma, lambda, minpow, maxpow, smoothness, riskpremium)
     end
 end
 function KunzmannScore{T_samplespace<:SampleSpace}(
     samplespace::T_samplespace,
     p0, pmcrv, prior, alpha,
     gamma, lambda;
+    riskpremium::Real              = 0,
     minpow::Real                   = .7,
     maxpow::Real                   = .9,
     smoothness::Real               = Inf,
@@ -56,7 +59,7 @@ function KunzmannScore{T_samplespace<:SampleSpace}(
         T_mcp = MonotoneConditionalPower
     end
     KunzmannScore{T_samplespace, T_gs, T_eff, T_mcp}(
-        samplespace, p0, pmcrv, prior, alpha, minconditionalpower, gamma, lambda, minpow, maxpow, smoothness
+        samplespace, p0, pmcrv, prior, alpha, minconditionalpower, gamma, lambda, minpow, maxpow, smoothness, riskpremium
     )
 end
 
@@ -74,7 +77,7 @@ smoothness(params::KunzmannScore) = params.smoothness
 
 function expectedcost(design::AbstractBinaryTwoStageDesign, params::KunzmannScore, p::Real)
     ss = SampleSize(design, p)
-    return params.gamma * mean(ss)
+    return params.gamma * p * mean(ss) + (params.gamma + params.riskpremium) * (1 - p) * mean(ss)
 end
 function underpowerpenalty(design::AbstractBinaryTwoStageDesign, params::KunzmannScore, p::Real)
     if p < params.pmcrv
@@ -95,7 +98,7 @@ end
 function _createProblem{T<:Integer}(
     n1::T,      # stage one sample size
     params::KunzmannScore;
-    npivots      = 20,
+    npivots      = 15,
     npriorpivots = 50
 )
     ss = samplespace(params)
@@ -166,7 +169,7 @@ function _createProblem{T<:Integer}(
     # expected costs
     @expression(m, ec[p in priorpivots],
         sum(
-            params.gamma * n * dbinom(x1, n1, p) * y[x1, n, c] for
+            (params.gamma * p + (params.gamma + params.riskpremium) * (1 - p)) * n * dbinom(x1, n1, p) * y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
@@ -176,7 +179,7 @@ function _createProblem{T<:Integer}(
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    pivots = collect(linspace(0, 1, npivots)) # lambda formulaion requires edges!
+    pivots = [0; collect(linspace(params.minpow, params.maxpow, max(1, npivots - 2))); 1] # lambda formulaion requires edges! exploitn fact that function is locally linear!
     @variable(m, 0 <= lambdaSOS2[priorpivots, pivots] <= 1)
     @variable(m, upp[priorpivots]) # underpower penalty
     for p in priorpivots
@@ -184,7 +187,7 @@ function _createProblem{T<:Integer}(
         @constraint(m, sum(lambdaSOS2[p, piv] for piv in pivots) == 1)
         @constraint(m, sum(lambdaSOS2[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
         if p >= params.pmcrv
-            @constraint(m, params.lambda*(1 - sum(lambdaSOS2[p, piv]*g(params, piv) for piv in pivots)) == upp[p])
+            @constraint(m, params.lambda * (1 - sum(lambdaSOS2[p, piv]*g(params, piv) for piv in pivots)) == upp[p])
         else
             @constraint(m, upp[p] == 0)
         end
@@ -213,6 +216,6 @@ function g(params::KunzmannScore, power)
         return params.minpow + (.5 + (params.maxpow - power)/(params.maxpow - params.minpow))*(power - params.minpow)
     end
     if (power > params.maxpow)
-        return 0.0
+        return 1.0
     end
 end

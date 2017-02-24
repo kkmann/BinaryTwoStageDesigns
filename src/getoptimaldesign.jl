@@ -20,6 +20,7 @@ function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
         VERBOSE > 0 ? toc() : nothing
         VERBOSE > 0 ? println(status) : nothing
         VERBOSE > 0 ? println(score(design)) : nothing
+        VERBOSE > 0 ? println(convert(DataFrames.DataFrame, design)) : nothing
         VERBOSE > 0 ? println() : nothing
         return design
     catch e
@@ -43,6 +44,7 @@ function getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}( # TODO: Idea
         n1range
     )
     scores = map(design -> try score(design) catch e Inf end, designs) # if score cannot be computed, probably infeasible > Inf
+    VERBOSE > 0 ? println(scores) : nothing
     return designs[findmin(scores)[2]], Dict(
         "n1"      => n1range,
         "scores"  => scores,
