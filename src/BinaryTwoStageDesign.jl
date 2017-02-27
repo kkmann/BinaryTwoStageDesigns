@@ -82,20 +82,21 @@ function power{T1<:Integer, T2<:Real}(
 )
     checkp(p)
     checkx1(x1, design)
-    return _cpr(
+    res = _cpr(
         x1,
         interimsamplesize(design),
         samplesize(design, x1),
         criticalvalue(design, x1),
         p
     )
+    return min(1, max(0, res)) # guarantee bounds!
 end
 function power{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
     checkp(p)
     n1      = interimsamplesize(design)
     X1      = Distributions.Binomial(n1, p) # stage one responses
     x1range = collect(0:n1)
-    return vecdot(Distributions.pdf(X1, x1range), power.(design, x1range, p))
+    return min(1, max(0, vecdot(Distributions.pdf(X1, x1range), power.(design, x1range, p))))
 end
 
 

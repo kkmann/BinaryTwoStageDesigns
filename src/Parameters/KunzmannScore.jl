@@ -119,11 +119,11 @@ function _createProblem{T<:Integer}(
         cvals         = [cvalsfinite; Inf]
         cvalsinfinite = [Inf]
     end
-    priorpivots = collect(linspace(0.0, 1.0, npriorpivots + 2))[2:(npriorpivots + 1)] # leave out boundary values!
-    dp          = priorpivots[2] - priorpivots[1]
-    priorvals   = prior.(priorpivots) ./ sum(prior.(priorpivots) .* dp) # normalize to 1
+    priorpivots  = collect(linspace(0.0, 1.0, npriorpivots + 2))[2:(npriorpivots + 1)] # leave out boundary values!
+    dp           = priorpivots[2] - priorpivots[1]
+    priorvals    = prior.(priorpivots) ./ sum(prior.(priorpivots) .* dp) # normalize to 1
     cpriorpivots = priorpivots[priorpivots .>= params.pmcrv]
-    cpriorvals  = prior.(cpriorpivots) ./ sum(prior.(cpriorpivots) .* dp) # normalize to 1, dp stays the same
+    cpriorvals   = prior.(cpriorpivots) ./ sum(prior.(cpriorpivots) .* dp) # normalize to 1, dp stays the same
     # add type one error rate constraint
     @constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
@@ -207,6 +207,7 @@ end
 
 # utility
 function g(params::KunzmannScore, power)
+    power
     power < 0 ? throw(InexactError()) : nothing
     power > 1 ? throw(InexactError()) : nothing
     if power < params.minpow
