@@ -87,6 +87,9 @@ function ros{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p
     return min(100, ros/(1 - params.fs))
 end
 function rup{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p1::Real)
+    if p1 < params.pmcrv
+        return 0.0
+    end
     powerreq = 1 - beta(params) # we can minimize this if we set power to zero!
     n1 = interimsamplesize(design)
     nreq__(p, powerreq) = nreq_(p, powerreq, params.p0, params.alpha)
@@ -200,6 +203,9 @@ function _createProblem{T<:Integer}(
     pivots = collect(linspace(0, 1, npivots)) # lambda formulaion requires edges!
     @variable(m, 0 <= lambda[priorpivots, pivots] <= 1)
     function frup(power, p; rupmax = 100.0)
+        if p < params.pmcrv
+            return 0.0
+        end
         nom   = max(0, nreq__(p, 1 - b) - nreq__(p, power))
         denom = nreq__(p, 1 - b) - nreq__(p, (1 - params.fp)*(1 - b))
         if (denom == 0.0) & (nom > 0)

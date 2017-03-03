@@ -77,9 +77,9 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
                 if isfinite(c) & (n == n1)
                     @constraint(m, y[x1, n, c] == 0)
                 end
-                if !isfinite(c) & (n > n1)
-                    @constraint(m, y[x1, n, c] == 0)
-                end
+                # if !isfinite(c) & (n > n1) # not necessary if design may continue with decision after stage one
+                #     @constraint(m, y[x1, n, c] == 0)
+                # end
                 if ( (c < x1) & (n > n1) ) & !(isgroupsequential(params) & !allowsstoppingforefficacy(params))
                     @constraint(m, y[x1, n, c] == 0)
                 end
