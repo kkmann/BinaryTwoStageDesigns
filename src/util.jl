@@ -42,18 +42,14 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
         @constraint(m, # functional constraint: exactly one non-zero entry in (y) per x1
             sum(y[x1, n, c] for n in nvals, c in cvals) == 1
         )
-        # if y[x1, n1, Inf] = 1 (stopping for futility at x1),
-        # then y[x1 - 1, n1, Inf] = 1 must hold too (for x1 = 1:n1)
-        # if y[x1, n1, Inf] = 0 the constraint is trivially fulfilled
+        # contiguous stopping for futility
         if x1 > 0
             @constraint(m,
                 y[x1 - 1, n1, Inf] - y[x1, n1, Inf] >= 0
             )
         end
         if (x1 < n1) & allowsstoppingforefficacy(params)
-            # if y[x1, n1, -Inf] = 1 (stopping for eff at x1),
-            # then y[x1 + 1, n1, -Inf] = 1 must hold too (for x1 = 0:(n1 - 1))
-            # if y[x1, n1, -Inf] = 0 the constraint is trivially fulfilled
+            # contiguous stopping for efficacy
             @constraint(m,
                 y[x1 + 1, n1, -Inf] - y[x1, n1, -Inf] >= 0
             )
@@ -73,17 +69,11 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
                         end
                     end
                 end
-                # c in {-inf, inf, 0} iff n(x_1) == n1 (0 is for no-stopping but fixed)
-                if (isfinite(c) & (c != 0)) & (n == n1)
+                # c finite => n > n1
+                if isfinite(c) & (n == n1)
                     @constraint(m, y[x1, n, c] == 0)
                 end
-                # if !isfinite(c) & (n > n1) # not necessary if design may continue with decision after stage one
-                #     @constraint(m, y[x1, n, c] == 0)
-                # end
-                # if ( (c < x1) & (n > n1) ) & !(isgroupsequential(params) & !allowsstoppingforefficacy(params))
-                #     @constraint(m, y[x1, n, c] == 0)
-                # end
-                if (x1 > c) & !(c in (-Inf, 0)) & !isgroupsequential(params) # decision is fixed but c is not valid (must be either -Inf (early stopping for efficacy or 0 if that is not allowed)
+                if (x1 > c) & (c != -Inf) & (!isgroupsequential(params) | (isgroupsequential(params) & allowsstoppingforefficacy(params))) # decision is fixed but c is not valid
                     @constraint(m, y[x1, n, c] == 0)
                 end
                 if !possible(n1, n, c, ss) # sample space constraints

@@ -32,9 +32,14 @@ maxsamplesize(ss::SimpleSampleSpace) = ss.nmax
 maxsamplesize(ss::SimpleSampleSpace, n1) = convert(Integer, floor(n1*ss.maxnfact))
 possible{T<:Integer}(n1::T, ss::SimpleSampleSpace) = n1 in ss.n1range
 function possible{T<:Integer,TR<:Real}(n1::T, n::T, c::TR, ss::SimpleSampleSpace)
-    res = (n1 in ss.n1range) & (n <= ss.nmax) & (n1 <= n)
-    res = n <= ss.maxnfact*n1 ? res : false
-    res = (n - n1 >= ss.n2min) | !isfinite(c) ? res : false
-    res = (n >= ss.nmincont) | !isfinite(c) ? res : false
+    res = n1 in ss.n1range # well, n1 must be possible
+    res = n <= ss.nmax ? res : false # overall sample size constraint must not
+                                     # be violated
+    res = n1 <= n ? res : false # n1 cannot be larger than n
+    res = n <= ss.maxnfact*n1 ? res : false # n cannot be too large in relation
+                                            # to n1
+    n2  = n - n1
+    res = (n2 < ss.n2min) & (c != Inf) ? false : res # n2 too small (also affects "early stopping" for efficacy!)
+    res = (n  < ss.nmincont) & (c != Inf) ? false : res # only stopping for futility may violate nmincount
     return res
 end
