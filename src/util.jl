@@ -73,14 +73,17 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
                         end
                     end
                 end
-                # no second stage but no early stopping or second stage but non-finite c or too low c
-                if isfinite(c) & (n == n1)
+                # c in {-inf, inf, 0} iff n(x_1) == n1 (0 is for no-stopping but fixed)
+                if (isfinite(c) & (c != 0)) & (n == n1)
                     @constraint(m, y[x1, n, c] == 0)
                 end
                 # if !isfinite(c) & (n > n1) # not necessary if design may continue with decision after stage one
                 #     @constraint(m, y[x1, n, c] == 0)
                 # end
-                if ( (c < x1) & (n > n1) ) & !(isgroupsequential(params) & !allowsstoppingforefficacy(params))
+                # if ( (c < x1) & (n > n1) ) & !(isgroupsequential(params) & !allowsstoppingforefficacy(params))
+                #     @constraint(m, y[x1, n, c] == 0)
+                # end
+                if (x1 > c) & !(c in (-Inf, 0)) & !isgroupsequential(params) # decision is fixed but c is not valid (must be either -Inf (early stopping for efficacy or 0 if that is not allowed)
                     @constraint(m, y[x1, n, c] == 0)
                 end
                 if !possible(n1, n, c, ss) # sample space constraints

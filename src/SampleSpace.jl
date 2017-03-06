@@ -34,7 +34,7 @@ possible{T<:Integer}(n1::T, ss::SimpleSampleSpace) = n1 in ss.n1range
 function possible{T<:Integer,TR<:Real}(n1::T, n::T, c::TR, ss::SimpleSampleSpace)
     res = (n1 in ss.n1range) & (n <= ss.nmax) & (n1 <= n)
     res = n <= ss.maxnfact*n1 ? res : false
-    res = (n - n1 >= ss.n2min) | !isfinite(c) ? res : false 
+    res = (n - n1 >= ss.n2min) | !isfinite(c) ? res : false
     res = (n >= ss.nmincont) | !isfinite(c) ? res : false
     return res
 end
