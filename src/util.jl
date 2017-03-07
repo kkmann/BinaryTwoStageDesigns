@@ -98,7 +98,7 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
                 @constraint(m,
                     sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
                         n in (n1 + 1):nmax,
-                        c in cvalsfinite
+                        c in cvals
                     ) - 3*nmax*_is_mode[x1] >= -3*nmax
                 )
             end
@@ -106,7 +106,7 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
                 @constraint(m,
                     sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
                         n in (n1 + 1):nmax,
-                        c in cvalsfinite
+                        c in cvals
                     ) + 3*nmax*_is_mode[x1] <= 3*nmax
                 )
             end

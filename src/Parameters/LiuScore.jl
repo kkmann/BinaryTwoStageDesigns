@@ -119,7 +119,7 @@ end
 function _createProblem{T<:Integer}(
     n1::T,      # stage one sample size
     params::LiuScore;
-    npivots      = 15,
+    npivots      = 10,
     npriorpivots = 50
 )
     ss = samplespace(params)
@@ -177,12 +177,18 @@ function _createProblem{T<:Integer}(
     # values of n on the continuation set)
     @variable(m, absdiff[x1 = 0:(n1 - 1)])
     for x1 in 0:(n1 - 1)
+        if allowsstoppingforefficacy(params)
+            tmp = [-Inf; cvalsfinite]
+        else
+            tmp = cvalsfinite
+        end
         @constraint(m,
-            absdiff[x1] >= sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in cvalsfinite)
-            - sum(2*nmax*y[x1 + i, n, Inf] for n in nvals, i in 0:1) # disables constraint for stopping for futility
+            absdiff[x1] >= sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in tmp)
+                - sum(2*nmax*y[x1 + i, n, Inf] for n in nvals, i in 0:1) # disables constraint for stopping for futility
         )
         @constraint(m,
-            -absdiff[x1] <= -sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in cvalsfinite) + sum(2*nmax*y[x1 + 1, n, Inf] for n in nvals, i in 0:1)
+            -absdiff[x1] <= -sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in tmp)
+                + sum(2*nmax*y[x1 + 1, n, Inf] for n in nvals, i in 0:1)
         )
         @constraint(m, absdiff[x1] <= maxdiff)
     end
@@ -201,7 +207,7 @@ function _createProblem{T<:Integer}(
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    pivots = collect(linspace(0, 1, npivots)) # lambda formulaion requires edges!
+    pivots = [collect(linspace(0, 1 - b, npivots - 1)); 1] # lambda formulaion requires edges!, rup is 0 from powerreq to 1
     @variable(m, 0 <= lambda[priorpivots, pivots] <= 1)
     function frup(power, p; rupmax = 100.0)
         if p < params.pmcrv
@@ -254,6 +260,6 @@ function nreq_(p, power, p0, alpha; nmax = 10000.0)
         return nmax
     end
     res = (1 - p)*p*( (qnorm(1 - alpha) + qnorm(power)) / (p0 - p) )^2
-    res = min(nmax, max(5, res))
+    res = min(nmax, max(0, res))
     return res
 end
