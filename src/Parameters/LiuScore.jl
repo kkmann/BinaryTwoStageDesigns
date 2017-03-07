@@ -177,12 +177,17 @@ function _createProblem{T<:Integer}(
     # values of n on the continuation set)
     @variable(m, absdiff[x1 = 0:(n1 - 1)])
     for x1 in 0:(n1 - 1)
+        if allowsstoppingforefficacy(params)
+            tmp = [-Inf; cvalsfinite]
+        else
+            tmp = cvalsfinite
+        end
         @constraint(m,
-            absdiff[x1] >= sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in [-Inf; cvalsfinite])
+            absdiff[x1] >= sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in tmp)
                 - sum(2*nmax*y[x1 + i, n, Inf] for n in nvals, i in 0:1) # disables constraint for stopping for futility
         )
         @constraint(m,
-            -absdiff[x1] <= -sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in [-Inf; cvalsfinite])
+            -absdiff[x1] <= -sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in tmp)
                 + sum(2*nmax*y[x1 + 1, n, Inf] for n in nvals, i in 0:1)
         )
         @constraint(m, absdiff[x1] <= maxdiff)
