@@ -98,7 +98,7 @@ end
 function _createProblem{T<:Integer}(
     n1::T,      # stage one sample size
     params::KunzmannScore;
-    npivots      = 15,
+    npivots      = 10,
     npriorpivots = 50
 )
     ss = samplespace(params)
