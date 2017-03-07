@@ -207,7 +207,7 @@ function _createProblem{T<:Integer}(
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    pivots = [collect(linspace(0, powerreq, npivots - 1)); 1] # lambda formulaion requires edges!, rup is 0 from powerreq to 1
+    pivots = [collect(linspace(0, 1 - b, npivots - 1)); 1] # lambda formulaion requires edges!, rup is 0 from powerreq to 1
     @variable(m, 0 <= lambda[priorpivots, pivots] <= 1)
     function frup(power, p; rupmax = 100.0)
         if p < params.pmcrv
