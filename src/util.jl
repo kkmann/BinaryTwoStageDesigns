@@ -1,12 +1,12 @@
 """
 Creates a basline JuMP model
 with only minimal constraints (contiguous stopping, unimodal n(x1)) and
-functional constraint TODO make samplespace restriction more effective by using maxsamplesize(ss, n1)
+functional constraint
 """
 function _createBaseProblem(n1, params) # regularize by penalizing total variation  of c and n
     ss  = samplespace(params)
     !possible(n1, ss) ? throw(InexactError()) : nothing
-    nmax = maxsamplesize(ss)
+    nmax = maxsamplesize(ss, n1)
     nvals = n1:nmax
     cvalsfinite = 0:(nmax - 1)
     if allowsstoppingforefficacy(params)
@@ -55,6 +55,11 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
             )
         end
         for n in nvals
+            if isgroupsequential(params)
+                @constraint(m, # groupsequential designs can only have fixed decision with early stopping
+                    sum(y[x1, n1, c] for c in cvalsinfinite) == sum(y[x1, n, c] for n in nvals, c in cvalsinfinite)
+                )
+            end
             for c in cvals
                 if isfinite(c)
                     if c >= n
@@ -122,7 +127,7 @@ end
 
 function _extractSolution(y, n1, params)
     ss = samplespace(params)
-    nmax = maxsamplesize(ss)
+    nmax = maxsamplesize(ss, n1)
     nvals = n1:nmax
     if allowsstoppingforefficacy(params)
         cvals = [-Inf; 0:(nmax - 1); Inf]
@@ -157,7 +162,7 @@ function _addconditionaltypeonestageoneconstraint(
     params = parameters(design)
     p0     = null(params)
     n1old  = interimsamplesize(design)
-    nmax   = maxsamplesize(params)
+    nmax   = maxsamplesize(params, n1)
     cvalsfinite = 0:(nmax - 1)
     if allowsstoppingforefficacy(params)
         cvals = [-Inf; cvalsfinite; Inf]
@@ -198,7 +203,7 @@ function _addconditionaltypeonestagetwoconstraint(
     params = parameters(design)
     p0     = null(params)
     n1old  = interimsamplesize(design)
-    nmax   = maxsamplesize(params)
+    nmax   = maxsamplesize(params, n1)
     nvals  = n1old:nmax
     cvalsfinite = 0:(nmax - 1)
     if allowsstoppingforefficacy(params)
@@ -268,7 +273,7 @@ function _addinvarianceimputationstageoneconstraint(
     m, y, n1obs, x1obs, nna1, design
 )
     params = parameters(design)
-    nmax   = maxsamplesize(params)
+    nmax   = maxsamplesize(params, n1)
     cvalsfinite = 0:(nmax - 1)
     if allowsstoppingforefficacy(params)
         cvals = [-Inf; cvalsfinite; Inf]
@@ -302,3 +307,23 @@ end
 dbinom(k, n, p) = Distributions.pdf(Distributions.Binomial(n, p), k)
 
 qnorm(p) = Distributions.quantile(Distributions.Normal(0, 1), p)
+
+function findgrid(prior, l, u, n; resolution = 10000)
+    candidates = collect(linspace(l, u, resolution))
+    quantiles  = collect(linspace(l, u, n + 2))[2:(n + 1)]
+    cdf = cumsum(prior.(candidates))
+    cdf = cdf / cdf[resolution]
+    pivots = zeros(n)
+    cdfpiv = zeros(n)
+    i = 1
+    for j in 1:n
+        while (cdf[i] < quantiles[j]) & (i < resolution)
+            i += 1
+        end
+        pivots[j] = candidates[i]
+        cdfpiv[j] = cdf[i]
+    end
+    dcdf = cdfpiv - [0; cdfpiv[1:(n - 1)]] # vector of first order differences
+    dcdf = dcdf/sum(dcdf)
+    return pivots, dcdf
+end

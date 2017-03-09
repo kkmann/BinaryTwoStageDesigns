@@ -120,10 +120,10 @@ function _createProblem{T<:Integer}(
     n1::T,      # stage one sample size
     params::LiuScore;
     npivots      = 10,
-    npriorpivots = 50
+    npriorpivots = 25
 )
     ss = samplespace(params)
-    nmax = maxsamplesize(ss)
+    nmax = maxsamplesize(ss, n1)
     possible(n1, ss) ? nothing : throw(InexactError())
     a  = alpha(params)
     b  = params.beta
@@ -141,9 +141,8 @@ function _createProblem{T<:Integer}(
         cvals         = [cvalsfinite; Inf]
         cvalsinfinite = [Inf]
     end
-    priorpivots = collect(linspace(params.pmcrv, 1.0, npriorpivots + 2))[2:(npriorpivots + 1)] # leave out boundary values!
-    dp          = priorpivots[2] - priorpivots[1]
-    priorvals   = prior.(priorpivots) ./ sum(prior.(priorpivots) .* dp) # normalize to 1
+    priorpivots, dcdf   = findgrid(prior, params.pmcrv, 1, npriorpivots) # fewe points for approximation, performance critical!
+    cpriorpivots, dccdf = findgrid(prior, params.pmcrv, 1, 1000) # not performance critical!
     # add type one error rate constraint
     @constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
@@ -152,10 +151,10 @@ function _createProblem{T<:Integer}(
     )
     # add conditional type two error rate constraint (power)
     for x1 in 0:n1
-        posterior1 = priorvals .* dbinom.(x1, n1, priorpivots) .* dp
+        posterior1 = dbinom.(x1, n1, cpriorpivots) .* dccdf
         z1 = sum(posterior1)
         @constraint(m,
-            sum(sum(posterior1 .* _cpr.(x1, n1, n, c, priorpivots))/z1*y[x1, n, c] for
+            sum(sum(posterior1 .* _cpr.(x1, n1, n, c, cpriorpivots))/z1*y[x1, n, c] for
                 n in nvals, c in cvalsfinite
             ) + sum(y[x1, n, c] for
                 n in nvals, c in cvalsinfinite
@@ -163,11 +162,11 @@ function _createProblem{T<:Integer}(
         )
         # ensure monotonicity if required
         if x1 >= 1 & hasmonotoneconditionalpower(params)
-            posterior2 = priorvals .* dbinom.(x1 - 1, n1, priorpivots) .* dp
+            posterior2 = dbinom.(x1 - 1, n1, cpriorpivots) .* dccdf
             z2 = sum(posterior2)
             @constraint(m,
-                sum(sum(posterior1 .* _cpr.(x1, n1, n, c, priorpivots))/z1*y[x1, n, c]
-                        - sum(posterior2 .* _cpr.(x1 - 1, n1, n, c, priorpivots))/z2*y[x1 - 1, n, c] for
+                sum(sum(posterior1 .* _cpr.(x1, n1, n, c, cpriorpivots))/z1*y[x1, n, c]
+                        - sum(posterior2 .* _cpr.(x1 - 1, n1, n, c, cpriorpivots))/z2*y[x1 - 1, n, c] for
                     n in nvals, c in cvals
                 ) >= 0
             )
@@ -232,10 +231,7 @@ function _createProblem{T<:Integer}(
         @constraint(m, sum(lambda[p, piv]*frup(piv, p) for piv in pivots) == rup[p])
     end
     @objective(m, Min,
-        sum(priorvals[i]*(
-            rup[priorpivots[i]] +
-            ros[priorpivots[i]]
-            )*dp for i in 1:npriorpivots) # normalized version
+        sum((rup[priorpivots[i]] + ros[priorpivots[i]])*dcdf[i] for i in 1:npriorpivots) # normalized version
     )
     return m, y
 end

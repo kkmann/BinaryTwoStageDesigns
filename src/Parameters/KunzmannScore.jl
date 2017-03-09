@@ -99,10 +99,10 @@ function _createProblem{T<:Integer}(
     n1::T,      # stage one sample size
     params::KunzmannScore;
     npivots      = 10,
-    npriorpivots = 50
+    npriorpivots = 25
 )
     ss = samplespace(params)
-    nmax = maxsamplesize(ss)
+    nmax = maxsamplesize(ss, n1)
     possible(n1, ss) ? nothing : throw(InexactError())
     a  = alpha(params)
     p0 = null(params)
@@ -119,11 +119,11 @@ function _createProblem{T<:Integer}(
         cvals         = [cvalsfinite; Inf]
         cvalsinfinite = [Inf]
     end
-    priorpivots  = collect(linspace(0.0, 1.0, npriorpivots + 2))[2:(npriorpivots + 1)] # leave out boundary values!
-    dp           = priorpivots[2] - priorpivots[1]
-    priorvals    = prior.(priorpivots) ./ sum(prior.(priorpivots) .* dp) # normalize to 1
-    cpriorpivots = priorpivots[priorpivots .>= params.pmcrv]
-    cpriorvals   = prior.(cpriorpivots) ./ sum(prior.(cpriorpivots) .* dp) # normalize to 1, dp stays the same
+    # priorpivots  = collect(linspace(0.0, 1.0, npriorpivots + 2))[2:(npriorpivots + 1)] # leave out boundary values!
+    # dp           = priorpivots[2] - priorpivots[1]
+    # priorvals    = prior.(priorpivots) ./ sum(prior.(priorpivots) .* dp) # normalize to 1
+    priorpivots, dcdf   = findgrid(prior, 0, 1, npriorpivots)
+    cpriorpivots, dccdf = findgrid(prior, params.pmcrv, 1, 1000) # not performance critical!
     # add type one error rate constraint
     @constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
@@ -132,7 +132,7 @@ function _createProblem{T<:Integer}(
     )
     # add conditional type two error rate constraint (power)
     for x1 in 0:n1
-        posterior1 = cpriorvals .* dbinom.(x1, n1, cpriorpivots) .* dp # this must be conditional on $\rho>\rho_mcrv
+        posterior1 = dbinom.(x1, n1, cpriorpivots) .* dccdf # this must be conditional on $\rho>\rho_mcrv
         z1 = sum(posterior1)
         @constraint(m,
             sum(sum(posterior1 .* _cpr.(x1, n1, n, c, cpriorpivots))/z1*y[x1, n, c] for
@@ -143,7 +143,7 @@ function _createProblem{T<:Integer}(
         )
         # ensure monotonicity if required
         if x1 >= 1 & hasmonotoneconditionalpower(params)
-            posterior2 = cpriorvals .* dbinom.(x1 - 1, n1, cpriorpivots) .* dp
+            posterior2 = dbinom.(x1 - 1, n1, cpriorpivots) .* dccdf
             z2 = sum(posterior2)
             @constraint(m,
                 sum(sum(posterior1 .* _cpr.(x1, n1, n, c, cpriorpivots))/z1*y[x1, n, c]
@@ -200,10 +200,7 @@ function _createProblem{T<:Integer}(
         end
     end
     @objective(m, Min,
-        sum(priorvals[i]*(
-            ec[priorpivots[i]] +
-            upp[priorpivots[i]] #; priorpivots[i] >= params.pmcrv] # todo: check whether it is really that simple
-            )*dp for i in 1:npriorpivots) # normalized version
+        sum( (ec[priorpivots[i]] + upp[priorpivots[i]])*dcdf[i] for i in 1:npriorpivots)
     )
     return m, y
 end
@@ -214,14 +211,14 @@ end
 
 # utility
 function g(params::KunzmannScore, power)
-    power
     power < 0 ? throw(InexactError()) : nothing
     power > 1 ? throw(InexactError()) : nothing
+    return Distributions.cdf(Distributions.Beta(12.44, 5.52), power)
     if power < params.minpow
-        return power
+        return 0
     end
     if (power >= params.minpow) & (power <= params.maxpow)
-        return params.minpow + (.5 + (params.maxpow - power)/(params.maxpow - params.minpow))*(power - params.minpow)
+        return .5 * (power - params.minpow) * (1/(params.maxpow - params.minpow) + (power - params.minpow)/(params.maxpow - params.minpow)^2)
     end
     if (power > params.maxpow)
         return 1.0

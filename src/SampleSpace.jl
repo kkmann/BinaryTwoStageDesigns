@@ -39,7 +39,14 @@ function possible{T<:Integer,TR<:Real}(n1::T, n::T, c::TR, ss::SimpleSampleSpace
     res = n <= ss.maxnfact*n1 ? res : false # n cannot be too large in relation
                                             # to n1
     n2  = n - n1
-    res = (n2 < ss.n2min) & (c != Inf) ? false : res # n2 too small (also affects "early stopping" for efficacy!)
+    if (n2 < ss.n2min) & (c != Inf)
+        # n2 too small (also affects "early stopping" for efficacy!)
+        if (c == -Inf) & (n1 == n) & (n1 >= ss.nmincont) # fine, early stopping for efficacy
+            nothing
+        else
+            res = false
+        end
+    end
     res = (n  < ss.nmincont) & (c != Inf) ? false : res # only stopping for futility may violate nmincount
     return res
 end

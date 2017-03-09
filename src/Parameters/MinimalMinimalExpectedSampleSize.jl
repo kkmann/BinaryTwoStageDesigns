@@ -44,7 +44,7 @@ function _createProblem{T<:Integer}(
     params::MinimalMinimalExpectedSampleSize
 )
     ss   = samplespace(params)
-    nmax = maxsamplesize(ss)
+    nmax = maxsamplesize(ss, n1)
     possible(n1, ss) ? nothing : throw(InexactError())
     a  = alpha(params)
     b  = beta(params)
