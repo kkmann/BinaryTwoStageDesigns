@@ -308,21 +308,25 @@ dbinom(k, n, p) = Distributions.pdf(Distributions.Binomial(n, p), k)
 
 qnorm(p) = Distributions.quantile(Distributions.Normal(0, 1), p)
 
-function findgrid(prior, l, u, n; resolution = 10000)
-    candidates = collect(linspace(l, u, resolution))
+function findgrid(prior, l, u, n; resolution = 10000) # todo maybe put pivots in the middle of the intervals?
+    candidates = collect(linspace(l, u, resolution + 2))[2:(resolution + 1)]
     quantiles  = collect(linspace(l, u, n + 2))[2:(n + 1)]
+    modprior(p) = .9*prior(p) +  .1*Distributions.pdf(Distributions.Beta(.5, .5), p)
+    cdfrelaxed = cumsum(modprior.(candidates))
+    cdfrelaxed = cdfrelaxed / cdfrelaxed[resolution]
     cdf = cumsum(prior.(candidates))
     cdf = cdf / cdf[resolution]
     pivots = zeros(n)
     cdfpiv = zeros(n)
     i = 1
     for j in 1:n
-        while (cdf[i] < quantiles[j]) & (i < resolution)
+        while (cdfrelaxed[i] < quantiles[j]) & (i < resolution)
             i += 1
         end
         pivots[j] = candidates[i]
         cdfpiv[j] = cdf[i]
     end
+    pivots = (pivots .+ [l; pivots[1:(n - 1)]] ) / 2
     dcdf = cdfpiv - [0; cdfpiv[1:(n - 1)]] # vector of first order differences
     dcdf = dcdf/sum(dcdf)
     return pivots, dcdf

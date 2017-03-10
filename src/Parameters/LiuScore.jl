@@ -119,8 +119,8 @@ end
 function _createProblem{T<:Integer}(
     n1::T,      # stage one sample size
     params::LiuScore;
-    npivots      = 10,
-    npriorpivots = 25
+    npivots      = 15,
+    npriorpivots = 33
 )
     ss = samplespace(params)
     nmax = maxsamplesize(ss, n1)

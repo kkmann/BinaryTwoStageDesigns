@@ -98,8 +98,8 @@ end
 function _createProblem{T<:Integer}(
     n1::T,      # stage one sample size
     params::KunzmannScore;
-    npivots      = 10,
-    npriorpivots = 25
+    npivots      = 15,
+    npriorpivots = 33
 )
     ss = samplespace(params)
     nmax = maxsamplesize(ss, n1)
@@ -186,7 +186,7 @@ function _createProblem{T<:Integer}(
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    pivots = [0; collect(linspace(params.minpow, params.maxpow, max(1, npivots - 2))); 1] # lambda formulaion requires edges! exploitn fact that function is locally linear!
+    pivots = [0; collect(linspace(.42, params.maxpow, max(1, npivots - 2))); 1] # lambda formulaion requires edges! exploitn fact that function is locally linear! #TODO make this adaptive to new parameters!
     @variable(m, 0 <= lambdaSOS2[priorpivots, pivots] <= 1)
     @variable(m, upp[priorpivots]) # underpower penalty
     for p in priorpivots
