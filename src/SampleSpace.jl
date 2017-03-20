@@ -18,18 +18,33 @@ type SimpleSampleSpace{T<:Integer} <: SampleSpace
     n2min
     maxnfact
     nmincont
-    function SimpleSampleSpace(n1range, nmax, n2min, maxnfact, nmincont)
+    stepsize
+    function SimpleSampleSpace(n1range, nmax, n2min, maxnfact, nmincont, stepsize)
         minimum(n1range) < 1 ? throw(InexactError()) : nothing
         maximum(n1range) > nmax ? throw(InexactError()) : nothing
-        new(n1range, nmax, n2min, maxnfact, nmincont)
+        new(n1range, nmax, n2min, maxnfact, nmincont, stepsize)
     end
 end
-SimpleSampleSpace{T<:Integer}(n1range::Vector{T}, nmax::T; n2min = 1, maxnfact = Inf, nmincont = 0) = SimpleSampleSpace{T}(n1range, nmax, n2min, maxnfact, nmincont)
-SimpleSampleSpace{T<:Integer}(n1range::UnitRange{T}, nmax::T; n2min = 1, maxnfact = Inf, nmincont = 0) = SimpleSampleSpace{T}(convert(Vector{T}, n1range), nmax, n2min, maxnfact, nmincont)
+SimpleSampleSpace{T<:Integer}(n1range::Vector{T}, nmax::T; n2min = 1, maxnfact = Inf, nmincont = 0, stepsize = 1) = SimpleSampleSpace{T}(n1range, nmax, n2min, maxnfact, nmincont, stepsize)
+SimpleSampleSpace{T<:Integer}(n1range::UnitRange{T}, nmax::T; n2min = 1, maxnfact = Inf, nmincont = 0, stepsize = 1) = SimpleSampleSpace{T}(convert(Vector{T}, n1range), nmax, n2min, maxnfact, nmincont, stepsize)
 
 interimsamplesizerange(ss::SimpleSampleSpace) = ss.n1range
 maxsamplesize(ss::SimpleSampleSpace) = ss.nmax
 maxsamplesize(ss::SimpleSampleSpace, n1) = convert(Integer, floor(n1*ss.maxnfact))
+function getnvals(ss::SimpleSampleSpace, n1)
+    nvals = collect(n1:ss.stepsize:maxsamplesize(ss, n1))
+    if !(ss.nmincont in nvals)
+        push!(nvals, ss.nmincont)
+    end
+    if !((n1 + ss.n2min) in nvals)
+        push!(nvals, n1 + ss.n2min)
+    end
+    if !(maxsamplesize(ss, n1) in nvals)
+        push!(nvals, maxsamplesize(ss, n1))
+    end
+    return sort(nvals)
+end
+
 possible{T<:Integer}(n1::T, ss::SimpleSampleSpace) = n1 in ss.n1range
 function possible{T<:Integer,TR<:Real}(n1::T, n::T, c::TR, ss::SimpleSampleSpace)
     res = n1 in ss.n1range # well, n1 must be possible

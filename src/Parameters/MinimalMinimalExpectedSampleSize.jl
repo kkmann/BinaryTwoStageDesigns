@@ -53,8 +53,8 @@ function _createProblem{T<:Integer}(
     # define base problem
     !possible(n1, ss) ? throw(InexactError()) : nothing
     nmax = maxsamplesize(ss)
-    nvals = n1:nmax
-    cvalsfinite = 0:(nmax - 1)
+    nvals = getnvals(ss, n1)
+    cvalsfinite = 0:(maximum(nvals) - 1)
     cvals = [-Inf; cvalsfinite; Inf]
     cvalsinfinite = [-Inf; Inf]
     m = Model()

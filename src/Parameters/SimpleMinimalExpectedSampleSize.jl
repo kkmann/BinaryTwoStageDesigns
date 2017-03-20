@@ -110,8 +110,8 @@ function _createProblem{T<:Integer}(
 
     # define base problem
     m, y = _createBaseProblem(n1, params) # c.f. util.jl
-    nvals = n1:nmax
-    cvalsfinite = 0:(nmax - 1)
+    nvals = getnvals(ss, n1)
+    cvalsfinite = 0:(maximum(nvals) - 1)
     if allowsstoppingforefficacy(params)
         cvals = [-Inf; cvalsfinite; Inf]
         cvalsinfinite = [-Inf; Inf]

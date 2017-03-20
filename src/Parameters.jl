@@ -31,6 +31,8 @@ beta(par::PointAlternative) = try par.beta catch error("not implemented") end
 
 
 
-
 abstract VagueAlternative <: Parameters
 prior{T<:Real}(par::VagueAlternative, p::T) = error("not implemented")
+function conditionalexpectedpower(design, VagueAlternative, x1)
+    error("not implemented")
+end

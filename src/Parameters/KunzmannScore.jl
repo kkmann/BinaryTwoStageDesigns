@@ -12,8 +12,8 @@ type KunzmannScore{
     mincondpower
     gamma
     lambda
-    minpow
-    maxpow
+    a
+    b
     smoothness
     riskpremium
     function KunzmannScore(
@@ -22,15 +22,14 @@ type KunzmannScore{
         alpha,
         mincondpower,
         gamma, lambda,
-        minpow, maxpow,
+        a, b,
         smoothness,
         riskpremium
     )
-        any(!([alpha; minpow; maxpow; p0; pmcrv; mincondpower] .>= 0.0)) ? throw(InexactError()) : nothing
-        any(!([alpha; minpow; maxpow; p0; pmcrv; mincondpower] .<= 1.0)) ? throw(InexactError()) : nothing
+        any(!([alpha; p0; pmcrv; mincondpower] .>= 0.0)) ? throw(InexactError()) : nothing
+        any(!([alpha; p0; pmcrv; mincondpower] .<= 1.0)) ? throw(InexactError()) : nothing
         abs(quadgk(prior, 0, 1)[1] - 1) <= .001 ? nothing: throw(InexactError())
-        minpow >= maxpow ? throw(InexactError()) : nothing
-        new(samplespace, p0, pmcrv, prior, alpha, mincondpower, gamma, lambda, minpow, maxpow, smoothness, riskpremium)
+        new(samplespace, p0, pmcrv, prior, alpha, mincondpower, gamma, lambda, a, b, smoothness, riskpremium)
     end
 end
 function KunzmannScore{T_samplespace<:SampleSpace}(
@@ -38,8 +37,8 @@ function KunzmannScore{T_samplespace<:SampleSpace}(
     p0, pmcrv, prior, alpha,
     gamma, lambda;
     riskpremium::Real              = 0,
-    minpow::Real                   = .7,
-    maxpow::Real                   = .9,
+    a::Real                        = 7.897556,
+    b::Real                        = 4.406376,
     smoothness::Real               = Inf,
     minconditionalpower::Real      = 0.0,
     GROUPSEQUENTIAL::Bool          = false,
@@ -59,7 +58,7 @@ function KunzmannScore{T_samplespace<:SampleSpace}(
         T_mcp = MonotoneConditionalPower
     end
     KunzmannScore{T_samplespace, T_gs, T_eff, T_mcp}(
-        samplespace, p0, pmcrv, prior, alpha, minconditionalpower, gamma, lambda, minpow, maxpow, smoothness, riskpremium
+        samplespace, p0, pmcrv, prior, alpha, minconditionalpower, gamma, lambda, a, b, smoothness, riskpremium
     )
 end
 
@@ -110,13 +109,13 @@ function _createProblem{T<:Integer}(
     maxdiff = min(2*nmax, smoothness(params)) # make finite!
     # define base problem
     m, y = _createBaseProblem(n1, params) # c.f. util.jl
-    nvals = n1:nmax
-    cvalsfinite = 0:(nmax - 1)
+    nvals = getnvals(ss, n1)
+    cvalsfinite = 0:(maximum(nvals) - 1)
     if allowsstoppingforefficacy(params)
-        cvals         = [-Inf; cvalsfinite; Inf]
+        cvals = [-Inf; cvalsfinite; Inf]
         cvalsinfinite = [-Inf; Inf]
     else
-        cvals         = [cvalsfinite; Inf]
+        cvals = [cvalsfinite; Inf]
         cvalsinfinite = [Inf]
     end
     # priorpivots  = collect(linspace(0.0, 1.0, npriorpivots + 2))[2:(npriorpivots + 1)] # leave out boundary values!
@@ -186,7 +185,9 @@ function _createProblem{T<:Integer}(
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    pivots = [0; collect(linspace(.42, params.maxpow, max(1, npivots - 2))); 1] # lambda formulaion requires edges! exploitn fact that function is locally linear! #TODO make this adaptive to new parameters!
+    lbound = quantile(Distributions.Beta(params.a, params.b), .1)
+    ubound = quantile(Distributions.Beta(params.a, params.b), .99)
+    pivots = [0; collect(linspace(lbound, ubound, max(1, npivots - 2))); 1] # lambda formulaion requires edges! exploitn fact that function is locally linear!
     @variable(m, 0 <= lambdaSOS2[priorpivots, pivots] <= 1)
     @variable(m, upp[priorpivots]) # underpower penalty
     for p in priorpivots
@@ -213,14 +214,5 @@ end
 function g(params::KunzmannScore, power)
     power < 0 ? throw(InexactError()) : nothing
     power > 1 ? throw(InexactError()) : nothing
-    return Distributions.cdf(Distributions.Beta(12.44, 5.52), power)
-    if power < params.minpow
-        return 0
-    end
-    if (power >= params.minpow) & (power <= params.maxpow)
-        return .5 * (power - params.minpow) * (1/(params.maxpow - params.minpow) + (power - params.minpow)/(params.maxpow - params.minpow)^2)
-    end
-    if (power > params.maxpow)
-        return 1.0
-    end
+    return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
 end

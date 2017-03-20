@@ -26,8 +26,8 @@ type LiuScore{
         any(!([alpha; beta; p0; pmcrv; mincondpower] .<= 1.0)) ? throw(InexactError()) : nothing
         quadgk(prior, 0, pmcrv)[1] <= 0.001 ? nothing: throw(InexactError())
         quadgk(prior, pmcrv, 1)[1] >= 0.999 ? nothing: throw(InexactError())
-        (fs >= 0) & (fs < 1) ? nothing : throw(InexactError())
         (fp >= 0) & (fp < 1) ? nothing : throw(InexactError())
+        fs > 1 ? nothing : throw(InexactError())
         new(samplespace, p0, pmcrv, prior, alpha, beta, mincondpower, fs, fp, smoothness)
     end
 end
@@ -84,7 +84,7 @@ function ros{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p
     for x1 in 0:n1
         ros += dbinom(x1, n1, p1)*max(0.0, samplesize(design, x1)/denom - 1)
     end
-    return min(100, ros/(1 - params.fs))
+    return min(100, ros/(params.fs - 1))
 end
 function rup{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p1::Real)
     if p1 < params.pmcrv
@@ -132,13 +132,13 @@ function _createProblem{T<:Integer}(
     maxdiff = min(2*nmax, smoothness(params)) # make finite!
     # define base problem
     m, y = _createBaseProblem(n1, params) # c.f. util.jl
-    nvals = n1:nmax
-    cvalsfinite = 0:(nmax - 1)
+    nvals = getnvals(ss, n1)
+    cvalsfinite = 0:(maximum(nvals) - 1)
     if allowsstoppingforefficacy(params)
-        cvals         = [-Inf; cvalsfinite; Inf]
+        cvals = [-Inf; cvalsfinite; Inf]
         cvalsinfinite = [-Inf; Inf]
     else
-        cvals         = [cvalsfinite; Inf]
+        cvals = [cvalsfinite; Inf]
         cvalsinfinite = [Inf]
     end
     priorpivots, dcdf   = findgrid(prior, params.pmcrv, 1, npriorpivots) # fewe points for approximation, performance critical!
@@ -195,7 +195,7 @@ function _createProblem{T<:Integer}(
     nreq__(p, powerreq) = nreq_(p, powerreq, p0, a)
     # construct expressions for ROS, upper bound necessary to guarantee finteness!
     @expression(m, ros[p in priorpivots],
-        1/(1 - params.fs) * sum(
+        1/(params.fs - 1) * sum(
             dbinom(x1, n1, p) * max(0, min(100.0, (n / nreq__(p, 1 - b) - 1))) * y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         )

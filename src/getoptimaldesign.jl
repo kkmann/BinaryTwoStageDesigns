@@ -29,7 +29,7 @@ function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
     end
 end
 
-function getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}( # TODO: Idea: pass previous solution as upper bound on objective -> becomes infeasible and can be cancelled early!
+function getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}(
     parameters::Parameters,
     solver::TS;
     VERBOSE::Integer = 1

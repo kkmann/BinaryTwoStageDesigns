@@ -7,8 +7,8 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
     ss  = samplespace(params)
     !possible(n1, ss) ? throw(InexactError()) : nothing
     nmax = maxsamplesize(ss, n1)
-    nvals = n1:nmax
-    cvalsfinite = 0:(nmax - 1)
+    nvals = getnvals(ss, n1)
+    cvalsfinite = 0:(maximum(nvals) - 1)
     if allowsstoppingforefficacy(params)
         cvals = [-Inf; cvalsfinite; Inf]
         cvalsinfinite = [-Inf; Inf]
@@ -102,7 +102,7 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
             for x1_ in 1:x1
                 @constraint(m,
                     sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
-                        n in (n1 + 1):nmax,
+                        n in nvals[2:end],
                         c in cvals
                     ) - 3*nmax*_is_mode[x1] >= -3*nmax
                 )
@@ -110,7 +110,7 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
             for x1_ in (x1 + 1):n1
                 @constraint(m,
                     sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
-                        n in (n1 + 1):nmax,
+                        n in nvals[2:end],
                         c in cvals
                     ) + 3*nmax*_is_mode[x1] <= 3*nmax
                 )
@@ -126,13 +126,16 @@ function _createBaseProblem(n1, params) # regularize by penalizing total variati
 end
 
 function _extractSolution(y, n1, params)
-    ss = samplespace(params)
-    nmax = maxsamplesize(ss, n1)
-    nvals = n1:nmax
+    ss    = samplespace(params)
+    nmax  = maxsamplesize(ss, n1)
+    nvals = getnvals(ss, n1)
+    cvalsfinite = 0:(maximum(nvals) - 1)
     if allowsstoppingforefficacy(params)
-        cvals = [-Inf; 0:(nmax - 1); Inf]
+        cvals = [-Inf; cvalsfinite; Inf]
+        cvalsinfinite = [-Inf; Inf]
     else
-        cvals = [0:(nmax - 1); Inf]
+        cvals = [cvalsfinite; Inf]
+        cvalsinfinite = [Inf]
     end
     nvec = zeros(Int64, n1 + 1)
     cvec = zeros(Float64, n1 + 1) # need float for +/- Inf
@@ -148,10 +151,69 @@ function _extractSolution(y, n1, params)
     end
     try
         design = BinaryTwoStageDesign(nvec, cvec, params)
+        return design
     catch e
+        println("trying to recover solution") # sometimes values are set to 0 due to numerical issues
         println(nvec)
         println(cvec)
-        error("could not create design from optimization result, consider changing solver or solver parameters to increase numerical accuracy.")
+        try
+            for i in 1:length(nvec)
+                if nvec[i] == 0
+                    leftn  = NaN
+                    rightn = NaN
+                    leftc  = NaN
+                    rightc = NaN
+                    if i > 1
+                        j = 1
+                        while (nvec[i - 1] == 0) & (i - j - 1 >= 1)
+                            j -= 1
+                            if nvec[i - j] != 0 # found left interpolation value
+                                break
+                            end
+                        end
+                        if nvec[i - j] != 0
+                            leftn = nvec[i - j]
+                            leftc = cvec[i - j]
+                        end
+                    end
+                    if i < length(nvec)
+                        j = 1
+                        while (nvec[i + 1] == 0) & (i + j + 1 <= length(nvec))
+                            j += 1
+                            if nvec[i + j] != 0 # found right interpolation value
+                                break
+                            end
+                        end
+                        if nvec[i + j] != 0
+                            rightn = nvec[i + j]
+                            rightc = cvec[i + j]
+                        end
+                    end
+                    if isnan(leftn) & isnan(rightn)
+                        continue
+                    end
+                    if isnan(leftn)
+                        nvec[i] = rightn
+                        cvec[i] = rightc
+                    end
+                    if isnan(rightn)
+                        nvec[i] = leftn
+                        cvec[i] = leftc + 1 # need to account for x1 + 1
+                    end
+                    if !isnan(leftn) & !isnan(rightn)
+                        nvec[i] = round((leftn + rightn)/2)
+                        cvec[i] = max(leftc + 1, ceil((leftc + rightc)/2))
+                    end
+                end
+            end
+            println(nvec)
+            println(cvec)
+            design = BinaryTwoStageDesign(nvec, cvec, params)
+            return design
+        catch e
+            println(e)
+            error("could not create design from optimization result, consider changing solver or solver parameters to increase numerical accuracy.")
+        end
     end
 end
 
@@ -160,10 +222,15 @@ function _addconditionaltypeonestageoneconstraint(
     m, y, n1obs, x1obs, nna1, design::BinaryTwoStageDesign
 )
     params = parameters(design)
+    ss     = samplespace(params)
+    nvals  = getnvals(ss, n1)
+    if ss.stepsize != 1
+        error("stepsize must be one")
+    end
     p0     = null(params)
     n1old  = interimsamplesize(design)
     nmax   = maxsamplesize(params, n1)
-    cvalsfinite = 0:(nmax - 1)
+    cvalsfinite = 0:(maximum(nvals) - 1)
     if allowsstoppingforefficacy(params)
         cvals = [-Inf; cvalsfinite; Inf]
         cvalsinfinite = [-Inf; Inf]
@@ -201,11 +268,16 @@ function _addconditionaltypeonestagetwoconstraint(
     m, y, n1, x1obs, nna1, xobs, nna, design
 )
     params = parameters(design)
+    ss     = samplespace(params)
+    nvals  = getnvals(ss, n1)
+    if ss.stepsize != 1
+        error("stepsize must be one")
+    end
     p0     = null(params)
     n1old  = interimsamplesize(design)
     nmax   = maxsamplesize(params, n1)
     nvals  = n1old:nmax
-    cvalsfinite = 0:(nmax - 1)
+    cvalsfinite = 0:(maximum(nvals) - 1)
     if allowsstoppingforefficacy(params)
         cvals = [-Inf; cvalsfinite; Inf]
         cvalsinfinite = [-Inf; Inf]
@@ -273,8 +345,13 @@ function _addinvarianceimputationstageoneconstraint(
     m, y, n1obs, x1obs, nna1, design
 )
     params = parameters(design)
+    ss     = samplespace(params)
+    nvals  = getnvals(ss, n1)
+    if ss.stepsize != 1
+        error("stepsize must be one")
+    end
     nmax   = maxsamplesize(params, n1)
-    cvalsfinite = 0:(nmax - 1)
+    cvalsfinite = 0:(maximum(nvals) - 1)
     if allowsstoppingforefficacy(params)
         cvals = [-Inf; cvalsfinite; Inf]
         cvalsinfinite = [-Inf; Inf]
@@ -297,12 +374,6 @@ function _addinvarianceimputationstageoneconstraint(
     end
     return m, y
 end
-
-
-#
-# function _isInSupport{T<:Integer}(supp::Array{Int64, 2}, x1::T, x2::T)
-#     return any(map(i -> [x1; x2] == supp[i, :], 1:size(supp, 1)))
-# end
 
 dbinom(k, n, p) = Distributions.pdf(Distributions.Binomial(n, p), k)
 
