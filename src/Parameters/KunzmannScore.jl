@@ -90,7 +90,7 @@ score(design::AbstractBinaryTwoStageDesign, params::KunzmannScore, p::Real) = ex
 
 function score(design::AbstractBinaryTwoStageDesign, params::KunzmannScore)
     f(p) = params.prior(p)*score(design, params, p)
-    return quadgk(f, 0, 1, reltol = .001, maxevals = 1e5)[1]
+    return quadgk(f, 0, 1, reltol = .001)[1]
 end
 
 

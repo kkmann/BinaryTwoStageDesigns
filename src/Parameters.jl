@@ -8,7 +8,7 @@ Base.getindex(par::Parameters, i) = par
 
 null(par::Parameters) = try par.p0 catch error("not implemented") end
 alpha(par::Parameters) = try par.alpha catch error("not implemented") end
-
+mcrv(par::Parameters) = try par.pmcrv catch error("not implemented") end
 
 samplespace(par::Parameters) = try par.samplespace catch error("not implemeted") end
 maxsamplesize(par::Parameters) = error("not implemented")
@@ -32,7 +32,4 @@ beta(par::PointAlternative) = try par.beta catch error("not implemented") end
 
 
 abstract VagueAlternative <: Parameters
-prior{T<:Real}(par::VagueAlternative, p::T) = error("not implemented")
-function conditionalexpectedpower(design, VagueAlternative, x1)
-    error("not implemented")
-end
+prior{T<:Real}(par::VagueAlternative, p::T) = try par.prior(p) catch error("not implemented") end

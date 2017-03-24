@@ -99,6 +99,23 @@ function power{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
     return min(1, max(0, vecdot(Distributions.pdf(X1, x1range), power.(design, x1range, p))))
 end
 
+function expectedpower(design::AbstractBinaryTwoStageDesign, params::VagueAlternative, x1)
+    pmcrv  = mcrv(params)
+    phi(p) = prior(params, p)
+    n1     = interimsamplesize(design)
+    z      = quadgk(p -> phi(p) * Distributions.pdf(Distributions.Binomial(n1, p), x1), pmcrv, 1)[1]
+    omega(p) = p < pmcrv ? 0 : phi(p) * Distributions.pdf(Distributions.Binomial(n1, p), x1) / z # conditional prior for stage 2
+    return quadgk(p -> power(design, x1, p) * omega(p), pmcrv, 1)[1]
+end
+function expectedpower(design::AbstractBinaryTwoStageDesign, params::VagueAlternative)
+    pmcrv  = mcrv(params)
+    phi(p) = prior(params, p)
+    n1     = interimsamplesize(design)
+    z      = quadgk(phi, pmcrv, 1)[1]
+    omega(p) = p < pmcrv ? 0 : phi(p) / z # conditional prior given effect
+    return quadgk(p -> power(design, p) * omega(p), pmcrv, 1)[1]
+end
+
 
 function stoppingforfutility{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
     checkp(p)

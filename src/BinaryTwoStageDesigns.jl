@@ -19,14 +19,14 @@ import MathProgBase
 export Parameters, samplespace, maxsamplesize, isgroupsequential, allowsstoppingforefficacy,
     NoParameters,
     PointAlternative, null, alpha, alternative, beta,
-    VagueAlternative, prior
+    VagueAlternative, prior, mcrv
 
 
 # include("BinaryTwoStageDesign.jl")
 export AbstractBinaryTwoStageDesign,
     BinaryTwoStageDesign,
         parameters, interimsamplesize, samplesize, criticalvalue, power, test, pdf,
-        simulate, support, ispossible, stoppingforfutility, score
+        simulate, support, ispossible, stoppingforfutility, score, expectedpower
 
 
 # include("SampleSize.jl")
@@ -49,6 +49,10 @@ export MinimalMinimalExpectedSampleSize
 export LiuScore, ros, rup
 
 export KunzmannScore, expectedcost, underpowerpenalty
+
+export EB
+
+export BMESS
 
 # include ("optimal.jl")
 export getoptimaldesign
@@ -76,6 +80,8 @@ include("Parameters/MinimalMinimalExpectedSampleSize.jl")
 include("Parameters/SimpleMinimalExpectedSampleSize.jl")
 include("Parameters/LiuScore.jl")
 include("Parameters/KunzmannScore.jl")
+include("Parameters/BMESS.jl")
+include("Parameters/EB.jl")
 include("util.jl")
 include("getoptimaldesign.jl")
 include("adapt.jl")
