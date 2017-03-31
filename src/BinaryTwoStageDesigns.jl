@@ -4,6 +4,7 @@ module BinaryTwoStageDesigns
 
 using JuMP
 using QuadGK
+using UnicodePlots
 
 import Base.show
 import Base.convert
@@ -37,12 +38,15 @@ export SampleSize
 export SampleSpace,
     SimpleSampleSpace, interimsamplesizerange, maxsamplesize, possible
 
+export IPModel, extractsolution
+
 # include("SimpleMinimalExpectedSampleSize.jl")
 export SimpleMinimalExpectedSampleSize,
     IsGroupSequential, GroupSequential, NotGroupSequential,
     StoppingForEfficacy, AllowStoppingForEfficacy, NoStoppingForEfficacy,
     HasMonotoneConditionalPower, MonotoneConditionalPower, NoMonotoneConditionalPower,
-    minconditionalpower, smoothness
+    minconditionalpower, smoothness,
+    getnvals, getcvals, isgroupsequential
 
 export MinimalMinimalExpectedSampleSize
 
@@ -76,6 +80,7 @@ include("Parameters.jl")
 include("BinaryTwoStageDesign.jl")
 include("SampleSize.jl")
 include("SampleSpace.jl")
+include("ipmodel.jl")
 include("Parameters/MinimalMinimalExpectedSampleSize.jl")
 include("Parameters/SimpleMinimalExpectedSampleSize.jl")
 include("Parameters/LiuScore.jl")

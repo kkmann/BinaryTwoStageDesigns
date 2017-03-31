@@ -1,9 +1,4 @@
-type EB{
-        T_samplespace<:SampleSpace,
-        T_gs<:IsGroupSequential,
-        T_eff<:StoppingForEfficacy,
-        T_mcp<:HasMonotoneConditionalPower
-} <: VagueAlternative
+type EB{T_samplespace<:SampleSpace} <: VagueAlternative
     samplespace::T_samplespace
     p0
     pmcrv
@@ -16,21 +11,20 @@ type EB{
     a
     b
     k
-    smoothness
+    npriorpivots # number of pivots for prior evaluation
+    ngpivots # number of pivots for approximation of g
+    MONOTONECONDITIONALPOWER
     function EB(
-        samplespace,
-        p0, pmcrv, prior,
-        alpha,
-        beta,
-        mincondpower,
-        gamma, lambda,
-        a, b, k,
-        smoothness
+        samplespace, p0, pmcrv, prior, alpha, beta, mincondpower, gamma,
+        lambda, a, b, k, npriorpivots, ngpivots, MONOTONECONDITIONALPOWER
     )
         any(!([alpha; p0; pmcrv; mincondpower] .>= 0.0)) ? throw(InexactError()) : nothing
         any(!([alpha; p0; pmcrv; mincondpower] .<= 1.0)) ? throw(InexactError()) : nothing
         abs(quadgk(prior, 0, 1)[1] - 1) <= .001 ? nothing: throw(InexactError())
-        new(samplespace, p0, pmcrv, prior, alpha, beta, mincondpower, gamma, lambda, a, b, k, smoothness)
+        new(
+            samplespace, p0, pmcrv, prior, alpha, beta, mincondpower, gamma,
+            lambda, a, b, k, npriorpivots, ngpivots, MONOTONECONDITIONALPOWER
+        )
     end
 end
 function EB{T_samplespace<:SampleSpace}(
@@ -41,44 +35,32 @@ function EB{T_samplespace<:SampleSpace}(
     a::Real                        = 1,
     b::Real                        = 1,
     k::Real                        = 1,
-    smoothness::Real               = Inf,
+    npriorpivots::Integer          = 33,
+    ngpivots::Integer              = 15,
     minconditionalpower::Real      = 0.0,
-    GROUPSEQUENTIAL::Bool          = false,
-    STOPPINGFOREFFICACY::Bool      = true,
     MONOTONECONDITIONALPOWER::Bool = true
 )
-    T_gs = NotGroupSequential
-    if GROUPSEQUENTIAL
-        T_gs = GroupSequential
-    end
-    T_eff = AllowStoppingForEfficacy
-    if !STOPPINGFOREFFICACY
-        T_eff = NoStoppingForEfficacy
-    end
-    T_mcp = NoMonotoneConditionalPower
-    if MONOTONECONDITIONALPOWER
-        T_mcp = MonotoneConditionalPower
-    end
-    EB{T_samplespace, T_gs, T_eff, T_mcp}(
-        samplespace, p0, pmcrv, prior, alpha, minconditionalpower, gamma, lambda, a, b, k, smoothness
+    EB{T_samplespace}(
+        samplespace, p0, pmcrv, prior, alpha, beta, minconditionalpower, gamma,
+        lambda, a, b, k, npriorpivots, ngpivots, MONOTONECONDITIONALPOWER
     )
 end
 
 maxsamplesize(params::EB) = maxsamplesize(params.samplespace)
-
-allowsstoppingforefficacy{T_samplespace, T_gs, T_eff, T_mcp}(params::EB{T_samplespace, T_gs, T_eff, T_mcp}) = T_eff == AllowStoppingForEfficacy ? true : false
-
-isgroupsequential{T_samplespace, T_gs, T_eff, T_mcp}(params::EB{T_samplespace, T_gs, T_eff, T_mcp}) = T_gs == GroupSequential ? true : false
-
-hasmonotoneconditionalpower{T_samplespace, T_gs, T_eff, T_mcp}(params::EB{T_samplespace, T_gs, T_eff, T_mcp}) = T_mcp == MonotoneConditionalPower ? true : false
-
+isgroupsequential{T_samplespace}(params::EB{T_samplespace}) = isgroupsequential(params.ss)
+hasmonotoneconditionalpower{T_samplespace}(params::EB{T_samplespace}) = params.MONOTONECONDITIONALPOWER
 minconditionalpower(params::EB) = params.mincondpower
 
-smoothness(params::EB) = params.smoothness
+
 
 function expectedcost(design::AbstractBinaryTwoStageDesign, params::EB, p::Real)
     ess = SampleSize(design, p) |> mean
     return params.gamma*ess * (p + params.k * (1 - p))
+end
+function g(params::EB, power)
+    power < 0 ? error("power cannot be negative") : nothing
+    power > 1 ? error("power cannot exceed 1")    : nothing
+    return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
 end
 function expectedbenefit(design::AbstractBinaryTwoStageDesign, params::EB, p::Real)
     if p < mcrv(params)
@@ -87,41 +69,28 @@ function expectedbenefit(design::AbstractBinaryTwoStageDesign, params::EB, p::Re
         return params.lambda * g(params, power(design, p))
     end
 end
-
 score(design::AbstractBinaryTwoStageDesign, params::EB, p::Real) = -(expectedbenefit(design, params, p) - expectedcost(design, params, p))
-
 function score(design::AbstractBinaryTwoStageDesign, params::EB)
     return quadgk(p -> params.prior(p)*score(design, params, p), 0, 1, reltol = .001)[1]
 end
 
-
-function _createProblem{T<:Integer}(
-    n1::T,      # stage one sample size
-    params::EB;
-    npivots      = 15,
-    npriorpivots = 33
-)
+function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
     ss = samplespace(params)
-    nmax = maxsamplesize(ss, n1)
-    possible(n1, ss) ? nothing : throw(InexactError())
-    a  = alpha(params)
-    p0 = null(params)
-    prior = params.prior
-    maxdiff = min(2*nmax, smoothness(params)) # make finite!
-    # define base problem
-    m, y = _createBaseProblem(n1, params) # c.f. util.jl
-    nvals = getnvals(ss, n1)
-    cvalsfinite = 0:(maximum(nvals) - 1)
-    if allowsstoppingforefficacy(params)
-        cvals = [-Inf; cvalsfinite; Inf]
-        cvalsinfinite = [-Inf; Inf]
-    else
-        cvals = [cvalsfinite; Inf]
-        cvalsinfinite = [Inf]
-    end
-    # priorpivots  = collect(linspace(0.0, 1.0, npriorpivots + 2))[2:(npriorpivots + 1)] # leave out boundary values!
-    # dp           = priorpivots[2] - priorpivots[1]
-    # priorvals    = prior.(priorpivots) ./ sum(prior.(priorpivots) .* dp) # normalize to 1
+    !possible(n1, ss) ? error("n1 and sample space incompatible") : nothing
+    # extract ip model
+    m             = ipm.m
+    y             = ipm.y
+    nvals         = ipm.nvals
+    cvals         = ipm.cvals
+    cvalsfinite   = ipm.cvalsfinite
+    cvalsinfinite = [-Inf; Inf]
+    # extract other parameters
+    nmax          = maxsamplesize(ss, n1)
+    p0            = null(params)
+    prior         = params.prior
+    npriorpivots  = params.npriorpivots
+    ngpivots      = params.ngpivots
+    # get grid for prior and conditional prior
     priorpivots, dcdf   = findgrid(prior, 0, 1, npriorpivots)
     cpriorpivots, dccdf = findgrid(prior, params.pmcrv, 1, 1000) # not performance critical!
     # add type one error rate constraint
@@ -153,27 +122,6 @@ function _createProblem{T<:Integer}(
             )
         end
     end
-    # # add constraints for smoothness (maxmial difference between successive
-    # # values of n on the continuation set)
-    # @variable(m, absdiff[x1 = 0:(n1 - 1)])
-    # for x1 in 0:(n1 - 1)
-    #     if allowsstoppingforefficacy(params)
-    #         tmp = [-Inf; cvalsfinite]
-    #     else
-    #         tmp = cvalsfinite
-    #     end
-    #     @constraint(m,
-    #         absdiff[x1] >= sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in tmp)
-    #             - sum(2*nmax*y[x1 + i, n, Inf] for n in nvals, i in 0:1) # disables constraint for stopping for futility
-    #     )
-    #     @constraint(m,
-    #         -absdiff[x1] <= -sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in tmp)
-    #             + sum(2*nmax*y[x1 + 1, n, Inf] for n in nvals, i in 0:1)
-    #     )
-    #     @constraint(m, absdiff[x1] <= maxdiff)
-    # end
-    # add optimality criterion
-    # expected costs
     @expression(m, ec[p in priorpivots],
         sum(
             params.gamma * (p + params.k*(1 - p)) * n * dbinom(x1, n1, p) * y[x1, n, c] for
@@ -188,7 +136,7 @@ function _createProblem{T<:Integer}(
     )
     lbound = quantile(Distributions.Beta(params.a, params.b), .1)
     ubound = quantile(Distributions.Beta(params.a, params.b), .99)
-    pivots = [0; collect(linspace(lbound, ubound, max(1, npivots - 2))); 1] # lambda formulaion requires edges! exploitn fact that function is locally linear!
+    pivots = [0; collect(linspace(lbound, ubound, max(1, ngpivots - 2))); 1] # lambda formulaion requires edges! exploitn fact that function is locally linear!
     @variable(m, 0 <= lambdaSOS2[priorpivots, pivots] <= 1)
     @variable(m, wpwr[priorpivots]) # weighted power
     for p in priorpivots
@@ -211,16 +159,9 @@ function _createProblem{T<:Integer}(
             -sum( (params.lambda*wpwr[priorpivots[i]] - ec[priorpivots[i]])*dcdf[i] for i in 1:npriorpivots) # negative score!
         )
     end
-    return m, y
+    return true
 end
 
 function _isfeasible(design::BinaryTwoStageDesign, params::EB)
     return true
-end
-
-# utility
-function g(params::EB, power)
-    power < 0 ? throw(InexactError()) : nothing
-    power > 1 ? throw(InexactError()) : nothing
-    return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
 end

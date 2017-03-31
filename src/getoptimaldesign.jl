@@ -4,29 +4,17 @@ function getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
     solver::TS;
     VERBOSE::Integer = 0
 )
-    VERBOSE > 0 ? println(n1) : nothing
-    VERBOSE > 0 ? tic() : nothing
-    possible(n1, samplespace(parameters)) ? nothing : throw(InexactError())
+
+    !possible(n1, samplespace(parameters)) ? error("n1 not compatible with sample space") : nothing
     # define problem
-    m, y = _createProblem(n1, parameters)
-    setsolver(m, solver)
-    status = solve(m)
-    if !(status in (:Optimal, :UserLimit)) # no valid solution found!
-        error("no feasible solution reached")
-    end
-    try
-        design = _extractSolution(y, n1, parameters) # c.f. util.jl
-        _isfeasible(design, parameters) ? nothing : error("solution infeasible")
-        VERBOSE > 0 ? toc() : nothing
-        VERBOSE > 0 ? println(status) : nothing
-        VERBOSE > 0 ? println(score(design)) : nothing
-        VERBOSE > 0 ? println(convert(DataFrames.DataFrame, design)) : nothing
-        VERBOSE > 0 ? println() : nothing
-        return design
-    catch e
-         println(e)
-         error("could not extract solution")
-    end
+    # m, y = _createProblem(n1, parameters)
+    ipm = IPModel(samplespace(parameters), n1)
+    completemodel(ipm, parameters, n1)
+    setsolver(ipm.m, solver)
+    solve(ipm.m) in (:Optimal, :UserLimit) ? nothing : error("no feasible solution reached")
+    design = extractsolution(ipm, parameters)
+    _isfeasible(design, parameters) ? nothing : error("solution infeasible")
+    return design
 end
 
 function getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}(
@@ -34,17 +22,32 @@ function getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}(
     solver::TS;
     VERBOSE::Integer = 1
 )
-    n1range = interimsamplesizerange(samplespace(parameters))
-    designs = pmap(
-        n1 -> try
-            getoptimaldesign(n1, parameters, solver, VERBOSE = VERBOSE)
+    n1range   = samplespace(parameters) |> interimsamplesizerange
+    designs   = Array{BinaryTwoStageDesign}(length(n1range))
+    scores    = zeros(length(n1range))
+    for i in 1:length(n1range)
+        VERBOSE > 0 ? println(n1range[i]) : nothing
+        VERBOSE > 0 ? tic() : nothing
+        try
+            designs[i] = getoptimaldesign(n1range[i], parameters, solver, VERBOSE = VERBOSE)
+            scores[i]  = score(designs[i])
         catch e
             println(e)
-        end,
-        n1range
-    )
-    scores = map(design -> try score(design) catch e Inf end, designs) # if score cannot be computed, probably infeasible > Inf
-    VERBOSE > 0 ? println(scores) : nothing
+            scores[i] = Inf
+        end
+        if VERBOSE > 0
+            toc()
+            println(scores[i])
+            try print(stairs(collect(0:n1range[i])/n1range[i], designs[i].n, title = "n vs. x1/n1", xlim = [0, 1], canvas = AsciiCanvas, style = :pre))
+            catch e
+                println(e)
+            end
+            try print(stairs(n1range[1:i], scores[1:i], title = "score vs. n1", xlim = [minimum(n1range), maximum(n1range)], canvas = AsciiCanvas, style = :pre))
+            catch e
+                println(e)
+            end
+        end
+    end
     return designs[findmin(scores)[2]], Dict(
         "n1"      => n1range,
         "scores"  => scores,
