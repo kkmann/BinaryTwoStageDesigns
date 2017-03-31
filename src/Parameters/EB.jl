@@ -9,33 +9,38 @@ type EB{
     pmcrv
     prior
     alpha
+    beta
     mincondpower
     gamma
     lambda
     a
     b
+    k
     smoothness
     function EB(
         samplespace,
         p0, pmcrv, prior,
         alpha,
+        beta,
         mincondpower,
         gamma, lambda,
-        a, b,
+        a, b, k,
         smoothness
     )
         any(!([alpha; p0; pmcrv; mincondpower] .>= 0.0)) ? throw(InexactError()) : nothing
         any(!([alpha; p0; pmcrv; mincondpower] .<= 1.0)) ? throw(InexactError()) : nothing
         abs(quadgk(prior, 0, 1)[1] - 1) <= .001 ? nothing: throw(InexactError())
-        new(samplespace, p0, pmcrv, prior, alpha, mincondpower, gamma, lambda, a, b, smoothness)
+        new(samplespace, p0, pmcrv, prior, alpha, beta, mincondpower, gamma, lambda, a, b, k, smoothness)
     end
 end
 function EB{T_samplespace<:SampleSpace}(
     samplespace::T_samplespace,
     p0, pmcrv, prior, alpha,
     gamma, lambda;
-    a::Real                        = 7.9,
-    b::Real                        = 4.4,
+    beta                           = 0.8,
+    a::Real                        = 1,
+    b::Real                        = 1,
+    k::Real                        = 1,
     smoothness::Real               = Inf,
     minconditionalpower::Real      = 0.0,
     GROUPSEQUENTIAL::Bool          = false,
@@ -55,7 +60,7 @@ function EB{T_samplespace<:SampleSpace}(
         T_mcp = MonotoneConditionalPower
     end
     EB{T_samplespace, T_gs, T_eff, T_mcp}(
-        samplespace, p0, pmcrv, prior, alpha, minconditionalpower, gamma, lambda, a, b, smoothness
+        samplespace, p0, pmcrv, prior, alpha, minconditionalpower, gamma, lambda, a, b, k, smoothness
     )
 end
 
@@ -71,44 +76,37 @@ minconditionalpower(params::EB) = params.mincondpower
 
 smoothness(params::EB) = params.smoothness
 
-function expectedsamplesize(design::AbstractBinaryTwoStageDesign, params::EB, p::Real)
-    ss = SampleSize(design, p)
-    return mean(ss)
+function expectedcost(design::AbstractBinaryTwoStageDesign, params::EB, p::Real)
+    ess = SampleSize(design, p) |> mean
+    return params.gamma*ess * (p + params.k * (1 - p))
 end
-function weightedpower(design::AbstractBinaryTwoStageDesign, params::EB, p::Real)
-    if p < params.pmcrv
+function expectedbenefit(design::AbstractBinaryTwoStageDesign, params::EB, p::Real)
+    if p < mcrv(params)
         return 0.0
     else
-        return params.lambda * (1 - g(params, power(design, p)))
+        return params.lambda * g(params, power(design, p))
     end
 end
 
-function score(design::AbstractBinaryTwoStageDesign, params::EB, p::Real)
-    res = 0
-    ss  = SampleSize(design, p)
-    res -= params.gamma * mean(ss) # expected cost
-    wp  = g(params, power(design, p))
-    res += params.lambda*wp
-    return res
-end
+score(design::AbstractBinaryTwoStageDesign, params::EB, p::Real) = -(expectedbenefit(design, params, p) - expectedcost(design, params, p))
 
 function score(design::AbstractBinaryTwoStageDesign, params::EB)
     return quadgk(p -> params.prior(p)*score(design, params, p), 0, 1, reltol = .001)[1]
 end
 
+
 function _createProblem{T<:Integer}(
     n1::T,      # stage one sample size
-    params::EB
+    params::EB;
+    npivots      = 15,
+    npriorpivots = 33
 )
     ss = samplespace(params)
     nmax = maxsamplesize(ss, n1)
     possible(n1, ss) ? nothing : throw(InexactError())
     a  = alpha(params)
     p0 = null(params)
-    pmcrv = params.pmcrv
     prior = params.prior
-    gamma = params.gamma
-    lambda = params.lambda
     maxdiff = min(2*nmax, smoothness(params)) # make finite!
     # define base problem
     m, y = _createBaseProblem(n1, params) # c.f. util.jl
@@ -121,67 +119,98 @@ function _createProblem{T<:Integer}(
         cvals = [cvalsfinite; Inf]
         cvalsinfinite = [Inf]
     end
-    @constraint(m, # add type one error rate constraint
+    # priorpivots  = collect(linspace(0.0, 1.0, npriorpivots + 2))[2:(npriorpivots + 1)] # leave out boundary values!
+    # dp           = priorpivots[2] - priorpivots[1]
+    # priorvals    = prior.(priorpivots) ./ sum(prior.(priorpivots) .* dp) # normalize to 1
+    priorpivots, dcdf   = findgrid(prior, 0, 1, npriorpivots)
+    cpriorpivots, dccdf = findgrid(prior, params.pmcrv, 1, 1000) # not performance critical!
+    # add type one error rate constraint
+    @constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         ) <= alpha(params)
     )
-    @expression(m, cep[x1 in 0:n1], # define expressions for conditional power given X1=x1
-        sum(quadgk(p -> prior(p)*dbinom(x1, n1, p)*_cpr.(x1, n1, n, c, p), pmcrv, 1, reltol = 0.001)[1] /
-                quadgk(p -> prior(p)*dbinom(x1, n1, p), pmcrv, 1, reltol = 0.001)[1] * y[x1, n, c] for
-            n in nvals, c in cvals
-        )
-    )
+    # add conditional type two error rate constraint (power)
     for x1 in 0:n1
-        @constraint(m, # add conditional type two error rate constraint (power)
-            cep[x1] >= minconditionalpower(params)
+        posterior1 = dbinom.(x1, n1, cpriorpivots) .* dccdf # this must be conditional on $\rho>\rho_mcrv
+        z1 = sum(posterior1)
+        @constraint(m,
+            sum(sum(posterior1 .* _cpr.(x1, n1, n, c, cpriorpivots))/z1*y[x1, n, c] for
+                n in nvals, c in cvalsfinite
+            ) + sum(y[x1, n, c] for
+                n in nvals, c in cvalsinfinite
+            ) >= minconditionalpower(params)
         )
+        # ensure monotonicity if required
         if x1 >= 1 & hasmonotoneconditionalpower(params)
-            @constraint(m, # ensure monotonicity if required
-                cep[x1] - cep[x1 - 1] >= 0
+            posterior2 = dbinom.(x1 - 1, n1, cpriorpivots) .* dccdf
+            z2 = sum(posterior2)
+            @constraint(m,
+                sum(sum(posterior1 .* _cpr.(x1, n1, n, c, cpriorpivots))/z1*y[x1, n, c]
+                        - sum(posterior2 .* _cpr.(x1 - 1, n1, n, c, cpriorpivots))/z2*y[x1 - 1, n, c] for
+                    n in nvals, c in cvals
+                ) >= 0
             )
         end
     end
-    # precompute prior probabilities of X1=x1
-    prior_prob = zeros(n1 + 1)
-    for x1 in 0:n1
-        prior_prob[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), 0, 1, reltol = 0.001)[1]
-    end
-    @expression(m, ec, # expected cost
+    # # add constraints for smoothness (maxmial difference between successive
+    # # values of n on the continuation set)
+    # @variable(m, absdiff[x1 = 0:(n1 - 1)])
+    # for x1 in 0:(n1 - 1)
+    #     if allowsstoppingforefficacy(params)
+    #         tmp = [-Inf; cvalsfinite]
+    #     else
+    #         tmp = cvalsfinite
+    #     end
+    #     @constraint(m,
+    #         absdiff[x1] >= sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in tmp)
+    #             - sum(2*nmax*y[x1 + i, n, Inf] for n in nvals, i in 0:1) # disables constraint for stopping for futility
+    #     )
+    #     @constraint(m,
+    #         -absdiff[x1] <= -sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in tmp)
+    #             + sum(2*nmax*y[x1 + 1, n, Inf] for n in nvals, i in 0:1)
+    #     )
+    #     @constraint(m, absdiff[x1] <= maxdiff)
+    # end
+    # add optimality criterion
+    # expected costs
+    @expression(m, ec[p in priorpivots],
         sum(
-            prior_prob[x1 + 1] * gamma * n * y[x1, n , c]
-            for x1 in 0:n1, n in nvals, c in cvals
+            params.gamma * (p + params.k*(1 - p)) * n * dbinom(x1, n1, p) * y[x1, n, c] for
+            x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    z = zeros(n1 + 1) # redefine as normalizing constants of the stage-one posterior
-    for x1 in 0:n1
-        z[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), pmcrv, 1, reltol = 0.001)[1]
-    end
-    @expression(m, cewp[x1 in 0:n1], # conditional expected weighted power
-        sum(
-            quadgk(p ->
-                    prior(p)*dbinom(x1, n1, p)/z[x1 + 1]* # stage one posterior f(p|x1, p >= pmcrv)
-                    g(params, _cpr(x1, n1, n, c, p)), # weighted power
-                pmcrv, 1, reltol = 0.001
-            )[1] * y[x1, n, c]
-            for n in nvals, c in cvals
+    # construct expressions for power
+    @expression(m, designpower[p in priorpivots],
+        sum(dbinom(x1, n1, p) * _cpr(x1, n1, n, c, p) * y[x1, n, c] for
+            x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    # pre compute prior probabilities of X1=x1 given p > pmcrv
-    z = quadgk(p -> prior(p), pmcrv, 1, reltol = 0.001)[1]
-    prior_prob_pmcrv = zeros(n1 + 1)
-    for x1 in 0:n1
-        prior_prob_pmcrv[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), pmcrv, 1, reltol = 0.001)[1] / z
+    lbound = quantile(Distributions.Beta(params.a, params.b), .1)
+    ubound = quantile(Distributions.Beta(params.a, params.b), .99)
+    pivots = [0; collect(linspace(lbound, ubound, max(1, npivots - 2))); 1] # lambda formulaion requires edges! exploitn fact that function is locally linear!
+    @variable(m, 0 <= lambdaSOS2[priorpivots, pivots] <= 1)
+    @variable(m, wpwr[priorpivots]) # weighted power
+    for p in priorpivots
+        addSOS2(m, [lambdaSOS2[p, piv] for piv in pivots])
+        @constraint(m, sum(lambdaSOS2[p, piv] for piv in pivots) == 1)
+        @constraint(m, sum(lambdaSOS2[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
+        if p >= params.pmcrv
+            @constraint(m, sum(lambdaSOS2[p, piv]*g(params, piv) for piv in pivots) == wpwr[p])
+        else
+            @constraint(m, wpwr[p] == 0)
+        end
     end
-    @expression(m, ewp, # expected weighted power
-        sum(
-            prior_prob_pmcrv[x1 + 1] * cewp[x1]
-            for x1 in 0:n1
+    if params.lambda == 0 # constraint optimization
+        @constraint(m, sum(wpwr[priorpivots[i]] for i in 1:npriorpivots) >= 1 - params.beta)
+        @objective(m, Min,
+            sum(ec[priorpivots[i]]*dcdf[i] for i in 1:npriorpivots) # simply minimize expected cost
         )
-    )
-    @objective(m, Max,
-        params.lambda * quadgk(p -> prior(p), pmcrv, 1, reltol = 0.001)[1] * ewp - ec
-    )
+    else
+        @objective(m, Min,
+            -sum( (params.lambda*wpwr[priorpivots[i]] - ec[priorpivots[i]])*dcdf[i] for i in 1:npriorpivots) # negative score!
+        )
+    end
     return m, y
 end
 
@@ -189,8 +218,9 @@ function _isfeasible(design::BinaryTwoStageDesign, params::EB)
     return true
 end
 
+# utility
 function g(params::EB, power)
-    power >= 0 ? nothing : error("power cannot be negative")
-    power <= 1 ? nothing : error("power cannot be greater than 1")
+    power < 0 ? throw(InexactError()) : nothing
+    power > 1 ? throw(InexactError()) : nothing
     return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
 end

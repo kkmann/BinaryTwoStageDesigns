@@ -3,7 +3,7 @@ Creates a basline JuMP model
 with only minimal constraints (contiguous stopping, unimodal n(x1)) and
 functional constraint
 """
-function _createBaseProblem(n1, params) # regularize by penalizing total variation  of c and n
+function _createBaseProblem(n1, params) 
     ss  = samplespace(params)
     !possible(n1, ss) ? throw(InexactError()) : nothing
     nmax = maxsamplesize(ss, n1)

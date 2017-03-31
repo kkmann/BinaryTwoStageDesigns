@@ -15,10 +15,10 @@ possible{T<:Integer, TR<:Real}(n1::T, n::T, c::TR, ss::SampleSpace) = error("not
 type SimpleSampleSpace{T<:Integer} <: SampleSpace
     n1range::Vector{T}
     nmax::T
-    n2min
-    maxnfact
-    nmincont
-    stepsize
+    n2min::T
+    maxnfact::Real
+    nmincont::T
+    stepsize::T
     function SimpleSampleSpace(n1range, nmax, n2min, maxnfact, nmincont, stepsize)
         minimum(n1range) < 1 ? throw(InexactError()) : nothing
         maximum(n1range) > nmax ? throw(InexactError()) : nothing
