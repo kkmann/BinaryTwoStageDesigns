@@ -56,8 +56,6 @@ export KunzmannScore, expectedcost, underpowerpenalty
 
 export EB
 
-export BMESS
-
 # include ("optimal.jl")
 export getoptimaldesign
 
@@ -84,9 +82,7 @@ include("ipmodel.jl")
 include("Parameters/MinimalMinimalExpectedSampleSize.jl")
 include("Parameters/SimpleMinimalExpectedSampleSize.jl")
 include("Parameters/LiuScore.jl")
-include("Parameters/Liu.jl")
 include("Parameters/KunzmannScore.jl")
-include("Parameters/BMESS.jl")
 include("Parameters/EB.jl")
 include("util.jl")
 include("getoptimaldesign.jl")

@@ -111,7 +111,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
             ) >= minconditionalpower(params)
         )
         # ensure monotonicity if required
-        if x1 >= 1 & hasmonotoneconditionalpower(params)
+        if (x1 >= 1) & hasmonotoneconditionalpower(params)
             posterior2 = dbinom.(x1 - 1, n1, cpriorpivots) .* dccdf
             z2 = sum(posterior2)
             @constraint(m,
@@ -134,8 +134,8 @@ function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    lbound = quantile(Distributions.Beta(params.a, params.b), .1)
-    ubound = quantile(Distributions.Beta(params.a, params.b), .99)
+    lbound = quantile(Distributions.Beta(params.a, params.b), .025)
+    ubound = quantile(Distributions.Beta(params.a, params.b), .975)
     pivots = [0; collect(linspace(lbound, ubound, max(1, ngpivots - 2))); 1] # lambda formulaion requires edges! exploitn fact that function is locally linear!
     @variable(m, 0 <= lambdaSOS2[priorpivots, pivots] <= 1)
     @variable(m, wpwr[priorpivots]) # weighted power
@@ -149,16 +149,9 @@ function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
             @constraint(m, wpwr[p] == 0)
         end
     end
-    if params.lambda == 0 # constraint optimization
-        @constraint(m, sum(wpwr[priorpivots[i]] for i in 1:npriorpivots) >= 1 - params.beta)
-        @objective(m, Min,
-            sum(ec[priorpivots[i]]*dcdf[i] for i in 1:npriorpivots) # simply minimize expected cost
-        )
-    else
-        @objective(m, Min,
-            -sum( (params.lambda*wpwr[priorpivots[i]] - ec[priorpivots[i]])*dcdf[i] for i in 1:npriorpivots) # negative score!
-        )
-    end
+    @objective(m, Min,
+        -sum( (params.lambda*wpwr[priorpivots[i]] - ec[priorpivots[i]])*dcdf[i] for i in 1:npriorpivots) # negative score!
+    )
     return true
 end
 

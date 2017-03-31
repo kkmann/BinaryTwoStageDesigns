@@ -1,4 +1,9 @@
-type LiuScore{T_samplespace<:SampleSpace} <: VagueAlternative
+type LiuScore{
+        T_samplespace<:SampleSpace,
+        T_gs<:IsGroupSequential,
+        T_eff<:StoppingForEfficacy,
+        T_mcp<:HasMonotoneConditionalPower
+} <: VagueAlternative
     samplespace::T_samplespace
     p0
     pmcrv
@@ -8,18 +13,14 @@ type LiuScore{T_samplespace<:SampleSpace} <: VagueAlternative
     mincondpower
     fs
     fp
-    MONOTONECONDITIONALPOWER
-    npriorpivots # number of pivots for prior evaluation
-    npivots # number of pivots for approximation of g
+    smoothness
     function LiuScore(
         samplespace,
         p0, pmcrv, prior,
         alpha, beta,
         mincondpower,
         fs, fp,
-        MONOTONECONDITIONALPOWER,
-        npriorpivots, # number of pivots for prior evaluation
-        npivots, # number of pivots for approximation of g
+        smoothness
     )
         any(!([alpha; beta; p0; pmcrv; mincondpower] .>= 0.0)) ? throw(InexactError()) : nothing
         any(!([alpha; beta; p0; pmcrv; mincondpower] .<= 1.0)) ? throw(InexactError()) : nothing
@@ -27,32 +28,49 @@ type LiuScore{T_samplespace<:SampleSpace} <: VagueAlternative
         quadgk(prior, pmcrv, 1)[1] >= 0.999 ? nothing: throw(InexactError())
         (fp >= 0) & (fp < 1) ? nothing : throw(InexactError())
         fs > 1 ? nothing : throw(InexactError())
-        new(samplespace, p0, pmcrv, prior, alpha, beta, mincondpower, fs, fp,
-            MONOTONECONDITIONALPOWER, npriorpivots, npivots
-        )
+        new(samplespace, p0, pmcrv, prior, alpha, beta, mincondpower, fs, fp, smoothness)
     end
 end
 function LiuScore{T_samplespace<:SampleSpace}(
     samplespace::T_samplespace,
     p0, pmcrv, prior, alpha, beta,
     fs, fp;
-    npriorpivots = 33,
-    npivots = 15,
-    minconditionalpower::Real = 0.0,
-    MONOTONECONDITIONALPOWER::Bool          = false,
+    smoothness::Real               = Inf,
+    minconditionalpower::Real      = 0.0,
+    GROUPSEQUENTIAL::Bool          = false,
+    STOPPINGFOREFFICACY::Bool      = true,
+    MONOTONECONDITIONALPOWER::Bool = true
 )
-    LiuScore{T_samplespace}(
-        samplespace, p0, pmcrv, prior, alpha, beta, minconditionalpower, fs, fp, MONOTONECONDITIONALPOWER, npriorpivots, npivots
+    T_gs = NotGroupSequential
+    if GROUPSEQUENTIAL
+        T_gs = GroupSequential
+    end
+    T_eff = AllowStoppingForEfficacy
+    if !STOPPINGFOREFFICACY
+        T_eff = NoStoppingForEfficacy
+    end
+    T_mcp = NoMonotoneConditionalPower
+    if MONOTONECONDITIONALPOWER
+        T_mcp = MonotoneConditionalPower
+    end
+    LiuScore{T_samplespace, T_gs, T_eff, T_mcp}(
+        samplespace, p0, pmcrv, prior, alpha, beta, minconditionalpower, fs, fp, smoothness
     )
 end
 
 maxsamplesize(params::LiuScore) = maxsamplesize(params.samplespace)
 
-hasmonotoneconditionalpower(params::LiuScore) = params.MONOTONECONDITIONALPOWER
+allowsstoppingforefficacy{T_samplespace, T_gs, T_eff, T_mcp}(params::LiuScore{T_samplespace, T_gs, T_eff, T_mcp}) = T_eff == AllowStoppingForEfficacy ? true : false
+
+isgroupsequential{T_samplespace, T_gs, T_eff, T_mcp}(params::LiuScore{T_samplespace, T_gs, T_eff, T_mcp}) = T_gs == GroupSequential ? true : false
+
+hasmonotoneconditionalpower{T_samplespace, T_gs, T_eff, T_mcp}(params::LiuScore{T_samplespace, T_gs, T_eff, T_mcp}) = T_mcp == MonotoneConditionalPower ? true : false
 
 minconditionalpower(params::LiuScore) = params.mincondpower
 
 beta(params::LiuScore) = params.beta
+
+smoothness(params::LiuScore) = params.smoothness
 
 function ros{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p1::Real)
     powerreq = 1 - beta(params)
@@ -97,30 +115,39 @@ function score{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P)
     return quadgk(f, params.pmcrv, 1, reltol = .001, maxevals = 1e5)[1]
 end
 
-function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
+
+function _createProblem{T<:Integer}(
+    n1::T,      # stage one sample size
+    params::LiuScore;
+    npivots      = 15,
+    npriorpivots = 33
+)
     ss = samplespace(params)
-    !possible(n1, ss) ? error("n1 and sample space incompatible") : nothing
-    # extract ip model
-    m             = ipm.m
-    y             = ipm.y
-    nvals         = ipm.nvals
-    cvals         = ipm.cvals
-    cvalsfinite   = ipm.cvalsfinite
-    cvalsinfinite = [-Inf; Inf]
-    # extract other parameters
-    nmax          = maxsamplesize(ss, n1)
-    p0            = null(params)
-    prior         = params.prior
-    npriorpivots  = params.npriorpivots
-    npivots      = params.npivots
-    # get grid for prior and conditional prior
-    priorpivots, dcdf   = findgrid(prior, 0, 1, npriorpivots)
+    nmax = maxsamplesize(ss, n1)
+    possible(n1, ss) ? nothing : throw(InexactError())
+    a  = alpha(params)
+    b  = params.beta
+    p0 = null(params)
+    prior = params.prior
+    maxdiff = min(2*nmax, smoothness(params)) # make finite!
+    # define base problem
+    m, y = _createBaseProblem(n1, params) # c.f. util.jl
+    nvals = getnvals(ss, n1)
+    cvalsfinite = 0:(maximum(nvals) - 1)
+    if allowsstoppingforefficacy(params)
+        cvals = [-Inf; cvalsfinite; Inf]
+        cvalsinfinite = [-Inf; Inf]
+    else
+        cvals = [cvalsfinite; Inf]
+        cvalsinfinite = [Inf]
+    end
+    priorpivots, dcdf   = findgrid(prior, params.pmcrv, 1, npriorpivots) # fewe points for approximation, performance critical!
     cpriorpivots, dccdf = findgrid(prior, params.pmcrv, 1, 1000) # not performance critical!
     # add type one error rate constraint
     @constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
-        ) <= alpha(params)
+        ) <= a
     )
     # add conditional type two error rate constraint (power)
     for x1 in 0:n1
@@ -134,7 +161,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
             ) >= minconditionalpower(params)
         )
         # ensure monotonicity if required
-        if (x1 >= 1) & hasmonotoneconditionalpower(params)
+        if x1 >= 1 & hasmonotoneconditionalpower(params)
             posterior2 = dbinom.(x1 - 1, n1, cpriorpivots) .* dccdf
             z2 = sum(posterior2)
             @constraint(m,
@@ -145,12 +172,31 @@ function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
             )
         end
     end
+    # add constraints for smoothness (maxmial difference between successive
+    # values of n on the continuation set)
+    @variable(m, absdiff[x1 = 0:(n1 - 1)])
+    for x1 in 0:(n1 - 1)
+        if allowsstoppingforefficacy(params)
+            tmp = [-Inf; cvalsfinite]
+        else
+            tmp = cvalsfinite
+        end
+        @constraint(m,
+            absdiff[x1] >= sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in tmp)
+                - sum(2*nmax*y[x1 + i, n, Inf] for n in nvals, i in 0:1) # disables constraint for stopping for futility
+        )
+        @constraint(m,
+            -absdiff[x1] <= -sum(n*(y[x1, n, c] - y[x1 + 1, n, c]) for n in nvals, c in tmp)
+                + sum(2*nmax*y[x1 + 1, n, Inf] for n in nvals, i in 0:1)
+        )
+        @constraint(m, absdiff[x1] <= maxdiff)
+    end
     # add optimality criterion
-    nreq__(p, powerreq) = nreq_(p, powerreq, p0, alpha(params))
+    nreq__(p, powerreq) = nreq_(p, powerreq, p0, a)
     # construct expressions for ROS, upper bound necessary to guarantee finteness!
     @expression(m, ros[p in priorpivots],
         1/(params.fs - 1) * sum(
-            dbinom(x1, n1, p) * max(0, min(100.0, (n / nreq__(p, 1 - params.beta) - 1))) * y[x1, n, c] for
+            dbinom(x1, n1, p) * max(0, min(100.0, (n / nreq__(p, 1 - b) - 1))) * y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
@@ -160,14 +206,14 @@ function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    pivots = [collect(linspace(0, 1 - params.beta, npivots - 1)); 1] # lambda formulaion requires edges!, rup is 0 from powerreq to 1
+    pivots = [collect(linspace(0, 1 - b, npivots - 1)); 1] # lambda formulaion requires edges!, rup is 0 from powerreq to 1
     @variable(m, 0 <= lambda[priorpivots, pivots] <= 1)
     function frup(power, p; rupmax = 100.0)
         if p < params.pmcrv
             return 0.0
         end
-        nom   = max(0, nreq__(p, 1 - params.beta) - nreq__(p, power))
-        denom = nreq__(p, 1 - params.beta) - nreq__(p, (1 - params.fp)*(1 - params.beta))
+        nom   = max(0, nreq__(p, 1 - b) - nreq__(p, power))
+        denom = nreq__(p, 1 - b) - nreq__(p, (1 - params.fp)*(1 - b))
         if (denom == 0.0) & (nom > 0)
             return rupmax
         end
@@ -187,7 +233,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
     @objective(m, Min,
         sum((rup[priorpivots[i]] + ros[priorpivots[i]])*dcdf[i] for i in 1:npriorpivots) # normalized version
     )
-    return true
+    return m, y
 end
 
 function _isfeasible(design::BinaryTwoStageDesign, params::LiuScore)
