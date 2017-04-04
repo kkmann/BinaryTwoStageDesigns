@@ -100,10 +100,10 @@ function power{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
 end
 
 function expectedpower(design::AbstractBinaryTwoStageDesign, params::VagueAlternative, x1)
-    pmcrv  = mcrv(params)
-    phi(p) = prior(params, p)
-    n1     = interimsamplesize(design)
-    z      = quadgk(p -> phi(p) * Distributions.pdf(Distributions.Binomial(n1, p), x1), pmcrv, 1)[1]
+    pmcrv    = mcrv(params)
+    phi(p)   = prior(params, p)
+    n1       = interimsamplesize(design)
+    z        = quadgk(p -> phi(p) * Distributions.pdf(Distributions.Binomial(n1, p), x1), pmcrv, 1)[1]
     omega(p) = p < pmcrv ? 0 : phi(p) * Distributions.pdf(Distributions.Binomial(n1, p), x1) / z # conditional prior for stage 2
     return quadgk(p -> power(design, x1, p) * omega(p), pmcrv, 1)[1]
 end

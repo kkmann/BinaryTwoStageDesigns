@@ -56,6 +56,8 @@ export KunzmannScore, expectedcost, underpowerpenalty
 
 export EB
 
+export BESS
+
 # include ("optimal.jl")
 export getoptimaldesign
 
@@ -74,6 +76,7 @@ export ConfidenceInterval,
     limits, confidence, design, coverage,
     ClopperPearsonConfidenceInterval, estimator
 
+include("util.jl")
 include("Parameters.jl")
 include("BinaryTwoStageDesign.jl")
 include("SampleSize.jl")
@@ -84,7 +87,7 @@ include("Parameters/SimpleMinimalExpectedSampleSize.jl")
 include("Parameters/LiuScore.jl")
 include("Parameters/KunzmannScore.jl")
 include("Parameters/EB.jl")
-include("util.jl")
+include("Parameters/BESS.jl")
 include("getoptimaldesign.jl")
 include("adapt.jl")
 include("estimate.jl")
