@@ -36,10 +36,10 @@ function LiuScore{T_samplespace<:SampleSpace}(
     samplespace::T_samplespace,
     p0, pmcrv, prior, alpha, beta,
     fs, fp;
-    npriorpivots = 33,
+    npriorpivots = 50,
     npivots = 15,
     minconditionalpower::Real = 0.0,
-    MONOTONECONDITIONALPOWER::Bool          = false,
+    MONOTONECONDITIONALPOWER::Bool = false,
 )
     LiuScore{T_samplespace}(
         samplespace, p0, pmcrv, prior, alpha, beta, minconditionalpower, fs, fp, MONOTONECONDITIONALPOWER, npriorpivots, npivots

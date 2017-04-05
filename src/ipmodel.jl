@@ -11,8 +11,9 @@ type IPModel
         !possible(n1, ss) ? error("n1 not compatible with sample space") : nothing
         nmax = maxsamplesize(ss, n1)
         nvals = getnvals(ss, n1)
-        cvalsfinite, cvals = getcvals(ss)
+        cvalsfinite = getcvals(ss, n1)
         cvalsinfinite = [-Inf; Inf]
+        cvals =  [-Inf; cvalsfinite; Inf]
         m = Model()
         # indicator variables y[x1, n, c] == 1 iff n(x1) = n, c(x1) = c
         @variable(m, y[x1 = 0:n1, n = nvals, c = cvals], Bin)
