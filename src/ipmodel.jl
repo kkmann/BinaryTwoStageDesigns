@@ -108,6 +108,9 @@ type IPModel
     end
 end
 
+getnvals(ipm::IPModel, n1::Integer) = getnvals(ipm.ss, n1)
+getcvals(ipm::IPModel, n1::Integer) = getcvals(ipm.ss, n1)
+
 function extractsolution(ipm::IPModel, params)
     nvec = zeros(Int64, ipm.n1 + 1)
     cvec = zeros(Float64, ipm.n1 + 1) # need float for +/- Inf

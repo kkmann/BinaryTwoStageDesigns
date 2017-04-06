@@ -6,7 +6,7 @@ using JuMP
 using QuadGK
 using UnicodePlots
 
-import Base.show
+import Base.show, Base.print
 import Base.convert
 import Distributions, Distributions.minimum, Distributions.maximum,
     Distributions.pdf, Distributions.cdf, Distributions.rand,
@@ -20,7 +20,8 @@ import MathProgBase
 export Parameters, samplespace, maxsamplesize, isgroupsequential, allowsstoppingforefficacy,
     NoParameters,
     PointAlternative, null, alpha, alternative, beta,
-    VagueAlternative, prior, mcrv
+    VagueAlternative, prior, mcrv,
+    simulate
 
 
 # include("BinaryTwoStageDesign.jl")

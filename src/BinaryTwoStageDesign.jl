@@ -32,7 +32,22 @@ BinaryTwoStageDesign{T1<:Integer, T2<:Real, PType<:Parameters}(
 ) = BinaryTwoStageDesign{T1, T2, PType}(n, c, params)
 
 
-show(io::IO, object::AbstractBinaryTwoStageDesign) = println("Binary two-stage design")
+function show(io::IO, object::AbstractBinaryTwoStageDesign)
+    @sprintf(
+        """
+        Binary two-stage design
+        =======================
+
+        %s
+         x1 | n(x1) c(x1)
+        -----------------
+        """,
+        print(parameters(object))
+    ) |> print
+    for x1 in 0:interimsamplesize(object)
+        println(@sprintf("%3i | %5i %5i", x1, samplesize(object, x1), criticalvalue(object, x1)))
+    end
+end
 
 
 convert(::Type{DataFrames.DataFrame}, design::AbstractBinaryTwoStageDesign) =

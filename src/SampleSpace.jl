@@ -22,12 +22,13 @@ type SimpleSampleSpace{T<:Integer} <: SampleSpace
     nmincont::T
     maxvariables
     GS::Bool # group sequenttial ?
+    specialnvalues # required for additional values always included in nvals
     function SimpleSampleSpace(n1range, nmax, n2min, maxnfact, nmincont, maxvariables, GS)
         minimum(n1range) < 1    ? error("minimal n1 must be >= 1")    : nothing
         maximum(n1range) > nmax ? error("maximal n1 must be <= nmax") : nothing
         maxvariables < 100      ? error("maxvariables must be >= 100") : nothing
         maxnfact = (maxnfact == Inf) ? nmax / minimum(n1range) : maxnfact
-        new(sort(n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS)
+        new(sort(n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS, convert(Vector{T}, zeros(0)))
     end
 end
 SimpleSampleSpace{T<:Integer}(n1range::Vector{T},
@@ -76,6 +77,11 @@ function getnvals(ss::SimpleSampleSpace, n1)
     end
     if !(maxsamplesize(ss, n1) in nvals)
         push!(nvals, maxsamplesize(ss, n1))
+    end
+    for snval in ss.specialnvalues # ensure that all special nvals are contained!
+        if !(snval in nvals) & (snval >= n1) & (snval <= nmax)
+            push!(nvals, snval)
+        end
     end
     return convert(Vector{Int64}, sort(nvals))
 end

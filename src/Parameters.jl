@@ -15,6 +15,33 @@ maxsamplesize(par::Parameters) = error("not implemented")
 isgroupsequential(par::Parameters) = error("not implemented")
 allowsstoppingforfutility(par::Parameters) = error("not implemented")
 
+function simulate(params::Parameters, p, n1, n; nna1 = 0, nna2 = 0, x1 = -1, x2 = -1)
+    RV = Distributions.Bernoulli(p)
+    if x1 < 0
+        response1 = convert(DataArrays.DataArray{Bool}, rand(RV, n1))
+        response1[Distributions.sample(1:n1, nna1, replace = false)] = DataFrames.NA
+    else
+        response1 = convert(DataArrays.DataArray{Bool}, fill(false, n1))
+        response1[Distributions.sample(1:n1, x1, replace = false)] = true
+        negativeresponses = view(response1, response1 .== false)
+        negativeresponses[Distributions.sample(1:(n1 - x1), nna1, replace = false)] = DataFrames.NA
+    end
+    if x2 < 0
+        response2 = convert(DataArrays.DataArray{Bool}, rand(RV, n - n1))
+        response2[Distributions.sample(1:(n - n1), nna2, replace = false)] = DataFrames.NA
+    else
+        response2 = convert(DataArrays.DataArray{Bool}, fill(false, n - n1))
+        response2[Distributions.sample(1:(n - n1), x2, replace = false)] = true
+        negativeresponses = view(response2, response2 .== false)
+        negativeresponses[Distributions.sample(1:(n - n1 - x2), nna2, replace = false)] = DataFrames.NA
+    end
+    data = DataFrames.DataFrame(
+        response = [response1; response2],
+        stage    = [fill(1, n1); fill(2, n - n1)]
+    )
+    return data
+end
+
 
 type NoParameters <: Parameters
 end
@@ -22,6 +49,9 @@ null(par::NoParameters) = error("NoParameters do not have null hypothesis")
 alpha(par::NoParameters) = error("NoParameters do not have alpha")
 samplespace(par::NoParameters) = error("NoParameters do not have sample space")
 maxsamplesize(par::NoParameters) = error("NoParameters do not have maximal sample size")
+function show(io::IO, object::NoParameters)
+    return "no parameters"
+end
 
 
 

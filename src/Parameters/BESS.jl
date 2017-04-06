@@ -60,8 +60,31 @@ maxsamplesize(params::BESS) = maxsamplesize(params.samplespace)
 isgroupsequential{T_samplespace}(params::BESS{T_samplespace}) = isgroupsequential(params.ss)
 hasmonotoneconditionalpower{T_samplespace}(params::BESS{T_samplespace}) = params.MONOTONECONDITIONALPOWER
 minconditionalpower(params::BESS) = params.minconditionalpower
+function print(params::BESS)
+    return @sprintf(
+        """
+        Optimality criterion: Bayesian expected sample size
+        ---------------------------------------------------
+                                    p0: %4.2f
+                                  MCRV: %4.2f
+                                 alpha: %4.2f
+                                  beta: %4.2f
+                                     a: %4.1f
+                                     b: %4.1f
+                                     k: %4.1f
+             minimal conditional power: %4.1f
+            monotone conditional power: %s
+                        # prior pivots: %4.1f
+                 # pivots for g(power): %4.1f
 
+        %s
 
+        """,
+        params.p0, params.pmcrv, params.alpha, params.beta, params.a, params.b,
+        params.k, params.minconditionalpower, params.MONOTONECONDITIONALPOWER,
+        params.npriorpivots, params.ngpivots, string(lineplot(linspace(0, 1, 100), params.prior.(linspace(0, 1, 100)), title = "prior:", canvas = AsciiCanvas))
+    )
+end
 
 function g(params::BESS, power)
     @checkprob power
