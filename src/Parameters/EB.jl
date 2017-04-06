@@ -144,7 +144,8 @@ function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
     @expression(m, ec[x1 in 0:n1], # weighted expected sample size conditional on X1=x1
         sum(
             (params.gamma*(x1 + params.k*(n1 - x1)) + # stage one cost
-             quadgk(p -> params.gamma*(p + params.k*(1 - p))*(n - n1) * dbinom(x1, n1, p)*prior(p)/z[x1 + 1], 0, 1, abstol = .001)[1]) * # stage two expected
+             quadgk(p -> params.gamma*(p + params.k*(1 - p))*(n - n1) * dbinom(x1, n1, p)*prior(p)/z[x1 + 1], 0, 1, abstol = .001)[1]  # stage two expected
+            ) *
             y[x1, n, c]
             for n in nvals, c in cvals
         )
@@ -166,7 +167,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
         @constraint(m, sum(lambdaSOS2[p, piv] for piv in pivots) == 1)
         @constraint(m, sum(lambdaSOS2[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
         if p >= params.pmcrv
-            @constraint(m, sum(lambdaSOS2[p, piv]*(.99*g(params, piv) + .01*piv) for piv in pivots) == wpwr[p]) # regularize by mixing in uniform!
+            @constraint(m, sum(lambdaSOS2[p, piv]*g(params, piv) for piv in pivots) == wpwr[p])
         else
             @constraint(m, wpwr[p] == 0)
         end
