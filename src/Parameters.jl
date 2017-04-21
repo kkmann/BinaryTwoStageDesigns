@@ -3,6 +3,7 @@ abstract Parameters # only guarantees p0, nmax, n1range, alpha # TODO: also scor
 
 # make parameters iterable for automatic broadcasting
 Base.size(::Parameters) = ()
+Base.length(par::Parameters) = 1
 Base.getindex(par::Parameters, i) = par
 
 

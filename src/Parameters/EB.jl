@@ -7,6 +7,7 @@ type EB{T_samplespace<:SampleSpace} <: VagueAlternative
     lambda
     a
     b
+    targetpower
     k
     alpha
     minconditionalpower
@@ -18,12 +19,12 @@ type EB{T_samplespace<:SampleSpace} <: VagueAlternative
         samplespace,
         p0, pmcrv, prior,
         gamma, lambda,
-        a, b, k,
+        a, b, targetpower, k,
         alpha,
         minconditionalpower, MONOTONECONDITIONALPOWER,
         npriorpivots, ngpivots
     )
-        @checkprob p0 pmcrv alpha minconditionalpower
+        @checkprob p0 pmcrv alpha minconditionalpower targetpower
         z = quadgk(prior, 0, 1, abstol = .0001)[1]
         abs(z - 1)   > .001 ? error(@sprintf("prior must integrate to one, is %.6f", z)) : nothing
         gamma        < 0    ? error(@sprintf("gamma must be positive, is %.6f", gamma)) : nothing
@@ -37,7 +38,7 @@ type EB{T_samplespace<:SampleSpace} <: VagueAlternative
             samplespace,
             p0, pmcrv, prior,
             gamma, lambda,
-            a, b, k,
+            a, b, targetpower, k,
             alpha,
             minconditionalpower, MONOTONECONDITIONALPOWER,
             npriorpivots, ngpivots
@@ -48,7 +49,7 @@ function EB{T_samplespace<:SampleSpace}( # default values
     samplespace::T_samplespace,
     p0::Real, pmcrv::Real, prior,
     gamma::Real, lambda::Real;
-    a::Real = 1, b::Real = 1, k::Real = 1,
+    a::Real = 1, b::Real = 1, targetpower::Real = .8, k::Real = 1,
     alpha::Real = 0.05,
     minconditionalpower::Real = 0.0, MONOTONECONDITIONALPOWER::Bool = true,
     npriorpivots::Integer = 50, ngpivots::Integer = 15
@@ -57,7 +58,7 @@ function EB{T_samplespace<:SampleSpace}( # default values
         samplespace,
         p0, pmcrv, prior,
         gamma, lambda,
-        a, b, k,
+        a, b, targetpower, k,
         alpha,
         minconditionalpower, MONOTONECONDITIONALPOWER,
         npriorpivots, ngpivots
@@ -69,6 +70,22 @@ isgroupsequential{T_samplespace}(params::EB{T_samplespace}) = isgroupsequential(
 hasmonotoneconditionalpower{T_samplespace}(params::EB{T_samplespace}) = params.MONOTONECONDITIONALPOWER
 minconditionalpower(params::EB) = params.minconditionalpower
 
+function expectedtransformedpower(design::AbstractBinaryTwoStageDesign, params::Union{EB, BESS}, x1)
+    pmcrv    = mcrv(params)
+    phi(p)   = prior(params, p)
+    n1       = interimsamplesize(design)
+    z        = quadgk(p -> phi(p) * Distributions.pdf(Distributions.Binomial(n1, p), x1), pmcrv, 1)[1]
+    omega(p) = p < pmcrv ? 0 : phi(p) * Distributions.pdf(Distributions.Binomial(n1, p), x1) / z # conditional prior for stage 2
+    return quadgk(p -> g(params, power(design, x1, p)) * omega(p), pmcrv, 1)[1]
+end
+function expectedtransformedpower(design::AbstractBinaryTwoStageDesign, params::Union{EB, BESS})
+    pmcrv  = mcrv(params)
+    phi(p) = prior(params, p)
+    n1     = interimsamplesize(design)
+    z      = quadgk(phi, pmcrv, 1)[1]
+    omega(p) = p < pmcrv ? 0 : phi(p) / z # conditional prior given effect
+    return quadgk(p -> g(params, power(design, p)) * omega(p), pmcrv, 1)[1]
+end
 
 
 function expectedcost(design::AbstractBinaryTwoStageDesign, params::EB, p::Real)
@@ -78,7 +95,15 @@ function expectedcost(design::AbstractBinaryTwoStageDesign, params::EB, p::Real)
 end
 function g(params::EB, power)
     @checkprob power
-    return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
+    if params.a == params.b == Inf
+        if power >= params.targetpower
+            return 1.0
+        else
+            return 0.0
+        end
+    else
+        return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
+    end
 end
 function expectedbenefit(design::AbstractBinaryTwoStageDesign, params::EB, p::Real)
     @checkprob p
@@ -95,7 +120,7 @@ end
 
 function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
     ss = samplespace(params)
-    !possible(n1, ss) ? error("n1 and sample space incompatible") : nothing
+    !possible(n1, ss) ? warn("completemodel(EB): n1 and sample space incompatible") : nothing
     # extract ip model
     m             = ipm.m
     y             = ipm.y
@@ -110,8 +135,8 @@ function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
     prior         = params.prior
     npriorpivots  = params.npriorpivots
     ngpivots      = params.ngpivots
-    # get grid for prior and conditional prior
-    priorpivots, dcdf   = findgrid(prior, 0, 1, npriorpivots)
+    # get grid for conditional prior
+    cpriorpivots, dccdf   = findgrid(prior, pmcrv, 1, npriorpivots)
     # add type one error rate constraint
     @constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
@@ -128,8 +153,8 @@ function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
         )
     )
     for x1 in 0:n1
-        @constraint(m, # add conditional type two error rate constraint (power) # TODO: must be conditional on continuation!
-            cep[x1] >= minconditionalpower(params)
+        @constraint(m, # add conditional type two error rate constraint (power)
+            cep[x1] >= minconditionalpower(params) * (1 - sum(y[x1, n1, c] for c in cvalsinfinite)) # must be conditional on continuation!
         )
         if x1 >= 1 & hasmonotoneconditionalpower(params)
             @constraint(m, # ensure monotonicity if required
@@ -151,31 +176,43 @@ function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
         )
     )
     # construct expressions for power
-    @expression(m, designpower[p in priorpivots],
+    @expression(m, designpower[p in cpriorpivots],
         sum(
             dbinom(x1, n1, p)*_cpr(x1, n1, n, c, p) * y[x1, n, c]
             for x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    lbound = quantile(Distributions.Beta(params.a, params.b), .025)
-    ubound = quantile(Distributions.Beta(params.a, params.b), .975)
-    pivots = [0; collect(linspace(lbound, ubound, max(1, ngpivots - 2))); 1] # lambda formulaion requires edges! exploitn fact that function is locally linear!
-    @variable(m, 0 <= lambdaSOS2[priorpivots, pivots] <= 1)
-    @variable(m, wpwr[priorpivots]) # weighted power
-    for p in priorpivots
-        addSOS2(m, [lambdaSOS2[p, piv] for piv in pivots])
-        @constraint(m, sum(lambdaSOS2[p, piv] for piv in pivots) == 1)
-        @constraint(m, sum(lambdaSOS2[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
-        if p >= params.pmcrv
-            @constraint(m, sum(lambdaSOS2[p, piv]*g(params, piv) for piv in pivots) == wpwr[p])
-        else
-            @constraint(m, wpwr[p] == 0)
+    prob_crv = quadgk(p -> prior(p), mcrv(params), 1)[1]
+    if params.a == params.b == Inf
+        @variable(m, exceedstargetpower[1:npriorpivots], Bin)#pivots = [0; params.targetpower - .001; params.targetpower + .001; 1] # lambda formulaion requires edges! model step function as linear approximation
+        for i in 1:npriorpivots
+            @constraint(m,
+                designpower[cpriorpivots[i]] - params.targetpower + (1 - exceedstargetpower[i]) >= .00001
+            )
         end
+        @expression(m, obj,
+            sum( ec[x1]*z[x1 + 1] for x1 in 0:n1 ) - prob_crv*params.lambda*sum( exceedstargetpower[i]*dccdf[i] for i in 1:npriorpivots ) # negative score!
+        )
+    else
+        lbound = quantile(Distributions.Beta(params.a, params.b), .025) # TODO: implement a = b = inf
+        ubound = quantile(Distributions.Beta(params.a, params.b), .975)
+        pivots = [0; collect(linspace(lbound, ubound, max(1, ngpivots - 2))); 1] # lambda formulaion requires edges! exploitn fact that function is locally linear!
+        @variable(m, 0 <= lambdaSOS2[cpriorpivots, pivots] <= 1)
+        @variable(m, wpwr[cpriorpivots]) # weighted power
+        for p in cpriorpivots
+            addSOS2(m, [lambdaSOS2[p, piv] for piv in pivots])
+            @constraint(m, sum(lambdaSOS2[p, piv] for piv in pivots) == 1)
+            @constraint(m, sum(lambdaSOS2[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
+            if p >= params.pmcrv
+                @constraint(m, sum(lambdaSOS2[p, piv]*g(params, piv) for piv in pivots) == wpwr[p])
+            else
+                @constraint(m, wpwr[p] == 0)
+            end
+        end
+        @expression(m, obj,
+            sum( ec[x1]*z[x1 + 1] for x1 in 0:n1 ) - prob_crv*params.lambda*sum( wpwr[cpriorpivots[i]]*dccdf[i] for i in 1:npriorpivots ) # negative score!
+        )
     end
-    @expression(m, obj,
-        sum( ec[x1]*z[x1 + 1] for x1 in 0:n1 ) - params.lambda*sum( wpwr[priorpivots[i]]*dcdf[i] for i in 1:npriorpivots ) # negative score!
-    )
-    @constraint(m, obj <= 0) # solutions with negative benefit are not feasible
     @objective(m, Min,
         obj
     )

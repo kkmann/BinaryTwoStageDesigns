@@ -5,6 +5,7 @@ module BinaryTwoStageDesigns
 using JuMP
 using QuadGK
 using UnicodePlots
+using Roots
 
 import Base.show, Base.print
 import Base.convert
@@ -55,7 +56,7 @@ export LiuScore, ros, rup
 
 export KunzmannScore, expectedcost, underpowerpenalty
 
-export EB
+export EB, expectedtransformedpower
 
 export BESS
 
@@ -87,8 +88,8 @@ include("Parameters/MinimalMinimalExpectedSampleSize.jl")
 include("Parameters/SimpleMinimalExpectedSampleSize.jl")
 include("Parameters/LiuScore.jl")
 include("Parameters/KunzmannScore.jl")
-include("Parameters/EB.jl")
 include("Parameters/BESS.jl")
+include("Parameters/EB.jl")
 include("getoptimaldesign.jl")
 include("adapt.jl")
 include("estimate.jl")

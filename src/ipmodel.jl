@@ -7,8 +7,8 @@ type IPModel
     n1
     ss
     function IPModel(ss::SampleSpace, n1::Integer)
-        n1 <= 1           ? error("n1 must be >= 1")                     : nothing
-        !possible(n1, ss) ? error("n1 not compatible with sample space") : nothing
+        n1 <= 1           ? error("IPModel: n1 must be >= 1")                    : nothing
+        !possible(n1, ss) ? warn("IPModel: n1 not compatible with sample space") : nothing
         nmax = maxsamplesize(ss, n1)
         nvals = getnvals(ss, n1)
         cvalsfinite = getcvals(ss, n1)

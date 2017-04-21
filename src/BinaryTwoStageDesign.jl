@@ -3,6 +3,9 @@ abstract AbstractBinaryTwoStageDesign
 
 # these two enable array broadcasting of all methods!
 Base.size(::AbstractBinaryTwoStageDesign) = ()
+Base.length(design::AbstractBinaryTwoStageDesign) = 1
+Base.start(design::AbstractBinaryTwoStageDesign) = true
+Base.done(design::AbstractBinaryTwoStageDesign, state) = true
 Base.getindex(design::AbstractBinaryTwoStageDesign, i) = design
 
 

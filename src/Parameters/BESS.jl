@@ -5,6 +5,7 @@ type BESS{T_samplespace<:SampleSpace} <: VagueAlternative
     prior
     a
     b
+    targetpower
     k
     alpha
     beta
@@ -16,12 +17,12 @@ type BESS{T_samplespace<:SampleSpace} <: VagueAlternative
     function BESS(
         samplespace,
         p0, pmcrv, prior,
-        a, b, k,
+        a, b, targetpower, k,
         alpha, beta,
         minconditionalpower, MONOTONECONDITIONALPOWER,
         npriorpivots, ngpivots
     )
-        @checkprob p0 pmcrv alpha beta minconditionalpower
+        @checkprob p0 pmcrv alpha beta minconditionalpower targetpower
         z = quadgk(prior, 0, 1, abstol = .0001)[1]
         abs(z - 1)   > .001 ? error(@sprintf("prior must integrate to one, is %.6f", z)) : nothing
         a            <= 0   ? error(@sprintf("a must be positive, is %.3f", a)) : nothing
@@ -31,7 +32,7 @@ type BESS{T_samplespace<:SampleSpace} <: VagueAlternative
         new(
             samplespace,
             p0, pmcrv, prior,
-            a, b, k,
+            a, b, targetpower, k,
             alpha, beta,
             minconditionalpower, MONOTONECONDITIONALPOWER,
             npriorpivots, ngpivots
@@ -41,7 +42,7 @@ end
 function BESS{T_samplespace<:SampleSpace}( # default values
     samplespace::T_samplespace,
     p0::Real, pmcrv::Real, prior;
-    a::Real = 1, b::Real = 1, k::Real = 1,
+    a::Real = 1, b::Real = 1, targetpower::Real = .8, k::Real = 1,
     alpha::Real = 0.05, beta::Real = 0.2,
     minconditionalpower::Real = 0.0, MONOTONECONDITIONALPOWER::Bool = true,
     npriorpivots::Integer = 50, ngpivots::Integer = 15
@@ -49,7 +50,7 @@ function BESS{T_samplespace<:SampleSpace}( # default values
     BESS{T_samplespace}(
         samplespace,
         p0, pmcrv, prior,
-        a, b, k,
+        a, b, targetpower, k,
         alpha, beta,
         minconditionalpower, MONOTONECONDITIONALPOWER,
         npriorpivots, ngpivots
@@ -71,6 +72,7 @@ function print(params::BESS)
                                   beta: %4.2f
                                      a: %4.1f
                                      b: %4.1f
+                           targetpower: %4.1f
                                      k: %4.1f
              minimal conditional power: %4.1f
             monotone conditional power: %s
@@ -81,7 +83,7 @@ function print(params::BESS)
 
         """,
         params.p0, params.pmcrv, params.alpha, params.beta, params.a, params.b,
-        params.k, params.minconditionalpower, params.MONOTONECONDITIONALPOWER,
+        params.targetpower, params.k, params.minconditionalpower, params.MONOTONECONDITIONALPOWER,
         params.npriorpivots, params.ngpivots, string(lineplot(linspace(0, 1, 100), params.prior.(linspace(0, 1, 100)), title = "prior:", canvas = AsciiCanvas))
     )
 end
@@ -136,7 +138,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
     )
     for x1 in 0:n1
         @constraint(m, # add conditional type two error rate constraint (power)
-            cep[x1] >= minconditionalpower(params)
+            cep[x1] >= minconditionalpower(params) * (1 - sum(y[x1, n1, c] for c in cvalsinfinite)) # must be conditional on continuation!
         )
         if x1 >= 1 & hasmonotoneconditionalpower(params)
             @constraint(m, # ensure monotonicity if required
@@ -154,40 +156,76 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
             for n in nvals, c in cvals
         )
     )
-    # construct expected weighted power constraint
-    cpriorpivots, dccdf = findgrid(prior, params.pmcrv, 1, npriorpivots) # conditional prior pivots
-    @expression(m, designpower[p in cpriorpivots], # power on conditional prior pivots
-        sum(
-            dbinom(x1, n1, p) * _cpr(x1, n1, n, c, p) * y[x1, n, c]
-            for x1 in 0:n1, n in nvals, c in cvals
-        )
-    )
-    # pivots for linear approximation of g
-    lbound = quantile(Distributions.Beta(params.a, params.b), .025)
-    ubound = quantile(Distributions.Beta(params.a, params.b), .975)
-    pivots = [0; collect(linspace(lbound, ubound, max(1, ngpivots - 2))); 1] # lambda formulation requires edges! exploit fact that function is locally linear!
-    @variable(m, 0 <= lambdaSOS2[cpriorpivots, pivots] <= 1)
-    @variable(m, wpwr[cpriorpivots]) # weighted power
-    for p in cpriorpivots
-        addSOS2(m, [lambdaSOS2[p, piv] for piv in pivots])
-        @constraint(m, sum(lambdaSOS2[p, piv] for piv in pivots) == 1)
-        @constraint(m, sum(lambdaSOS2[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
-        if p >= params.pmcrv
-            @constraint(m, sum(lambdaSOS2[p, piv]*g(params, piv) for piv in pivots) == wpwr[p])
-        else
-            @constraint(m, wpwr[p] == 0)
+    if params.a == params.b == 1 # special case 1: easier computation!
+        z            = quadgk(p -> prior(p), pmcrv, 1, abstol = .0001)[1]
+        cprior_probs = zeros(n1 + 1)
+        for x1 in 0:n1
+            cprior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p)/z, pmcrv, 1, abstol = .0001)[1]
         end
+        @constraint(m,
+            sum( cep[x1]*cprior_probs[x1 + 1] for x1 in 0:n1 ) >= 1 - params.beta
+        )
+        prior_probs = zeros(n1 + 1)
+        for x1 in 0:n1
+            prior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), 0, 1, abstol = .001)[1]
+        end
+        @objective(m, Min,
+            sum( ec[x1]*prior_probs[x1 + 1] for x1 in 0:n1 )
+        )
+    elseif params.a == params.b == Inf # special case 1: easier computation!
+        z       = quadgk(p -> prior(p), pmcrv, 1, abstol = .0001)[1]
+        ccdf(p) = quadgk(pp -> prior(pp)/z, pmcrv, p, abstol = .001)[1]
+        cquant  = Roots.fzero(p -> (1 - ccdf(p)) - params.targetpower, pmcrv, 1) # conditional prior quantile
+        @constraint(m, # power on conditional prior quantile
+            sum(
+                dbinom(x1, n1, cquant) * _cpr(x1, n1, n, c, cquant) * y[x1, n, c]
+                for x1 in 0:n1, n in nvals, c in cvals
+            ) >= 1 - params.beta
+        )
+        prior_probs = zeros(n1 + 1)
+        for x1 in 0:n1
+            prior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), 0, 1, abstol = .001)[1]
+        end
+        @objective(m, Min,
+            sum( ec[x1]*prior_probs[x1 + 1] for x1 in 0:n1 )
+        )
+    else # construct expected weighted power constraint
+        cpriorpivots, dccdf = findgrid(prior, params.pmcrv, 1, npriorpivots) # conditional prior pivots
+        @expression(m, designpower[p in cpriorpivots], # power on conditional prior pivots
+            sum(
+                dbinom(x1, n1, p) * _cpr(x1, n1, n, c, p) * y[x1, n, c]
+                for x1 in 0:n1, n in nvals, c in cvals
+            )
+        )
+        # pivots for linear approximation of g
+        lbound = quantile(Distributions.Beta(params.a, params.b), .025)
+        ubound = quantile(Distributions.Beta(params.a, params.b), .975)
+        pivots = [0; collect(linspace(lbound, ubound, max(1, ngpivots - 2))); 1] # lambda formulation requires edges! exploit fact that function is locally linear!
+        @variable(m, 0 <= lambdaSOS2[cpriorpivots, pivots] <= 1)
+        @variable(m, wpwr[cpriorpivots]) # weighted power
+        for p in cpriorpivots
+            addSOS2(m, [lambdaSOS2[p, piv] for piv in pivots])
+            @constraint(m, sum(lambdaSOS2[p, piv] for piv in pivots) == 1)
+            @constraint(m, sum(lambdaSOS2[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
+            @constraint(m, sum(lambdaSOS2[p, piv]*g(params, piv) for piv in pivots) == wpwr[p])
+        end
+        @expression(m, ewpwr,
+            sum( wpwr[cpriorpivots[i]] * dccdf[i] for i in 1:npriorpivots)
+        )
+        @constraint(m,
+            ewpwr >= 1 - params.beta
+        )
+        # @variable(m, absewpwr >= 0)
+        # @constraint(m, absewpwr >= ewpwr - params.targetpower)
+        # @constraint(m, -absewpwr <= ewpwr - params.targetpower)
+        prior_probs = zeros(n1 + 1)
+        for x1 in 0:n1
+            prior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), 0, 1, abstol = .001)[1]
+        end
+        @objective(m, Min,
+            sum( ec[x1]*prior_probs[x1 + 1] for x1 in 0:n1 ) # + 2*nmax*absewpwr
+        )
     end
-    @constraint(m,
-        sum( wpwr[cpriorpivots[i]] * dccdf[i] for i in 1:npriorpivots) >= 1 - params.beta
-    )
-    prior_probs = zeros(n1 + 1)
-    for x1 in 0:n1
-        prior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), 0, 1, abstol = .001)[1]
-    end
-    @objective(m, Min,
-        sum( ec[x1]*prior_probs[x1 + 1] for x1 in 0:n1 )
-    )
     return true
 end
 
