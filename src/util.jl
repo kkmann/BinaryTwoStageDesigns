@@ -159,33 +159,7 @@ dbinom(k, n, p) = Distributions.pdf(Distributions.Binomial(n, p), k)
 
 qnorm(p) = Distributions.quantile(Distributions.Normal(0, 1), p)
 
-# function findgrid(prior, l, u, n; resolution = 10000)
-#     candidates = collect(linspace(l, u, resolution + 2))[2:(resolution + 1)]
-#     quantiles  = collect(linspace(l, u, n + 2))[2:(n + 1)]
-#     modprior_(p) = .9*prior(p) + .1*Distributions.pdf(Distributions.Beta(1, 1), p)
-#     zmodprior = quadgk(modprior_, l, u)[1]
-#     modprior(p) = modprior_(p) / zmodprior * (p < l ? 0 : (l - u))
-#     zprior = quadgk(prior, l, u)[1]
-#     cprior(p) = prior(p) / zprior * (p < l ? 0 : (l - u))
-#     cdfrelaxed = cumsum(modprior.(candidates))
-#     cdfrelaxed = cdfrelaxed / cdfrelaxed[resolution]
-#     cdf = cumsum(cprior.(candidates))
-#     cdf = cdf / cdf[resolution]
-#     pivots = zeros(n)
-#     cdfpiv = zeros(n)
-#     i = 1
-#     for j in 1:n
-#         while (cdfrelaxed[i] < quantiles[j]) & (i < resolution)
-#             i += 1
-#         end
-#         pivots[j] = candidates[i]
-#         cdfpiv[j] = cdf[i]
-#     end
-#     pivots = (pivots .+ [l; pivots[1:(n - 1)]] ) / 2 # midpoint pivots!
-#     dcdf = cdfpiv - [0; cdfpiv[1:(n - 1)]] # vector of first order differences
-#     dcdf = dcdf/sum(dcdf)
-#     return pivots, dcdf, cdfpiv
-# end
+
 
 function findgrid(prior, l, u, n)
     dp = 1/(n + 1)
@@ -209,6 +183,7 @@ function findgrid(prior, l, u, n)
     dcdf = dcdf/sum(dcdf)
     return pivots, dcdf
 end
+
 
 
 macro checkprob(x...)

@@ -44,17 +44,12 @@ export IPModel, extractsolution
 
 # include("SimpleMinimalExpectedSampleSize.jl")
 export SimpleMinimalExpectedSampleSize,
-    IsGroupSequential, GroupSequential, NotGroupSequential,
-    StoppingForEfficacy, AllowStoppingForEfficacy, NoStoppingForEfficacy,
-    HasMonotoneConditionalPower, MonotoneConditionalPower, NoMonotoneConditionalPower,
     minconditionalpower, smoothness,
     getnvals, getcvals, isgroupsequential
 
 export MinimalMinimalExpectedSampleSize
 
 export LiuScore, ros, rup
-
-export KunzmannScore, expectedcost, underpowerpenalty
 
 export EB, expectedtransformedpower
 
@@ -87,7 +82,6 @@ include("ipmodel.jl")
 include("Parameters/MinimalMinimalExpectedSampleSize.jl")
 include("Parameters/SimpleMinimalExpectedSampleSize.jl")
 include("Parameters/LiuScore.jl")
-include("Parameters/KunzmannScore.jl")
 include("Parameters/BESS.jl")
 include("Parameters/EB.jl")
 include("getoptimaldesign.jl")

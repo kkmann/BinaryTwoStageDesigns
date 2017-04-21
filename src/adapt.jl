@@ -1,24 +1,26 @@
-function adapt(design::BinaryTwoStageDesign, data::DataFrames.DataFrame)
+function adapt(design::BinaryTwoStageDesign, data::DataFrames.DataFrame, solver)
     # check data frame
     !isa(data[1], DataArrays.DataArray{Bool, 1}) ? error("first column of 'data' must be binary DataArray, true=response") : nothing
     !isa(data[2, 1], Integer) ? error("second column of 'data' must be integer DataArray, 1 = stage 1, 2 = stage 2") : nothing
     !all(map(x -> x in (1, 2), data[2])) ? error("second column of 'data' can only hold integers 1 or 2 (stages)") : nothing
     n1plan = interimsamplesize(design)
-    n1obs::Integer  = data[1][data[2] .== 1] |> x -> x[!DataArrays.isna(x)] |> sum
+    n1obs::Integer  = data[1][data[2] .== 1] |> length
+    x1obs::Integer  = data[1][data[2] .== 1] |> x -> x[!DataArrays.isna(x)] |> sum
     nna1::Integer   = data[1][data[2] .== 1] |> x -> x[DataArrays.isna(x)]  |> length
-    n2obs::Integer  = data[1][data[2] .== 2] |> x -> x[!DataArrays.isna(x)] |> sum
+    n2obs::Integer  = data[1][data[2] .== 2] |> length
+    x2obs::Integer  = data[1][data[2] .== 2] |> x -> x[!DataArrays.isna(x)] |> sum
     nna2::Integer   = data[1][data[2] .== 2] |> x -> x[DataArrays.isna(x)]  |> length
     nobs::Integer   = size(data, 1)
     if nobs == n1obs # only stage 1
         if (n1obs == n1plan) & (nna1 == 0) # nothing to do
             return design
         else
-            !(n1obs in design.params.samplespace.n1range) ? error("observed n1 not compatible with sample space, consider modifying it") : nothing
-            push!(design.params.samplespace.snvals, n1obs) # guarantee that observed n1 is in sample space
-            push!(design.params.samplespace.snvals, nobs) # and observed sample size
+            push!(design.params.samplespace.specialnvalues, n1obs) # guarantee that observed n1 is in sample space
             ipm = IPModel(samplespace(parameters(design)), n1obs)
-            completemodel(imp, parameters(design), n1obs)
-            addconditionaltypeoneerrorrateconstraint!(ipm, n1obs, x1obs, nna1, design)
+            completemodel(ipm, parameters(design), n1obs)
+            for x1 in x1obs:(x1obs + nna1)
+                addconditionaltypeoneerrorrateconstraint!(ipm, n1obs, x1, nna1, design)
+            end
             addinvarianceimputationconstraint!(ipm, n1obs, x1obs, nna1)
         end
     end
@@ -33,12 +35,12 @@ function adapt(design::BinaryTwoStageDesign, data::DataFrames.DataFrame)
             )
         end
     end
-    setsolver(ipm, solver)
+    setsolver(ipm.m, solver)
     status = solve(ipm.m)
     if !(status in (:Optimal, :UserLimit)) # no valid solution found!
         error("no feasible solution reached")
     end
-    newDesign = extractsolution(ipm, params)
+    newDesign = extractsolution(ipm, parameters(design))
     # # TODO: check whether constraints also hold for p < p0!
     return newDesign
 end
@@ -59,7 +61,7 @@ function addconditionaltypeoneerrorrateconstraint!(
                 sum(
                     dbinom(j, n1obs - n1old, p0)*_cpr(x1 + j, n1obs, n, c, p0)*ipm.y[x1 + j, n, c] for
                     j = 0:(n1obs - n1old),
-                    n = n1obs:nmax,
+                    n = nvals,
                     c = cvals
                 ) <= _cpr(x1, n1old, samplesize(design, x1), criticalvalue(design, x1), p0)
             )
@@ -70,7 +72,7 @@ function addconditionaltypeoneerrorrateconstraint!(
             @constraint(ipm.m,
                 sum(
                     _cpr(x1, n1obs, n, c, null(params))*ipm.y[x1, n, c] for
-                    n = n1obs:nmax,
+                    n = nvals,
                     c = cvals
                 ) <= sum([dbinom(j, n1old - n1obs, p0)*_cpr(x1 + j, n1old, samplesize(design, x1 + j), criticalvalue(design, x1 + j), p0) for
                     j in 0:(n1old - n1obs)])
@@ -156,7 +158,7 @@ function addinvarianceimputationconstraint!(
                 @constraint(ipm.m,
                     sum(ipm.y[x1, n, c] for
                         c = cvals
-                    ) - sum(y[x1 - 1, n, c] for
+                    ) - sum(ipm.y[x1 - 1, n, c] for
                         c = cvals
                     ) == 0
                 )
