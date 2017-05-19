@@ -58,9 +58,6 @@ export BESS
 # include ("optimal.jl")
 export getoptimaldesign
 
-# include ("adapt.jl")
-export adapt
-
 # include ("estimate.jl")
 export BinaryTwoStageDesignEstimator,
     design, estimate, p, bias, rmse, incompatibleoutcomes,
@@ -85,7 +82,6 @@ include("Parameters/LiuScore.jl")
 include("Parameters/BESS.jl")
 include("Parameters/EB.jl")
 include("getoptimaldesign.jl")
-include("adapt.jl")
 include("estimate.jl")
 include("Estimators/mle.jl")
 include("Estimators/rbe.jl")
