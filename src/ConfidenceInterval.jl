@@ -28,3 +28,51 @@ function coverage{T<:Real}(ci::ConfidenceInterval, p::T; orientation = "overall"
     end
     return res
 end
+
+function meanwidth{T<:Real}(
+    ci::ConfidenceInterval,
+    p::T
+)
+    d = design(ci)
+    supp   = support(d)
+    res    = 0.0
+    for i in 1:size(supp, 1)
+        x1, x2 = supp[i, :]
+        res = res + pdf(d, x1, x2, p)*(limits(ci, x1, x2)[2] - limits(ci, x1, x2)[1])
+    end
+    return res
+end
+
+function meaninterval{T<:Real}(
+    ci::ConfidenceInterval,
+    p::T
+)
+    d = design(ci)
+    supp   = support(d)
+    mean_limits = [0.0; 0.0]
+    for i in 1:size(supp, 1)
+        x1, x2      = supp[i, :]
+        mean_limits = mean_limits + pdf(d, x1, x2, p)*limits(ci, x1, x2)
+    end
+    return mean_limits
+end
+
+function findInconsistencies{T<:Real}(
+    ci::ConfidenceInterval,
+    p0::T
+)
+    design = design(ci)
+    supp   = support(design)
+    res    = []
+    for o in 1:1:size(supp, 1)
+        x1, x2 = supp[i, :]
+        if (limits(ci, x1, x2)[1] <= p0) & (x1 + x2 > design.c[x1 + 1])
+            push!(res, [x1 x2 design.c[x1 + 1] limits(ci, x1, x2)[1] p0])
+        end
+        if (limits(ci, x1, x2)[1] > p0) & (x1 + x2 <= design.c[x1 + 1])
+            push!(res, [x1 x2 ci.design.c[x1 + 1] limits(ci, x1, x2)[1] p0])
+        end
+    end
+    res = vcat(res...)
+    return res
+end

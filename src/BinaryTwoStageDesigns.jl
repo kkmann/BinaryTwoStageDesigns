@@ -17,7 +17,7 @@ import DataArrays
 import MathProgBase
 
 
-# include("Parameters.jl")
+# Parameters.jl
 export Parameters, samplespace, maxsamplesize, isgroupsequential, allowsstoppingforefficacy,
     NoParameters,
     PointAlternative, null, alpha, alternative, beta,
@@ -25,24 +25,24 @@ export Parameters, samplespace, maxsamplesize, isgroupsequential, allowsstopping
     simulate
 
 
-# include("BinaryTwoStageDesign.jl")
+# BinaryTwoStageDesign.jl
 export AbstractBinaryTwoStageDesign,
     BinaryTwoStageDesign,
         parameters, interimsamplesize, samplesize, criticalvalue, power, test, pdf,
         simulate, support, ispossible, stoppingforfutility, score, expectedpower
 
 
-# include("SampleSize.jl")
+# SampleSize.jl
 export SampleSize
 
 
-# include("SampleSpace.jl")
+# SampleSpace.jl
 export SampleSpace,
     SimpleSampleSpace, interimsamplesizerange, maxsamplesize, possible
 
 export IPModel, extractsolution
 
-# include("SimpleMinimalExpectedSampleSize.jl")
+# SimpleMinimalExpectedSampleSize.jl
 export SimpleMinimalExpectedSampleSize,
     minconditionalpower, smoothness,
     getnvals, getcvals, isgroupsequential
@@ -55,20 +55,21 @@ export EB, expectedtransformedpower
 
 export BESS
 
-# include ("optimal.jl")
+# optimal.jl
 export getoptimaldesign
 
-# include ("estimate.jl")
+# estimate.jl
 export BinaryTwoStageDesignEstimator,
     design, estimate, p, bias, rmse, incompatibleoutcomes,
     MaximumLikelihoodEstimator, # include("Estimators/mle.jl")
     RaoBlackwellizedEstimator, # inlcude("Estimators/rbe.jl")
     jeffreysprior, CompatibleEstimator
 
-# include("")
+#
 export ConfidenceInterval,
-    limits, confidence, design, coverage,
-    ClopperPearsonConfidenceInterval, estimator
+    limits, confidence, design, coverage, estimator,
+    ClopperPearsonConfidenceInterval, NaiveClopperPearsonConfidenceInterval,
+    MinimumMeanWidthConfidenceInterval
 
 include("util.jl")
 include("Parameters.jl")
@@ -88,5 +89,7 @@ include("Estimators/rbe.jl")
 include("Estimators/CompatibleEstimator.jl")
 include("ConfidenceInterval.jl")
 include("ConfidenceIntervals/ClopperPearsonConfidenceInterval.jl")
+include("ConfidenceIntervals/NaiveClopperPearsonConfidenceInterval.jl")
+include("ConfidenceIntervals/MinimumMeanWidthConfidenceInterval.jl")
 
 end # module
