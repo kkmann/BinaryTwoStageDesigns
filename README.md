@@ -6,7 +6,7 @@ evaluation of exact single-arm two-stage designs with binary endpoint.
 ## Installation
 
 Several key features depend on Integer Linear Programs and a suitable solver
-for the (JuMP)[https://github.com/JuliaOpt/JuMP.jl]-package must be installed
+for the [JuMP](https://github.com/JuliaOpt/JuMP.jl)-package must be installed
 prior to using these.
 The package is tested against the commercial solver
 (Gurobi)[http://www.gurobi.com/index] and its Julia interface
@@ -19,11 +19,11 @@ functionality involving optimization.
 The package is not yet registered and the current development verions can be
 installed via
 
-    Pgk.clone("https://github.com/imbi-heidelberg/BinaryTwoStageDesigns")
+    Julia> Pgk.clone("https://github.com/imbi-heidelberg/BinaryTwoStageDesigns")
 
 A specific release can then be installed by checking-out the respective
 branch:
 
-    Pkg.checkout("BinaryTwoStageDesigns", "0.1")
+    Julia> Pkg.checkout("BinaryTwoStageDesigns", "0.1")
 
-The documentation is available under [https://imbi-heidelberg.github.io/BinaryTwoStageDesigns]. 
+The documentation is available under [https://imbi-heidelberg.github.io/BinaryTwoStageDesigns].
