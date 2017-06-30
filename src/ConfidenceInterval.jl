@@ -57,20 +57,20 @@ function meaninterval{T<:Real}(
     return mean_limits
 end
 
-function findInconsistencies{T<:Real}(
+function findinconsistencies{T<:Real}(
     ci::ConfidenceInterval,
     p0::T
 )
-    design = design(ci)
-    supp   = support(design)
+    d = design(ci)
+    supp   = support(d)
     res    = []
-    for o in 1:1:size(supp, 1)
+    for i in 1:1:size(supp, 1)
         x1, x2 = supp[i, :]
-        if (limits(ci, x1, x2)[1] <= p0) & (x1 + x2 > design.c[x1 + 1])
-            push!(res, [x1 x2 design.c[x1 + 1] limits(ci, x1, x2)[1] p0])
+        if (limits(ci, x1, x2)[1] <= p0) & (x1 + x2 > d.c[x1 + 1])
+            push!(res, [x1 x2 d.c[x1 + 1] limits(ci, x1, x2)[1] p0])
         end
-        if (limits(ci, x1, x2)[1] > p0) & (x1 + x2 <= design.c[x1 + 1])
-            push!(res, [x1 x2 ci.design.c[x1 + 1] limits(ci, x1, x2)[1] p0])
+        if (limits(ci, x1, x2)[1] > p0) & (x1 + x2 <= d.c[x1 + 1])
+            push!(res, [x1 x2 d.c[x1 + 1] limits(ci, x1, x2)[1] p0])
         end
     end
     res = vcat(res...)

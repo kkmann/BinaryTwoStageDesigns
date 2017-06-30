@@ -30,7 +30,7 @@ function getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}(
             try
                 dsg = getoptimaldesign(n1, parameters, solver, VERBOSE = VERBOSE)
                 if VERBOSE > 0
-                    try print(stairs(collect(0:n1)/n1, dsg.n, title = "n vs. x1/n1", xlim = [0, 1], canvas = AsciiCanvas, style = :pre))
+                    try print(UnicodePlots.stairs(collect(0:n1)/n1, dsg.n, title = "n vs. x1/n1", xlim = [0, 1], canvas = UnicodePlots.AsciiCanvas, style = :pre))
                     catch e
                         println(e)
                     end
@@ -52,7 +52,7 @@ function getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}(
             val     = val[tmp]
             designs = designs[tmp]
             if VERBOSE > 0
-                try print(lineplot(piv[val .!= Inf], val[val .!= Inf], title = "score vs. n1", xlim = [n1lo, n1hi], canvas = AsciiCanvas))
+                try print(UnicodePlots.lineplot(piv[val .!= Inf], val[val .!= Inf], title = "score vs. n1", xlim = [n1lo, n1hi], canvas = UnicodePlots.AsciiCanvas))
                 catch e
                     println(e)
                 end
@@ -120,11 +120,11 @@ function getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}(
         if VERBOSE > 0
             toc()
             println(scores[i])
-            try print(stairs(collect(0:n1range[i])/n1range[i], designs[i].n, title = "n vs. x1/n1", xlim = [0, 1], canvas = AsciiCanvas, style = :pre))
+            try print(UnicodePlots.stairs(collect(0:n1range[i])/n1range[i], designs[i].n, title = "n vs. x1/n1", xlim = [0, 1], canvas = UnicodePlots.AsciiCanvas, style = :pre))
             catch e
                 println(e)
             end
-            try print(stairs(n1range[1:i], scores[1:i], title = "score vs. n1", xlim = [minimum(n1range), maximum(n1range)], canvas = AsciiCanvas, style = :pre))
+            try print(UnicodePlots.stairs(n1range[1:i], scores[1:i], title = "score vs. n1", xlim = [minimum(n1range), maximum(n1range)], canvas = UnicodePlots.AsciiCanvas, style = :pre))
             catch e
                 println(e)
             end

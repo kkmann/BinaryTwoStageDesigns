@@ -4,7 +4,7 @@ module BinaryTwoStageDesigns
 
 using JuMP
 using QuadGK
-using UnicodePlots
+import UnicodePlots
 using Roots
 
 import Base.show, Base.print
@@ -67,7 +67,7 @@ export BinaryTwoStageDesignEstimator,
 
 #
 export ConfidenceInterval,
-    limits, confidence, design, coverage, estimator,
+    limits, confidence, design, coverage, estimator, findinconsistencies,
     ClopperPearsonConfidenceInterval, NaiveClopperPearsonConfidenceInterval,
     MinimumMeanWidthConfidenceInterval
 
