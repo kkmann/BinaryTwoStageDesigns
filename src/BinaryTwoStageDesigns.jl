@@ -2,11 +2,9 @@ __precompile__()
 
 module BinaryTwoStageDesigns
 
-using JuMP
-using QuadGK
+import JuMP
+import QuadGK
 import UnicodePlots
-using Roots
-
 import Base.show, Base.print
 import Base.convert
 import Distributions, Distributions.minimum, Distributions.maximum,
@@ -20,16 +18,14 @@ import MathProgBase
 # Parameters.jl
 export Parameters, samplespace, maxsamplesize, isgroupsequential, allowsstoppingforefficacy,
     NoParameters,
-    PointAlternative, null, alpha, alternative, beta,
-    VagueAlternative, prior, mcrv,
-    simulate
+    PointAlternative,
+        null, alpha, alternative, beta
 
 
 # BinaryTwoStageDesign.jl
-export AbstractBinaryTwoStageDesign,
-    BinaryTwoStageDesign,
+export BinaryTwoStageDesign,
         parameters, interimsamplesize, samplesize, criticalvalue, power, test, pdf,
-        simulate, support, ispossible, stoppingforfutility, score, expectedpower
+        simulate, support, ispossible, stoppingforfutility, score, expectedpower, jeffreysprior
 
 
 # SampleSize.jl
@@ -47,14 +43,6 @@ export SimpleMinimalExpectedSampleSize,
     minconditionalpower, smoothness,
     getnvals, getcvals, isgroupsequential
 
-export MinimalMinimalExpectedSampleSize
-
-export LiuScore, ros, rup
-
-export EB, expectedtransformedpower
-
-export BESS
-
 # optimal.jl
 export getoptimaldesign
 
@@ -63,12 +51,13 @@ export BinaryTwoStageDesignEstimator,
     design, estimate, p, bias, rmse, incompatibleoutcomes,
     MaximumLikelihoodEstimator, # include("Estimators/mle.jl")
     RaoBlackwellizedEstimator, # inlcude("Estimators/rbe.jl")
-    jeffreysprior, CompatibleEstimator
+    CompatibleEstimator
 
 #
 export ConfidenceInterval,
     limits, confidence, design, coverage, estimator, findinconsistencies,
-    ClopperPearsonConfidenceInterval, NaiveClopperPearsonConfidenceInterval,
+    ClopperPearsonConfidenceInterval,
+    NaiveClopperPearsonConfidenceInterval,
     MinimumMeanWidthConfidenceInterval
 
 include("util.jl")
@@ -77,11 +66,7 @@ include("BinaryTwoStageDesign.jl")
 include("SampleSize.jl")
 include("SampleSpace.jl")
 include("ipmodel.jl")
-include("Parameters/MinimalMinimalExpectedSampleSize.jl")
 include("Parameters/SimpleMinimalExpectedSampleSize.jl")
-include("Parameters/LiuScore.jl")
-include("Parameters/BESS.jl")
-include("Parameters/EB.jl")
 include("getoptimaldesign.jl")
 include("estimate.jl")
 include("Estimators/mle.jl")

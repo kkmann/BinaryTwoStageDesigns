@@ -5,12 +5,12 @@ qnorm(p) = Distributions.quantile(Distributions.Normal(0, 1), p)
 function findgrid(prior, l, u, n)
     dp = 1/(n + 1)
     modprior_(p) = .9*prior(p) + .1*Distributions.pdf(Distributions.Beta(1, 1), p)
-    zmodprior = quadgk(modprior_, l, u)[1]
+    zmodprior = QuadGK.quadgk(modprior_, l, u)[1]
     modprior(p) = modprior_(p) / zmodprior * (p < l ? 0 : 1)
-    zprior = quadgk(prior, l, u)[1]
-    modcdf(p) = quadgk(modprior, l, p)[1]
+    zprior = QuadGK.quadgk(prior, l, u)[1]
+    modcdf(p) = QuadGK.quadgk(modprior, l, p)[1]
     cprior(p) = prior(p) / zprior * (p < l ? 0 : 1)
-    cdf(p) = quadgk(cprior, l, p)[1]
+    cdf(p) = QuadGK.quad(cprior, l, p)[1]
     pivots  = [l + 10^-6.0]
     modcdfs = [0.0]
     cdfs    = [0.0]

@@ -1,4 +1,4 @@
-abstract Parameters # only guarantees p0, nmax, n1range, alpha # TODO: also score, expectedScore
+abstract Parameters 
 
 
 # make parameters iterable for automatic broadcasting
@@ -59,8 +59,3 @@ end
 abstract PointAlternative <: Parameters
 alternative(par::PointAlternative) = try par.p1 catch error("not implemented") end
 beta(par::PointAlternative) = try par.beta catch error("not implemented") end
-
-
-
-abstract VagueAlternative <: Parameters
-prior{T<:Real}(par::VagueAlternative, p::T) = try par.prior(p) catch error("not implemented") end

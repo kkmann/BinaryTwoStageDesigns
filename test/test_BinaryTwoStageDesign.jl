@@ -23,17 +23,7 @@
     @test typeof(sd[1]) == BinaryTwoStageDesign{typeof(1), typeof(Inf), NoParameters}
 
     @testset "show() and convert()" begin
-        println("testing whether show() and convert() methods can be called ... ")
-        originalSTDOUT = STDOUT
-        redirect_stdout()
-        function testShow(design)
-            show(design)
-            return true
-        end
-        for i in 1:length(p0)
-            @test testShow(sd[i])
-        end
-        redirect_stdout(originalSTDOUT)
+        println("testing whetherconvert() method can be called ... ")
         @test convert(DataFrames.DataFrame, sd[1]) == DataFrames.DataFrame(
             x1 = 0:interimsamplesize(sd[1]),
             n  = samplesize(sd[1]),

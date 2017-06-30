@@ -1,8 +1,8 @@
 type RaoBlackwellizedEstimator <: BinaryTwoStageDesignEstimator
-    design::AbstractBinaryTwoStageDesign
+    design::BinaryTwoStageDesign
 
     function RaoBlackwellizedEstimator(
-        design::AbstractBinaryTwoStageDesign
+        design::BinaryTwoStageDesign
     )
         new(design)
     end

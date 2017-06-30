@@ -1,8 +1,8 @@
 type MaximumLikelihoodEstimator <: BinaryTwoStageDesignEstimator
-    design::AbstractBinaryTwoStageDesign
+    design::BinaryTwoStageDesign
 
     function MaximumLikelihoodEstimator(
-        design::AbstractBinaryTwoStageDesign
+        design::BinaryTwoStageDesign
     )
         new(design)
     end

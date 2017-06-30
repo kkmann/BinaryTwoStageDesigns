@@ -42,7 +42,7 @@ hasmonotoneconditionalpower{T_samplespace}(params::SimpleMinimalExpectedSampleSi
 minconditionalpower(params::SimpleMinimalExpectedSampleSize) = params.minconditionalpower
 
 
-function score{T_P<:SimpleMinimalExpectedSampleSize}(design::AbstractBinaryTwoStageDesign, params::T_P)
+function score{T_P<:SimpleMinimalExpectedSampleSize}(design::BinaryTwoStageDesign, params::T_P)
     n = SampleSize(design, params.pess)
     return mean(n)
 end
@@ -62,7 +62,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::SimpleMinimalExpectedSa
     p0            = null(params)
     p1            = params.p1
     # add type one error rate constraint
-    @constraint(m,
+    JuMP.@constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
             x1 in 0:n1,
             n  in nvals,
@@ -70,7 +70,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::SimpleMinimalExpectedSa
         ) <= alpha(params)
     )
     # add type two error rate constraint (power)
-    @constraint(m,
+    JuMP.@constraint(m,
         sum(dbinom(x1, n1, p1)*_cpr(x1, n1, n, c, p1)*y[x1, n, c] for
             x1 in 0:n1,
             n  in nvals,
@@ -81,13 +81,13 @@ function completemodel{T<:Integer}(ipm::IPModel, params::SimpleMinimalExpectedSa
     for x1 in 0:n1
         # ensure monotonicity if required
         if x1 >= 1 & hasmonotoneconditionalpower(params)
-            @constraint(m,
+            JuMP.@constraint(m,
                 sum(_cpr(x1, n1, n, c, p1)*y[x1, n, c] - _cpr(x1 - 1, n1, n, c, p1)*y[x1 - 1, n, c] for
                     n  in nvals, c in cvals
                 ) >= 0
             )
         end
-        @constraint(m,
+        JuMP.@constraint(m,
             sum(_cpr(x1, n1, n, c, p1)*y[x1, n, c] for
                 n  in nvals,
                 c  in cvalsfinite
@@ -98,13 +98,13 @@ function completemodel{T<:Integer}(ipm::IPModel, params::SimpleMinimalExpectedSa
         )
     end
     # add constraint for minimal stopping-for-futility probability
-    @constraint(m,
+    JuMP.@constraint(m,
         sum(dbinom(x1, n1, p0)*y[x1, n1, Inf] for
             x1 in 0:n1
         ) >= params.minstoppingforfutility
     )
     # add optimality criterion
-    @objective(m, Min,
+    JuMP.@objective(m, Min,
         sum(dbinom(x1, n1, params.pess)*n*y[x1, n, c] for
             x1 in 0:n1,
             n  in nvals,

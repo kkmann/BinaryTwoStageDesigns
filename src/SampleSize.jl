@@ -1,7 +1,7 @@
 type SampleSize <: Distributions.DiscreteUnivariateDistribution
     design
     p
-    function SampleSize{T<:Real}(design::AbstractBinaryTwoStageDesign, p::T)
+    function SampleSize{T<:Real}(design::BinaryTwoStageDesign, p::T)
         checkp(p)
         new(design, p)
     end

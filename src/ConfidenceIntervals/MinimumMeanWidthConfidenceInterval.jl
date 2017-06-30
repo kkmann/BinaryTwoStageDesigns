@@ -4,16 +4,13 @@ immutable MinimumMeanWidthConfidenceInterval <: ConfidenceInterval
     limits::Array{Float64}
     prior::Function
 
-    function MinimumMeanWidthConfidenceInterval(
+    function MinimumMeanWidthConfidenceInterval{TS<:MathProgBase.AbstractMathProgSolver}(
         estimator::BinaryTwoStageDesignEstimator,
         rho0::Float64,
-        prior::Function;
+        prior::Function,
+        solver::TS;
         confidence::Float64 = .9,
-        ngrid::Int64  = 100,
-        solver = Gurobi.GurobiSolver(
-            MIPGapAbs    = 10.0^(-2.0),
-            MIPFocus     = 3
-        )
+        ngrid::Int64  = 100
     )
         alpha =  1 - confidence
         ngrid += 1 # number of gridpoints is number of intervals + 1
@@ -55,17 +52,17 @@ immutable MinimumMeanWidthConfidenceInterval <: ConfidenceInterval
                 estimates[o, 2] = i + 1
             end
             # precompute probabilities
-            exp_probs[o] = quadgk(rho -> prior(rho)*pdf(d, x1, x2, rho), 0.0, 1.0, abstol = 10^(-3.0))[1]
+            exp_probs[o] = QuadGK.quadgk(rho -> prior(rho)*pdf(d, x1, x2, rho), 0.0, 1.0, abstol = 10^(-3.0))[1]
             for i in 1:ngrid
                 probs[o, i] = pdf(d, x1, x2, rho_grid[i])
             end
         end
-        model = Model(solver = solver)
-        @variable(model, # lower bounds
+        model = JuMP.Model(solver = solver)
+        JuMP.@variable(model, # lower bounds
             y[o = 1:nposs, i = 1:(ngrid - 1), j = (i + 1):ngrid],
             Bin
         )
-        @variable(model,
+        JuMP.@variable(model,
             z_mon[o = 1:nposs, i = 1:2] >= 0
         )
         a = 0
@@ -82,121 +79,121 @@ immutable MinimumMeanWidthConfidenceInterval <: ConfidenceInterval
                 x1_prev = x1x2_poss[o - 1, 1]
                 x2_prev = x1x2_poss[o - 1, 2]
                 if (x1 == x1_prev) & (x2 == x2_prev + 1)
-                    expr1 = AffExpr()
-                    expr2 = AffExpr()
+                    expr1 = JuMP.AffExpr()
+                    expr2 = JuMP.AffExpr()
                     for i in 1:(ngrid - 1)
                         for j in (i + 1):ngrid
-                            append!(expr1, rho_grid[i]*(y[o - 1, i, j] - y[o, i, j]))
-                            append!(expr2, rho_grid[j]*(y[o - 1, i, j] - y[o, i, j]))
+                            JuMP.append!(expr1, rho_grid[i]*(y[o - 1, i, j] - y[o, i, j]))
+                            JuMP.append!(expr2, rho_grid[j]*(y[o - 1, i, j] - y[o, i, j]))
                         end
                     end
-                    @constraint(model,
+                    JuMP.@constraint(model,
                         # expr1 <= 0
                         z_mon[o, 1] >= expr1
                     )
-                    @constraint(model,
+                    JuMP.@constraint(model,
                         # expr2 <= 0
                         z_mon[o, 2] >= expr2
                     )
                 end
             end
             # functional constraint
-            funcConstrExpr = AffExpr()
+            funcConstrExpr = JuMP.AffExpr()
             for i in 1:(ngrid - 1)
                 for j in (i + 1):ngrid
-                    append!(funcConstrExpr, y[o, i, j])
+                    JuMP.append!(funcConstrExpr, y[o, i, j])
                 end
             end
-            @constraint(model,
+            JuMP.@constraint(model,
                 funcConstrExpr == 1
             )
             # estimator consistency: estimator must lie in interval!
-            estConstrExpr = AffExpr()
+            estConstrExpr = JuMP.AffExpr()
             for i in 1:estimates[o, 1] # lower bound must be smaller or equal to estimate
                 for j in max(i + 1, estimates[o, 2]):ngrid # upper bound must be larger or equal
-                    append!(estConstrExpr, y[o, i, j]) # a possible assignment
+                    JuMP.append!(estConstrExpr, y[o, i, j]) # a possible assignment
                 end
             end
-            @constraint(model,
+            JuMP.@constraint(model,
                 estConstrExpr == 1 # any of the possible assigments must be selected!
             )
             # consistency 1: x1 + x2 > c(x1) -> lower bound must be strictly larger than rho0
             if x1 + x2 > d.c[x1 + 1]
-                cons1ConstrExpr = AffExpr()
+                cons1ConstrExpr = JuMP.AffExpr()
                 for i in 1:min(ngrid - 1, a) # rho_grid[a] <= rho0
                     for j in (i + 1):ngrid
-                        append!(cons1ConstrExpr, y[o, i, j])
+                        JuMP.append!(cons1ConstrExpr, y[o, i, j])
                     end
                 end
-                @constraint(model,
+                JuMP.@constraint(model,
                     cons1ConstrExpr == 0 # none of the assignments with lower bound <= rho0 can be selected
                 )
             end
             # consistency 2: x1 + x2 <= c(x1) -> lower bound must be smaller or equal to rho0
             if x1 + x2 <= d.c[x1 + 1]
-                cons2ConstrExpr = AffExpr()
+                cons2ConstrExpr = JuMP.AffExpr()
                 for i in 1:min(ngrid - 1, a) # rho_grid[a] <= rho0
                     for j in (i + 1):ngrid
-                        append!(cons2ConstrExpr, y[o, i, j])
+                        JuMP.append!(cons2ConstrExpr, y[o, i, j])
                     end
                 end
-                @constraint(model,
+                JuMP.@constraint(model,
                     cons2ConstrExpr == 1 # one of the assignments with lower bound <= rho0 must be selected
                 )
             end
             # upper boundary bleeding, if x1 + x2 == n(x1) the upper boundary must be 1 to prevent coverage from dropping towards zero
             if x1 + x2 == d.n[x1 + 1]
-                boundaryUpperConstrExpr = AffExpr()
+                boundaryUpperConstrExpr = JuMP.AffExpr()
                 for i in 1:(ngrid - 1)
-                    append!(boundaryUpperConstrExpr, y[o, i, ngrid])
+                    JuMP.append!(boundaryUpperConstrExpr, y[o, i, ngrid])
                 end
-                @constraint(model,
+                JuMP.@constraint(model,
                     boundaryUpperConstrExpr == 1
                 )
             end
         end
         # lower boundary bleeding, if x1 + x2 == 0 lower boundary must be 0 to prevent coverage fro mdropping too low
-        boundaryLowerConstrExpr = AffExpr()
+        boundaryLowerConstrExpr = JuMP.AffExpr()
         for j in 2:ngrid
-            append!(boundaryLowerConstrExpr, y[1, 1, j]) # x1x2_poss[1, :] = [0 0]
+            JuMP.append!(boundaryLowerConstrExpr, y[1, 1, j]) # x1x2_poss[1, :] = [0 0]
         end
-        @constraint(model,
+        JuMP.@constraint(model,
             boundaryLowerConstrExpr == 1
         )
         for i in 1:ngrid
-            lowerBoundCoverage = AffExpr()
-            upperBoundCoverage = AffExpr()
+            lowerBoundCoverage = JuMP.AffExpr()
+            upperBoundCoverage = JuMP.AffExpr()
             for o in 1:nposs
                 for j in 1:(ngrid - 1)
                     for k in (j + 1):ngrid
                         if j <= i # lower bound <= rho_grid[i]
-                            append!(lowerBoundCoverage, probs[o, i]*y[o, j, k])
+                            JuMP.append!(lowerBoundCoverage, probs[o, i]*y[o, j, k])
                         end
                         if k >= i # upper bound >= rho_grid[i]
-                            append!(upperBoundCoverage, probs[o, i]*y[o, j, k])
+                            JuMP.append!(upperBoundCoverage, probs[o, i]*y[o, j, k])
                         end
                     end
                 end
             end
-            @constraint(model,
+            JuMP.@constraint(model,
                 lowerBoundCoverage >= 1 - alpha/2
             )
-            @constraint(model,
+            JuMP.@constraint(model,
                 upperBoundCoverage >= 1 - alpha/2
             )
         end
-        objExpr = AffExpr()
+        objExpr = JuMP.AffExpr()
         for o in 1:nposs
-            append!(objExpr, (ngrid - 1)*z_mon[o, 1])
-            append!(objExpr, (ngrid - 1)*z_mon[o, 2])
+            JuMP.append!(objExpr, (ngrid - 1)*z_mon[o, 1])
+            JuMP.append!(objExpr, (ngrid - 1)*z_mon[o, 2])
             for i in 1:(ngrid - 1)
                 for j in (i + 1):ngrid
-                    append!(objExpr, exp_probs[o]*(rho_grid[j] - rho_grid[i])*y[o, i, j])
+                    JuMP.append!(objExpr, exp_probs[o]*(rho_grid[j] - rho_grid[i])*y[o, i, j])
                 end
             end
         end
-        @objective(model, Min, objExpr)
-        status = solve(model)
+        JuMP.@objective(model, Min, objExpr)
+        status = JuMP.solve(model)
         if !(status in (:Optimal, :UserLimit)) # no valid solution found!
             error("no feasible solution reached")
         end
@@ -208,15 +205,12 @@ immutable MinimumMeanWidthConfidenceInterval <: ConfidenceInterval
             current_best_score = 0.0
             for i in 1:(ngrid - 1)
                 for j in (i + 1):ngrid
-                    val = getvalue(y[o, i, j]) == 1.0
+                    val = JuMP.getvalue(y[o, i, j]) == 1.0
                     if val > current_best_score # in the end gives the solution where y[x1, n, c] is closest to 1
                         current_best_score = val
                         limits[x1 + 1, x2 + 1, :] = [rho_grid[i] rho_grid[j]]
                     end
                 end
-            end
-            if current_best_score < .9
-                warn("extracted solution with low integrality")
             end
         end
         return new(estimator, confidence, limits, prior)
