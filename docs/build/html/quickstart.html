@@ -26,7 +26,8 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" /> 
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Binary Two-Stage Designs" href="index.html" /> 
   </head>
   <body>
     <div class="related" role="navigation" aria-label="related navigation">
@@ -38,6 +39,9 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Binary Two-Stage Designs"
+             accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">BinaryTwoStageDesigns 0.1 documentation</a> &#187;</li> 
       </ul>
     </div>  
@@ -49,18 +53,69 @@
             
   <div class="section" id="quick-start">
 <span id="quickstart"></span><h1>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h1>
-<p>No prior knowledge of Julia is required.
-You just need a working Julia setup and we recommend an instalaltion of the
-<a class="reference external" href="http://www.gurobi.com/index">Gurobi</a>. solver.
-A good place to start learning about Julia itself
-is <a class="reference external" href="http://julialang.org/learning/">http://julialang.org/learning/</a>.</p>
+<p>Make sure that Julia Gurobi/Gurobi.jl/JuMP and BinaryTwoStageDesigns are properly
+installed on your system.</p>
 <div class="section" id="setting-up-the-workspace">
 <h2>Setting up the Workspace<a class="headerlink" href="#setting-up-the-workspace" title="Permalink to this headline">¶</a></h2>
-<blockquote>
-<div>using BinaryTwoStageDesigns</div></blockquote>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="k">using</span> <span class="n">BinaryTwoStageDesigns</span>
+<span class="k">using</span> <span class="n">Gurobi</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-problem">
+<h2>Example problem<a class="headerlink" href="#example-problem" title="Permalink to this headline">¶</a></h2>
+<p>Assume that a pharmaceutical company wants to test a new anti-cancer agent in
+a clinical phase II trial.
+Tumor response after 30 days is adopted as surrogate endpoint for overall
+survival.
+A relatively large improvement under treatment over the  historical response
+rate to treatment-as-usual (TAU) of <span class="math">\(p_0=0.2\)</span> is suspected.
+Due to ethical concerns and randomization is considered infeasible and
+the sponsor wants to reject the null hypothesis <span class="math">\(\mathcal{H}_0:p\leq p_0\)</span>
+at a significance level of <span class="math">\(\alpha=5\%\)</span>.
+At <span class="math">\(p_1=0.35\)</span> a power of at least <span class="math">\(80\%\)</span> is deemed sufficent.</p>
+<p>Using these figures for planning a single-stage design (binomial test) would
+result in a sample size of ????.
+This has several disadvantages.
+First of all, the discrete nature of the test statistic makes it impossible to
+fully exhaust the type-I-error rate and is thus ineffective.
+On the other hand, no safeguard agaist an actual lower response rate is possible
+as the full number of subjects will always be included.</p>
+<p>Two-stage designs can resolve these issues by allowing an interim analysis after
+recruiting <span class="math">\(n_1\)</span> patients and deciding whether to continue to a second
+stage or terminate the trial prematurely.
+This idea was originally implemented by <a class="reference internal" href="#simon1989" id="id1">[Simon1989]</a> using a simple
+group-sequential structure (fixed size upon continuing).</p>
+<p>Based on ideas presented in <a class="reference internal" href="#kunzmann2016" id="id2">[Kunzmann2016]</a> BinaryTwoStageDesigns
+relaxes the constraint of a fixed sample size upon continuation and can be used
+to derive designs with flexible stage-two sampel size which minimize the
+expected sample size under a specific parameter value.</p>
+<table class="docutils citation" frame="void" id="simon1989" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[Simon1989]</a></td><td>Simon, R. Optimal two-stage designs for phase II clinical trials.
+<cite>Controlled Clinical Trials</cite> 1989; 10, 1–10</td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="kunzmann2016" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[Kunzmann2016]</a></td><td>Kunzmann, K. and Kieser, K. Optimal adaptive two-stage designs for single-arm trials with binary endpoint.
+<cite>https://arxiv.org/abs/1605.00249</cite></td></tr>
+</tbody>
+</table>
 </div>
 <div class="section" id="finding-designs">
 <h2>Finding Designs<a class="headerlink" href="#finding-designs" title="Permalink to this headline">¶</a></h2>
+<p>For this example we will compute the design minimizing the expected sample size
+under the alternative <span class="math">\(p_1=0.35\)</span> with the additional requirement that
+at least 25 subjects should be enrolled if the trial does not stop early for
+futility.
+This constraint is sensible as it increases the reliability of the data on which
+a potential subsequent phase III trial would be planned.</p>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">SimpleSampleSpace</span><span class="p">()</span>
+</pre></div>
+</div>
 <p>todo</p>
 </div>
 <div class="section" id="exploring-design-properties">
@@ -79,12 +134,16 @@ is <a class="reference external" href="http://julialang.org/learning/">http://ju
   <ul>
 <li><a class="reference internal" href="#">Quick Start</a><ul>
 <li><a class="reference internal" href="#setting-up-the-workspace">Setting up the Workspace</a></li>
+<li><a class="reference internal" href="#example-problem">Example problem</a></li>
 <li><a class="reference internal" href="#finding-designs">Finding Designs</a></li>
 <li><a class="reference internal" href="#exploring-design-properties">Exploring Design Properties</a></li>
 </ul>
 </li>
 </ul>
 
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Binary Two-Stage Designs</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -115,6 +174,9 @@ is <a class="reference external" href="http://julialang.org/learning/">http://ju
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Binary Two-Stage Designs"
+             >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">BinaryTwoStageDesigns 0.1 documentation</a> &#187;</li> 
       </ul>
     </div>

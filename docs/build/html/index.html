@@ -51,28 +51,18 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="module-BinaryTwoStageDesigns">
-<span id="binary-two-stage-designs"></span><h1>Binary Two-Stage Designs<a class="headerlink" href="#module-BinaryTwoStageDesigns" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#setting-up-the-workspace">Setting up the Workspace</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#finding-designs">Finding Designs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#exploring-design-properties">Exploring Design Properties</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<p><a class="reference external" href="https://github.com/kkmann/BinaryTwoStageDesigns">BinaryTwoStageDesigns</a>
-provides functionality for working with single arm two-stage designs for
+  <div class="section" id="binary-two-stage-designs">
+<h1>Binary Two-Stage Designs<a class="headerlink" href="#binary-two-stage-designs" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="https://github.com/imbi-heidelberg/BinaryTwoStageDesigns">BinaryTwoStageDesigns</a>
+provides functionality for working with exact single-arm two-stage designs for
 clinical trials with binary endpoint.
 Special focus lies on the computation of optimal two-stage designs extending
-the ideas of <a class="reference internal" href="#simon1989" id="id1">[Simon1989]</a> using the <a class="reference external" href="http://julialang.org/">Julia</a>
+the ideas of <a class="reference internal" href="quickstart.html#simon1989" id="id1">[Simon1989]</a> using the <a class="reference external" href="https://julialang.org/">Julia</a>
 programming language.
-The <strong>AdaptiveDesigns</strong> package relies heavily on the functionality of the
-<a class="reference external" href="https://github.com/JuliaOpt/JuMP.jl">JuMP</a> package and the mixed integer
-programming solver <a class="reference external" href="http://www.gurobi.com/index">Gurobi</a>.
+BinaryTwoStageDesigns relies heavily on the functionality of the
+<a class="reference external" href="https://github.com/JuliaOpt/JuMP.jl">JuMP</a> package and is tested against the
+commercial mixed integer programming solver
+<a class="reference external" href="http://www.gurobi.com/index">Gurobi</a>.
 While JuMP supports other solvers the use of Gurobi is highly recommended.
 Academic licenses for Gurobi can be obtained free of charge upon request.</p>
 <table class="docutils citation" frame="void" id="simon1989" rules="none">
@@ -82,20 +72,43 @@ Academic licenses for Gurobi can be obtained free of charge upon request.</p>
 <cite>Controlled Clinical Trials</cite> 1989; 10, 1–10</td></tr>
 </tbody>
 </table>
+<span class="target" id="module-BinaryTwoStageDesigns"></span><div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#setting-up-the-workspace">Setting up the Workspace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#example-problem">Example problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#finding-designs">Finding Designs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#exploring-design-properties">Exploring Design Properties</a></li>
+</ul>
+</li>
+</ul>
+</div>
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
-<p>A working Julia and Gurobi installation are required.
-Simply add the package repository by:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Pkg</span><span class="o">.</span><span class="n">clone</span><span class="p">(</span><span class="s2">&quot;https://github.com/kkmann/BinaryTwoStageDesigns&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
 <p>For those not familiar with Julia, <a class="reference external" href="http://julialang.org/learning/">http://julialang.org/learning/</a> might be
 a good starting point.
 The language can be tried out without having to install any software via the
-Julia containers provided by <a class="reference external" href="https://www.juliabox.org/">https://www.juliabox.org/</a> for free
-(Google account required for sign in).
-When you have a working Julia setup running and you want to dive right into the
-package usage see <a class="reference internal" href="quickstart.html#quickstart"><span class="std std-ref">Quick Start</span></a>.</p>
+Julia containers provided by <a class="reference external" href="https://juliabox.com/">https://juliabox.com/</a> for free.</p>
+<p>Make sure Gurobi/<a class="reference external" href="https://github.com/JuliaOpt/Gurobi.jl">Gurobi.jl</a>/JuMP are
+working correctly before using any of the functionality involving optimization.</p>
+<p>The package is not yet registered and the current development verions can be
+installed via</p>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">Julia</span><span class="o">&gt;</span> <span class="n">Pgk</span><span class="o">.</span><span class="n">clone</span><span class="p">(</span><span class="s">&quot;https://github.com/imbi-heidelberg/BinaryTwoStageDesigns&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A specific release can then be installed by checking-out the respective
+branch, e.g.</p>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">Julia</span><span class="o">&gt;</span> <span class="n">Pkg</span><span class="o">.</span><span class="n">checkout</span><span class="p">(</span><span class="s">&quot;BinaryTwoStageDesigns&quot;</span><span class="p">,</span> <span class="s">&quot;0.1&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The documentation of the current development version is available under
+<a class="reference external" href="https://imbi-heidelberg.github.io/BinaryTwoStageDesigns">https://imbi-heidelberg.github.io/BinaryTwoStageDesigns</a> and previous versions
+can be found under /docs/build/html/index.html of the respective release.</p>
+</div>
+<div class="section" id="quick-start">
+<h2>Quick-start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h2>
+<p>See <a class="reference internal" href="quickstart.html#quickstart"><span class="std std-ref">Quick Start</span></a>.</p>
 </div>
 </div>
 <div class="section" id="indices-and-tables">
@@ -117,6 +130,7 @@ package usage see <a class="reference internal" href="quickstart.html#quickstart
   <ul>
 <li><a class="reference internal" href="#">Binary Two-Stage Designs</a><ul>
 <li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#quick-start">Quick-start</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
