@@ -23,6 +23,5 @@
     for i in 1:size(supp, 1)
         x1, x2 = supp[i, :]
         lim = limits(ci, x1, x2)
-        println(x1, x2, lim)
     end
 end

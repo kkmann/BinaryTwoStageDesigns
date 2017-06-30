@@ -1,14 +1,7 @@
-@testset "MLE" begin
+@testset "Estimators" begin
     ss = SimpleSampleSpace(5:30, 75)
     using Gurobi
     solver = GurobiSolver(
-        IntFeasTol = 1e-9,
-        MIPGapAbs = 1e-3,
-        MIPGap = 1e-4,
-        Heuristics = .25,
-        NumericFocus = 3,
-        Threads = 2,
-        MIPFocus = 1,
         TimeLimit = 900
     )
 

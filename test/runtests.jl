@@ -11,8 +11,6 @@ include("test_SimpleMinimalExpectedSampleSize.jl")
 
 include("test_optimization.jl")
 
-# include("test_mle.jl")
+include("test_estimators.jl")
 
-# include("test_ci.jl")
-
-# include("test_tmp.jl")
+include("test_ci.jl")
