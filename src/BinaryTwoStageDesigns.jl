@@ -5,7 +5,7 @@ module BinaryTwoStageDesigns
 import JuMP
 import QuadGK
 import UnicodePlots
-import Base.show, Base.print
+import Base.show, Base.print, Base.Multimedia.display
 import Base.convert
 import Distributions, Distributions.minimum, Distributions.maximum,
     Distributions.pdf, Distributions.cdf, Distributions.rand,

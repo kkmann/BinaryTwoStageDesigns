@@ -13,7 +13,6 @@ getnvals(ss::SampleSpace, n1) = error("not implemented")
 getcvals(ss::SampleSpace, n1) = error("not implemented")
 
 
-
 type SimpleSampleSpace{T<:Integer} <: SampleSpace
     n1range::Vector{T}
     nmax::T
@@ -35,6 +34,8 @@ SimpleSampleSpace{T<:Integer}(n1range::Vector{T},
     nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false) = SimpleSampleSpace{T}(n1range, nmax, n2min, maxnfact, nmincont, maxvariables, GS)
 SimpleSampleSpace{T<:Integer}(n1range, # unspecific, try to convert to integer vector
     nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false) = SimpleSampleSpace{T}(convert(Vector{T}, n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS)
+
+
 
 interimsamplesizerange(ss::SimpleSampleSpace) = ss.n1range
 maxsamplesize(ss::SimpleSampleSpace) = ss.nmax
