@@ -26,6 +26,9 @@ branch:
 
     Julia> Pkg.checkout("BinaryTwoStageDesigns", "0.1")
 
-The documentation of the current development version is available under
-https://imbi-heidelberg.github.io/BinaryTwoStageDesigns and previous versions
-can be found under /docs/build/html/index.html of the respective release.
+## Documentation
+
+The documentation of the current development version is available
+[here](https://imbi-heidelberg.github.io/BinaryTwoStageDesigns) and previous
+versions can be found locally under /docs/build/html/index.html of the
+respective release.
