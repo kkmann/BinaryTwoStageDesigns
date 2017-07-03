@@ -22,15 +22,11 @@ Academic licenses for Gurobi can be obtained free of charge upon request.
 .. 	[Simon1989] Simon, R. Optimal two-stage designs for phase II clinical trials.
   `Controlled Clinical Trials` 1989; 10, 1–10
 
-.. module:: BinaryTwoStageDesigns
-   :synopsis: Methods for planning and evaluation of exact single-arm two-stage
-              designs with binary endpoint
-
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   quickstart.rst
+   BinaryTwoStageDesign.rst
 
 
 
@@ -66,7 +62,7 @@ can be found under /docs/build/html/index.html of the respective release.
 Quick-start
 -----------
 
-See :ref:`quickstart`.
+See `here <https://github.com/imbi-heidelberg/BinaryTwoStageDesigns/tree/master/docs/quickstart.ipynb>`_.
 
 
 
