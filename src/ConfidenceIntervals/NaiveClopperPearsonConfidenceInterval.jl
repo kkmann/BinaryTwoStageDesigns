@@ -1,3 +1,29 @@
+"""
+    NaiveClopperPearsonConfidenceInterval <: ConfidenceInterval
+
+    NaiveClopperPearsonConfidenceInterval{T<:Real}(
+        design::BinaryTwoStageDesign;
+        confidence::T = .9
+    )
+
+Naive Clopper-Pearson confidence interval using default ordering.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| estimator    | estimator object defining the sample space ordering |
+| confidence   | confidence level of the interval |
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> interimsamplesize(ss)
+julia> design = getoptimaldesign(15, params, Gurobi.GurobiSolver())
+julia> est = MaximumLikelihoodEstimator(design, Gurobi.GurobiSolver())
+julia> ci = NaiveClopperPearsonConfidenceInterval(est, confidence = .9)
+```
+"""
 immutable NaiveClopperPearsonConfidenceInterval <: ConfidenceInterval
     design::BinaryTwoStageDesign
     confidence::Float64

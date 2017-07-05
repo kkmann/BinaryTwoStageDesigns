@@ -1,3 +1,34 @@
+"""
+    CompatibleEstimator <: BinaryTwoStageDesignEstimator
+
+    CompatibleEstimator{TS<:MathProgBase.AbstractMathProgSolver}(
+        design::BinaryTwoStageDesign,
+        solver::TS;
+        prior::Function = jeffreysprior(design),
+        k = 100
+    )
+
+Compatible estimator minimizing expected MSE for response rate `p` see also:
+
+Kunzmann K, Kieser M. Point estimation and p‐values in phase II adaptive two‐stage designs with a binary endpoint. Statistics in medicine. 2017 Mar 15;36(6):971-84.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | BinaryTwoStageDesign |
+| solver       | MathProgBase solver, must support quadratic expressions |
+| prior        | weight function for MSE values at different `p`, must be of form `f(p::Real)::Real` |
+| k            | number of equally spaced grid-points for evaluation of MSE and prior |
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> interimsamplesize(ss)
+julia> design = getoptimaldesign(15, params, Gurobi.GurobiSolver())
+julia> est = CompatibleEstimator(design, Gurobi.GurobiSolver())
+```
+"""
 type CompatibleEstimator <: BinaryTwoStageDesignEstimator
     design::BinaryTwoStageDesign
     estimates::DataFrames.DataFrame
@@ -5,7 +36,7 @@ type CompatibleEstimator <: BinaryTwoStageDesignEstimator
     function CompatibleEstimator{TS<:MathProgBase.AbstractMathProgSolver}(
         design::BinaryTwoStageDesign,
         solver::TS;
-        prior::Function = jeffreysprior(design),  
+        prior::Function = jeffreysprior(design),
         k = 100
     )
         epsilon = 10.0^(-6.0)

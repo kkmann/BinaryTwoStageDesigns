@@ -1,3 +1,20 @@
+"""
+    RaoBlackwellizedEstimator <: BinaryTwoStageDesignEstimator
+
+    RaoBlackwellizedEstimator(design::BinaryTwoStageDesign)
+
+Unbiased estimator for response rate `p` see also:
+
+Kunzmann K, Kieser M. Point estimation and p‐values in phase II adaptive two‐stage designs with a binary endpoint. Statistics in medicine. 2017 Mar 15;36(6):971-84.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> interimsamplesize(ss)
+julia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())
+julia> est = RaoBlackwellizedEstimator(design)
+```
+"""
 type RaoBlackwellizedEstimator <: BinaryTwoStageDesignEstimator
     design::BinaryTwoStageDesign
 

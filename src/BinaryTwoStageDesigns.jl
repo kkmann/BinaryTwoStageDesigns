@@ -56,6 +56,7 @@ export BinaryTwoStageDesignEstimator,
 #
 export ConfidenceInterval,
     limits, confidence, design, coverage, estimator, findinconsistencies,
+    meanwidth, meaninterval,
     ClopperPearsonConfidenceInterval,
     NaiveClopperPearsonConfidenceInterval,
     MinimumMeanWidthConfidenceInterval

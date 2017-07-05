@@ -16,11 +16,12 @@ Academic licenses for Gurobi can be obtained free of charge upon request.
 
 ## Quickstart
 
-A quickstart guide is available as [jupyter notebook](https://github.com/imbi-heidelberg/BinaryTwoStageDesigns/blob/master/docs/quickstart.ipynb)
+A quickstart guide is available as [jupyter notebook](https://github.com/imbi-heidelberg/BinaryTwoStageDesigns/blob/master/docs/quickstart.ipynb).
 
 ## Contents
 
 ```@contents
+Depth = 3
 ```
 
 ## Index

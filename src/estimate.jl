@@ -1,3 +1,8 @@
+"""
+    BinaryTwoStageDesignEstimator
+
+Abstract base type for all estimators.
+"""
 abstract BinaryTwoStageDesignEstimator
 
 # these two enable array broadcasting of all methods!
@@ -7,10 +12,62 @@ Base.getindex(estimator::BinaryTwoStageDesignEstimator, i) = estimator
 
 design(estimator::BinaryTwoStageDesignEstimator) = try return estimator.design catch error("not implemented") end
 
+"""
+    estimate{T<:Integer}(estimator::BinaryTwoStageDesignEstimator, x1::T, x2::T)
 
+Estimate the response rate from observed x1 and x2.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| estimator    | any BinaryTwoStageDeisgnEstimator object |
+| x1           | stage-one responses |
+| x2           | stage-two responses |
+
+# Return Value
+
+Real, estimated response rate.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> interimsamplesize(ss)
+julia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())
+julia> est = MLE(design)
+julia> estimate(est, 0, 0)
+```
+"""
 estimate{T<:Integer}(estimator::BinaryTwoStageDesignEstimator, x1::T, x2::T) = error("not implemented")
 
+"""
+    p{T1<:Integer, T2<:Real}(estimator::BinaryTwoStageDesignEstimator, x1::T1, x2::T1, p0::T2)
 
+Compute the p value after observing (x1, x2) for null hypothesis H0: p <= p0 with
+respect to ordering induced by `estimator`.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| estimator    | any BinaryTwoStageDeisgnEstimator object |
+| x1           | stage-one responses |
+| x2           | stage-two responses |
+| p0           | upper boundary of null hypothesis |
+
+# Return Value
+
+Real, p value.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> interimsamplesize(ss)
+julia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())
+julia> est = MLE(design)
+julia> p(est, 0, 0, .2)
+```
+"""
 function p{T1<:Integer, T2<:Real}(estimator::BinaryTwoStageDesignEstimator, x1::T1, x2::T1, p0::T2)
     checkx1x2(x1, x2, design(estimator))
     supp          = support(design(estimator))
@@ -20,7 +77,31 @@ function p{T1<:Integer, T2<:Real}(estimator::BinaryTwoStageDesignEstimator, x1::
     return pdf.(design(estimator), supp[ismoreextreme, 1], supp[ismoreextreme, 2], p0) |> sum
 end
 
+"""
+    bias{T<:Real}(estimator::BinaryTwoStageDesignEstimator, p::T)
 
+Bias of `estimator` given response rate `p`.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| estimator    | any BinaryTwoStageDeisgnEstimator object |
+| p0           | upper boundary of null hypothesis |
+
+# Return Value
+
+Real, bias given `p`.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> interimsamplesize(ss)
+julia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())
+julia> est = MLE(design)
+julia> bias(est, .3)
+```
+"""
 function bias{T<:Real}(estimator::BinaryTwoStageDesignEstimator, p::T)
     supp      = support(design(estimator))
     estimates = estimate.(estimator, supp[:, 1], supp[:, 2])
@@ -28,7 +109,31 @@ function bias{T<:Real}(estimator::BinaryTwoStageDesignEstimator, p::T)
     return dot(probs, estimates) - p
 end
 
+"""
+    rmse{T<:Real}(estimator::BinaryTwoStageDesignEstimator, p::T)
 
+Root mean squared error of `estimator` given response rate `p`.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| estimator    | any BinaryTwoStageDeisgnEstimator object |
+| p0           | upper boundary of null hypothesis |
+
+# Return Value
+
+Real, RMSE given `p`.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> interimsamplesize(ss)
+julia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())
+julia> est = MLE(design)
+julia> rmse(est, .3)
+```
+"""
 function rmse{T<:Real}(estimator::BinaryTwoStageDesignEstimator, p::T)
     supp     = support(design(estimator))
     return sqrt( sum(
@@ -37,7 +142,31 @@ function rmse{T<:Real}(estimator::BinaryTwoStageDesignEstimator, p::T)
     ) )
 end
 
+"""
+    incompatibleoutcomes(estimator::BinaryTwoStageDesignEstimator)
 
+Find outcomes where the induced p value implies different decision than the
+underlying design
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| estimator    | any BinaryTwoStageDeisgnEstimator object |
+
+# Return Value
+
+Array with respective outcomes
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> interimsamplesize(ss)
+julia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())
+julia> est = MLE(design)
+julia> incompatibleoutcomes(est)
+```
+"""
 function incompatibleoutcomes(estimator::BinaryTwoStageDesignEstimator)
     supp = support(design(estimator))
     res  = []

@@ -1,3 +1,37 @@
+"""
+    MinimumMeanWidthConfidenceInterval <: ConfidenceInterval
+
+    MinimumMeanWidthConfidenceInterval{TS<:MathProgBase.AbstractMathProgSolver}(
+        estimator::BinaryTwoStageDesignEstimator,
+        rho0::Float64,
+        prior::Function,
+        solver::TS;
+        confidence::Float64 = .9,
+        ngrid::Int64 = 100
+    )
+
+Exact confidence interval based on ordering induced by `estimator` minimizing the
+expected squared width with respect to weight function `prior(p::Real)`.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| estimator    | estimator object defining the sample space ordering |
+| rho0         | upper boundary of null hypothesis |
+| confidence   | confidence level of the interval |
+| solver       | MathProgBase solver used for optimization, must support quadratic expressions |
+| ngrid        | number of equally spaced grid-points on which to check coverage |
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> interimsamplesize(ss)
+julia> design = getoptimaldesign(15, params, Gurobi.GurobiSolver())
+julia> est = MaximumLikelihoodEstimator(design, Gurobi.GurobiSolver())
+julia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)
+```
+"""
 immutable MinimumMeanWidthConfidenceInterval <: ConfidenceInterval
     estimator::BinaryTwoStageDesignEstimator
     confidence::Float64

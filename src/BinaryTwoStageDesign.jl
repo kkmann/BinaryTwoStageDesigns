@@ -121,7 +121,7 @@ PDF of (x1, x2) given design, p
 ```julia-repl
 julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
 julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
 julia> pdf(design, 0, 0, .4)
 ```
 """
@@ -185,7 +185,7 @@ Conditional power of `design` at `p` given `x1` responses in stage one.
 ```julia-repl
 julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
 julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
 julia> power(design, .4)
 julia> power(design, 0, .4)
 ```
@@ -218,7 +218,7 @@ Probablity of stopping-for-futility
 ```julia-repl
 julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
 julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
 julia> stoppingforfutility(design, .2)
 ```
 """
@@ -258,7 +258,7 @@ Boolean, true if x1 + x2 > c(x1), i.e., if the null hypothesis can be rejected.
 ```julia-repl
 julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
 julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
 julia> test(design, 0, 0)
 ```
 """
@@ -289,7 +289,7 @@ c (critical value), x2 (stage-two responses), and rejectedH0 (test decision).
 ```julia-repl
 julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
 julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
 julia> df = simulate(design, .3, 1000)
 ```
 """
@@ -345,7 +345,7 @@ A single real value, i.e., the score.
 ```julia-repl
 julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
 julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
 julia> score(design, params)
 julia> score(design)
 ```
@@ -373,7 +373,7 @@ probability and `prior(p)` the PDF of the Jeffres prior at `p`.
 ```julia-repl
 julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
 julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
 julia> f = jeffreysprior(design)
 julia> f(.5)
 ```

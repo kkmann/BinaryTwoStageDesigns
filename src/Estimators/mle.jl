@@ -1,3 +1,18 @@
+"""
+    MaximumLikelihoodEstimator
+
+    MaximumLikelihoodEstimator(design::BinaryTwoStageDesign)
+
+Simple maximum likelihood estimator for response rate `p`.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> interimsamplesize(ss)
+julia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())
+julia> est = MaximumLikelihoodEstimator(design)
+```
+"""
 type MaximumLikelihoodEstimator <: BinaryTwoStageDesignEstimator
     design::BinaryTwoStageDesign
 

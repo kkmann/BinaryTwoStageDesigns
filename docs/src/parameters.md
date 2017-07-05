@@ -12,8 +12,6 @@ be optimized.
 Parameters
 
 PointAlternative
-
-score
 ```
 
 ## SimpleMinimalExpectedSampleSize
