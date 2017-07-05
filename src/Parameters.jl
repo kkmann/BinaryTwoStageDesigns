@@ -1,4 +1,10 @@
-abstract Parameters 
+"""
+    Parameters
+
+Abstract type representing a generic set of paramters for finding optimal
+two-stage designs.
+"""
+abstract Parameters
 
 
 # make parameters iterable for automatic broadcasting
@@ -16,7 +22,7 @@ maxsamplesize(par::Parameters) = error("not implemented")
 isgroupsequential(par::Parameters) = error("not implemented")
 allowsstoppingforfutility(par::Parameters) = error("not implemented")
 
-function simulate(params::Parameters, p, n1, n; nna1 = 0, nna2 = 0, x1 = -1, x2 = -1)
+function simulate(params::Parameters, p, n1, n; nna1 = 0, nna2 = 0, x1 = -1, x2 = -1) # still needed?
     RV = Distributions.Bernoulli(p)
     if x1 < 0
         response1 = convert(DataArrays.DataArray{Bool}, rand(RV, n1))
@@ -43,7 +49,11 @@ function simulate(params::Parameters, p, n1, n; nna1 = 0, nna2 = 0, x1 = -1, x2 
     return data
 end
 
+"""
+    NoParameters <: Parameters
 
+Empty parameters.
+"""
 type NoParameters <: Parameters
 end
 null(par::NoParameters) = error("NoParameters do not have null hypothesis")
@@ -55,7 +65,12 @@ function show(io::IO, object::NoParameters)
 end
 
 
+"""
+    PointAlternative <: Parameters
 
+Abstract type representing a generic set of paramters for finding optimal
+two-stage designs which are characterized by a specific point alternative.
+"""
 abstract PointAlternative <: Parameters
 alternative(par::PointAlternative) = try par.p1 catch error("not implemented") end
 beta(par::PointAlternative) = try par.beta catch error("not implemented") end

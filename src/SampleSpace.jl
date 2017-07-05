@@ -1,17 +1,141 @@
+"""
+    SampleSpace
+
+Abstract type representing generic sample spaces defining the search space for
+finding optimal two stage designs.
+"""
 abstract SampleSpace
 
 Base.size(::SampleSpace) = ()
 Base.getindex(ss::SampleSpace, i) = ss
 
+"""
+    interimsamplesizerange(ss::SimpleSampleSpace)
+
+Extract the interim sample size range of a `SampleSpace` object.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| ss           | SampleSpace object |
+
+# Return Value
+
+The n1range as integer vector.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> interimsamplesize(ss)
+```
+"""
 interimsamplesizerange(ss::SampleSpace) = error("not implemented")
+
+"""
+    maxsamplesize(ss::SampleSpace)
+
+Extract the maximal sample size of a `SampleSpace` object.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| ss           | SampleSpace object |
+
+# Return Value
+
+The maximal overall sample size.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> maxsamplesize(ss)
+```
+"""
 maxsamplesize(ss::SampleSpace) = error("not implemented")
+
+"""
+    maxsamplesize(ss::SampleSpace, n1)
+
+Extract the maximal sample size of a `SampleSpace` object given stage-one sample size n1. This might
+differ from the maximal sample size due to the factor `maxnfactor`.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| ss           | SampleSpace object |
+| n1           | interim sample size |
+
+# Return Value
+
+The maximal overall sample size given n1.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> maxsamplesize(ss, 15)
+```
+"""
 maxsamplesize(ss::SampleSpace, n1) = error("not implemented")
+
+"""
+    possible{T<:Integer}(n1::T, ss::SampleSpace)
+
+Returns true if interim sample size n1 is compatible with sample space ss.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| n1           | interim sample size |
+| ss           | SampleSpace object |
+
+# Return Value
+
+true if n1 is valid for ss, false otherwise
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> possible(15, ss)
+```
+"""
 possible{T<:Integer}(n1::T, ss::SampleSpace) = error("not implemented")
+
+"""
+    possible{T<:Integer, TR<:Real}(n1::T, n::T, c::TR, ss::SampleSpace)
+
+TODO
+"""
 possible{T<:Integer, TR<:Real}(n1::T, n::T, c::TR, ss::SampleSpace) = error("not implemented")
+
+"""
+    isgroupsequential(ss::SampleSpace)
+
+Returns true if ss is restricted to group-sequential sample spaces.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| ss           | SampleSpace object |
+
+# Return Value
+
+true if ss is group-sequential, false otherwise
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> isgroupsequential(ss)
+```
+"""
 isgroupsequential(ss::SampleSpace) = error("not implemented")
+
 getnvals(ss::SampleSpace, n1) = error("not implemented")
 getcvals(ss::SampleSpace, n1) = error("not implemented")
-
 
 type SimpleSampleSpace{T<:Integer} <: SampleSpace
     n1range::Vector{T}
@@ -30,12 +154,38 @@ type SimpleSampleSpace{T<:Integer} <: SampleSpace
         new(sort(n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS, convert(Vector{T}, zeros(0)))
     end
 end
+
 SimpleSampleSpace{T<:Integer}(n1range::Vector{T},
     nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false) = SimpleSampleSpace{T}(n1range, nmax, n2min, maxnfact, nmincont, maxvariables, GS)
+"""
+    SimpleSampleSpace{T<:Integer}(n1range, nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false)
+
+Constructs an object of type `SimpleSampleSpace` defining the search space for
+finding optimal two stage designs.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| n1range      | possible stage-one sample sizes, can be anything which is convertable to an integer vector |
+| n2min        | minimal stage-two sample size |
+| nmax         | maximal overall sample size (stage one and two combined) |
+| maxnfact     | nmax must be smaller than maxnfact*n1 |
+| nmincont     | minimal sample size upon rejection of the null hypothesis |
+| maxvariables | (approximate) maximal number of binary variables used when finding optimal design; if the sample space is too big this can be used to find approximate solutions to the optimization problem |
+| GS           | flag indicating wheather the design should be group-sequential (constant stage two sample size upon continuation) |
+
+# Return Value
+
+An object of type `SimpleSampleSpace` with the respective parameters.
+
+# Examples
+```julia-repl
+julia> SimpleSampleSpace(10:25, 100, n2min = 5)
+```
+"""
 SimpleSampleSpace{T<:Integer}(n1range, # unspecific, try to convert to integer vector
     nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false) = SimpleSampleSpace{T}(convert(Vector{T}, n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS)
-
-
 
 interimsamplesizerange(ss::SimpleSampleSpace) = ss.n1range
 maxsamplesize(ss::SimpleSampleSpace) = ss.nmax

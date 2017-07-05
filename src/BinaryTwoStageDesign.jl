@@ -1,3 +1,25 @@
+"""
+    BinaryTwoStageDesign{T1<:Integer, T2<:Real, PType<:Parameters}
+
+Immutable type representing a binary two-stage design. Two constructors are
+implemented: `BinaryTwoStageDesign{T1<:Integer, T2<:Real}(n::Vector{T1}, c::Vector{T2})`
+does not require any additional parameters but only vectors n and c of
+final sample sizes and critical values for x1 = 0:n1, n1 + 1 = length(c) = length(n).
+The second option `BinaryTwoStageDesign{T1<:Integer, T2<:Real, PType<:Parameters}(n::Vector{T1},c::Vector{T2},params::PType)`
+also stores the passed paramter object.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| n            | integer vector of length n1 + 1 with sample size n(x1) |
+| c            | real vector of length n1 + 1 with critical values c(x1), c(x1) = +/- Inf indicates early stopping and must imply n(x1) = n1 |
+| [params]     | parameter object |
+
+# Details
+
+Note that the test rejects whenever x1 + x2 > c(x1)
+"""
 immutable BinaryTwoStageDesign{T1<:Integer, T2<:Real, PType<:Parameters}
     n::Vector{T1}
     c::Vector{T2} # rejected if x1 + x2 > c(x1), must allow real to hold Infinity
@@ -23,6 +45,11 @@ BinaryTwoStageDesign{T1<:Integer, T2<:Real, PType<:Parameters}(
     params::PType
 ) = BinaryTwoStageDesign{T1, T2, PType}(n, c, params)
 
+"""
+    convert(::Type{DataFrames.DataFrame}, design::BinaryTwoStageDesign)
+
+Convert a design to a DataFrame with columns x1, n, c.
+"""
 convert(::Type{DataFrames.DataFrame}, design::BinaryTwoStageDesign) =
     DataFrames.DataFrame(
         x1 = 0:interimsamplesize(design),
@@ -37,19 +64,67 @@ Base.start(design::BinaryTwoStageDesign) = true
 Base.done(design::BinaryTwoStageDesign, state) = true
 Base.getindex(design::BinaryTwoStageDesign, i) = design
 
+"""
+    interimsamplesize(design::BinaryTwoStageDesign)
+
+Return inter sample size n1 of a design.
+"""
 interimsamplesize(design::BinaryTwoStageDesign) = length(design.n) - 1
+"""
+    parameters(design::BinaryTwoStageDesign)
+
+Return stored parameter object of a design.
+"""
 parameters(design::BinaryTwoStageDesign) = design.params
 
+"""
+    samplesize(design::BinaryTwoStageDesign)
+
+Return vector of final sample sizes for x1 = 0:n1, or via
+`samplesize{T<:Integer}(design::BinaryTwoStageDesign, x1::T)` only for specific
+`x1`.
+"""
 samplesize(design::BinaryTwoStageDesign) = design.n
 samplesize{T<:Integer}(design::BinaryTwoStageDesign, x1::T) =
     (checkx1(x1, design); design.n[x1 + 1])
 
+"""
+    criticalvalue(design::BinaryTwoStageDesign)
 
+Return vector of critical values for x1 = 0:n1, or via
+`criticalvalue(design::BinaryTwoStageDesign, x1)` only for specific `x1`.
+"""
 criticalvalue(design::BinaryTwoStageDesign) = design.c
 criticalvalue{T<:Integer}(design::BinaryTwoStageDesign, x1::T) =
     (checkx1(x1, design); design.c[x1 + 1])
 
+"""
+    pdf{T1<:Integer, T2<:Real}(design::BinaryTwoStageDesign, x1::T1, x2::T1, p::T2)
 
+Probability density function of (x1, x2) responses in stage one and two respectively
+under `design` given response rate `p`.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | a BinaryTwoStageDesign |
+| x1           | number of stage-one responses |
+| x2           | number of stage-two responses |
+| p            | response probability |
+
+# Return Value
+
+PDF of (x1, x2) given design, p
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
+julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> pdf(design, 0, 0, .4)
+```
+"""
 function pdf{T1<:Integer, T2<:Real}(
     design::BinaryTwoStageDesign,
     x1::T1, x2::T1, p::T2
@@ -85,6 +160,36 @@ function power{T1<:Integer, T2<:Real}(
     )
     return min(1, max(0, res)) # guarantee bounds!
 end
+"""
+    power{T<:Real}(design::BinaryTwoStageDesign, p::T)
+
+Compute the power of a given design.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | a BinaryTwoStageDesign |
+| p            | response probability |
+
+# Details
+
+A conditional power method is also implemented as `power{T1<:Integer, T2<:Real}(design::BinaryTwoStageDesign, x1::T1, p::T2)`
+where `x1` is the stage-one number of responses.
+
+# Return Value
+
+Conditional power of `design` at `p` given `x1` responses in stage one.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
+julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> power(design, .4)
+julia> power(design, 0, .4)
+```
+"""
 function power{T<:Real}(design::BinaryTwoStageDesign, p::T)
     checkp(p)
     n1      = interimsamplesize(design)
@@ -93,7 +198,30 @@ function power{T<:Real}(design::BinaryTwoStageDesign, p::T)
     return min(1, max(0, vecdot(Distributions.pdf(X1, x1range), power.(design, x1range, p))))
 end
 
+"""
+    stoppingforfutility{T<:Real}(design::BinaryTwoStageDesign, p::T)
 
+Compute probability of stopping early for futility of a given design.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | a BinaryTwoStageDesign |
+| p            | response probability |
+
+# Return Value
+
+Probablity of stopping-for-futility
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
+julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> stoppingforfutility(design, .2)
+```
+"""
 function stoppingforfutility{T<:Real}(design::BinaryTwoStageDesign, p::T)
     checkp(p)
     n1  = interimsamplesize(design)
@@ -108,13 +236,63 @@ function stoppingforfutility{T<:Real}(design::BinaryTwoStageDesign, p::T)
     return res
 end
 
+"""
+    test{T<:Integer}(design::BinaryTwoStageDesign, x1::T, x2::T)::Bool
 
+Binary test decision of `design` when observing `x1` responses in stage one and
+`x2` responses in stage two.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | a BinaryTwoStageDesign |
+| x1           | number of stage-one responses |
+| x2           | number of stage-two responses |
+
+# Return Value
+
+Boolean, true if x1 + x2 > c(x1), i.e., if the null hypothesis can be rejected.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
+julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> test(design, 0, 0)
+```
+"""
 function test{T<:Integer}(design::BinaryTwoStageDesign, x1::T, x2::T)::Bool
     checkx1x2(x1, x2, design)
     return x1 + x2 > criticalvalue(design, x1)
 end
 
+"""
+    simulate{T1<:Integer, T2<:Real}(design::BinaryTwoStageDesign, p::T2, nsim::T1)
 
+Simulate `nsim` trials of design `design` with true response probability `p`.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | a BinaryTwoStageDesign |
+| p            | true response probability |
+| nsim         | number of simulated trials|
+
+# Return Value
+
+A DataFrame with columns x1 (stage one responses) n (overall sample size)
+c (critical value), x2 (stage-two responses), and rejectedH0 (test decision).
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
+julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> df = simulate(design, .3, 1000)
+```
+"""
 function simulate{T1<:Integer, T2<:Real}(design::BinaryTwoStageDesign, p::T2, nsim::T1)
     x2    = SharedArray(Int, nsim)
     n     = SharedArray(Int, nsim)
@@ -140,11 +318,66 @@ function simulate{T1<:Integer, T2<:Real}(design::BinaryTwoStageDesign, p::T2, ns
     )
 end
 
+"""
+    score(design::BinaryTwoStageDesign, params::Parameters)::Real
 
+Evaluates the score of a design for a given set of parameters.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | a BinaryTwoStageDesign |
+| params       | a parameters object holding the required information about the score |
+
+# Details
+
+A method `score(design::BinaryTwoStageDesign)::Real` is also implemented which
+uses the parameter object stored within the design object after optimization.
+Note that this is only possible if the design was created as result of calling
+`getoptimaldesign()`.
+
+# Return Value
+
+A single real value, i.e., the score.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
+julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> score(design, params)
+julia> score(design)
+```
+"""
 score(design::BinaryTwoStageDesign, params::Parameters)::Real = error("not implemented")
 score(design::BinaryTwoStageDesign)::Real = score(design, parameters(design))
 
+"""
+    jeffreysprior(design::BinaryTwoStageDesign)
 
+Computes the Jeffreys prior of any given design.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | a BinaryTwoStageDesign |
+
+# Return Value
+
+A function with signature `prior{T<:Real}(p::T)::Real` where `p` is the response
+probability and `prior(p)` the PDF of the Jeffres prior at `p`.
+
+# Examples
+```julia-repl
+julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
+julia> design = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
+julia> f = jeffreysprior(design)
+julia> f(.5)
+```
+"""
 function jeffreysprior(design::BinaryTwoStageDesign)
     function sqrtfi(p::Float64)::Float64
         res  = 0.0
@@ -160,7 +393,7 @@ function jeffreysprior(design::BinaryTwoStageDesign)
         return sqrt(res)
     end
     z = QuadGK.quadgk(sqrtfi, 0, 1, abstol = 0.001)[1] # exact integration from 0 to 1 is expensive!
-    function prior{T<:Real}(p::T)::Float64
+    function prior{T<:Real}(p::T)::Real
         checkp(p)
         return sqrtfi(p)/z
     end
