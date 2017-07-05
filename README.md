@@ -1,7 +1,9 @@
 # BinaryTwoStageDesigns
 
 A [Julia](http://julialang.org) package implementing methods for planning and
-evaluation of exact single-arm two-stage designs with binary endpoint.
+evaluation of exact single-arm two-stage designs with binary
+endpoint.
+Dokumentation is available [here](https://imbi-heidelberg.github.io/BinaryTwoStageDesigns).
 
 ## Installation
 
@@ -22,13 +24,13 @@ installed via
     Julia> Pgk.clone("https://github.com/imbi-heidelberg/BinaryTwoStageDesigns")
 
 A specific release can then be installed by checking-out the respective
-branch:
+branch@tag, e.g.,:
 
-    Julia> Pkg.checkout("BinaryTwoStageDesigns", "0.1")
+    Julia> Pkg.checkout("BinaryTwoStageDesigns", "master@v0.1.0")
 
 ## Documentation
 
 The documentation of the current development version is available
 [here](https://imbi-heidelberg.github.io/BinaryTwoStageDesigns) and previous
-versions can be found locally under /docs/build/html/index.html of the
+versions can be found locally under /docs/build/index.html of the
 respective release.
