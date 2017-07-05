@@ -3,7 +3,7 @@
 A [Julia](http://julialang.org) package implementing methods for planning and
 evaluation of exact single-arm two-stage designs with binary
 endpoint.
-Dokumentation is available [here](https://imbi-heidelberg.github.io/BinaryTwoStageDesigns).
+Documentation is available [here](https://imbi-heidelberg.github.io/BinaryTwoStageDesigns).
 
 ## Installation
 
