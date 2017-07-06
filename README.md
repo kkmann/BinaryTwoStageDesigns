@@ -19,14 +19,22 @@ Make sure Gurobi/Gurobi.jl/JuMP are working correctly before using any of the
 functionality involving optimization.
 
 The package is not yet registered and the current development verions can be
-installed via
+installed via:
 
-    Julia> Pgk.clone("https://github.com/imbi-heidelberg/BinaryTwoStageDesigns")
+  Julia> Pgk.clone("https://github.com/imbi-heidelberg/BinaryTwoStageDesigns")
 
-A specific release can then be installed by checking-out the respective
-branch@tag, e.g.,:
+A specific patch can be installed by checking out its branch, e.g.,
 
-    Julia> Pkg.checkout("BinaryTwoStageDesigns", "master@v0.1.0")
+  Julia> Pkg.checkout("BinaryTwoStageDesigns", "0.1")
+
+Note that these versions need not be stable (minor fixes and documentation changes). A specific release, which is just a tagged commit, must be checked out using git directly. I.e. swtich to the .julia/0.5/BinaryTwoStageDesigns in your user folder and checkout the tag directly (git must be installed), e.g. by:
+
+  git checkout v0.1.0
+
+Note that this will cause wa warning about a 'detached HEAD' state. This is
+fine for usage of the specific version and only has implications for developers.
+
+
 
 ## Documentation
 
