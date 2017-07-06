@@ -12,4 +12,4 @@ makedocs(
         "Inference" => "inference.md"
     ],
     repo = "https://github.com/imbi-heidelberg/BinaryTwoStageDesigns/{commit}"
-    )
+)
