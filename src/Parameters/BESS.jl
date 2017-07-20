@@ -92,12 +92,12 @@ function g(params::BESS, power)
     @checkprob power
     return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
 end
-function score(design::AbstractBinaryTwoStageDesign, params::BESS, p::Real)
+function score(design::BinaryTwoStageDesign, params::BESS, p::Real)
     @checkprob p
     ess = SampleSize(design, p) |> mean
     return ess * (p + params.k * (1 - p))
 end
-function score(design::AbstractBinaryTwoStageDesign, params::BESS)
+function score(design::BinaryTwoStageDesign, params::BESS)
     return quadgk(
         p -> prior(params, p)*score(design, params, p),
         0, 1, reltol = .001
@@ -122,7 +122,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
     npriorpivots  = params.npriorpivots
     ngpivots      = params.ngpivots
     # add type one error rate constraint
-    @constraint(m,
+    JuMP.@constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         ) <= alpha(params)
@@ -131,17 +131,17 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
     for x1 in 0:n1
         z[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), pmcrv, 1, abstol = .001)[1]
     end
-    @expression(m, cep[x1 in 0:n1], # define expressions for conditional power given X1=x1
+    JuMP.@expression(m, cep[x1 in 0:n1], # define expressions for conditional power given X1=x1
         sum(quadgk(p -> prior(p)*dbinom(x1, n1, p)*_cpr.(x1, n1, n, c, p), pmcrv, 1, abstol = 0.001)[1] / z[x1 + 1] * y[x1, n, c]
             for n in nvals, c in cvals
         )
     )
     for x1 in 0:n1
-        @constraint(m, # add conditional type two error rate constraint (power)
+        JuMP.@constraint(m, # add conditional type two error rate constraint (power)
             cep[x1] >= minconditionalpower(params) * (1 - sum(y[x1, n1, c] for c in cvalsinfinite)) # must be conditional on continuation!
         )
         if x1 >= 1 & hasmonotoneconditionalpower(params)
-            @constraint(m, # ensure monotonicity if required
+            JuMP.@constraint(m, # ensure monotonicity if required
                 cep[x1] - cep[x1 - 1] >= 0
             )
         end
@@ -150,7 +150,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
     for x1 in 0:n1
         z[x1 + 1] = quadgk(p -> dbinom(x1, n1, p) * prior(p), 0, 1, abstol = .001)[1]
     end
-    @expression(m, ec[x1 in 0:n1], # weighted expected sample size conditional on X1=x1
+    JuMP.@expression(m, ec[x1 in 0:n1], # weighted expected sample size conditional on X1=x1
         sum(
             (x1 + params.k*(n1 - x1) + quadgk(p -> (p + params.k*(1 - p))*(n - n1) * dbinom(x1, n1, p)*prior(p)/z[x1 + 1], 0, 1, abstol = .001)[1]) * y[x1, n, c]
             for n in nvals, c in cvals
@@ -162,21 +162,21 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
         for x1 in 0:n1
             cprior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p)/z, pmcrv, 1, abstol = .0001)[1]
         end
-        @constraint(m,
+        JuMP.@constraint(m,
             sum( cep[x1]*cprior_probs[x1 + 1] for x1 in 0:n1 ) >= 1 - params.beta
         )
         prior_probs = zeros(n1 + 1)
         for x1 in 0:n1
             prior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), 0, 1, abstol = .001)[1]
         end
-        @objective(m, Min,
+        JuMP.@objective(m, Min,
             sum( ec[x1]*prior_probs[x1 + 1] for x1 in 0:n1 )
         )
     elseif params.a == params.b == Inf # special case 1: easier computation!
         z       = quadgk(p -> prior(p), pmcrv, 1, abstol = .0001)[1]
         ccdf(p) = quadgk(pp -> prior(pp)/z, pmcrv, p, abstol = .001)[1]
         cquant  = Roots.fzero(p -> (1 - ccdf(p)) - params.targetpower, pmcrv, 1) # conditional prior quantile
-        @constraint(m, # power on conditional prior quantile
+        JuMP.@constraint(m, # power on conditional prior quantile
             sum(
                 dbinom(x1, n1, cquant) * _cpr(x1, n1, n, c, cquant) * y[x1, n, c]
                 for x1 in 0:n1, n in nvals, c in cvals
@@ -186,12 +186,12 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
         for x1 in 0:n1
             prior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), 0, 1, abstol = .001)[1]
         end
-        @objective(m, Min,
+        JuMP.@objective(m, Min,
             sum( ec[x1]*prior_probs[x1 + 1] for x1 in 0:n1 )
         )
     else # construct expected weighted power constraint
         cpriorpivots, dccdf = findgrid(prior, params.pmcrv, 1, npriorpivots) # conditional prior pivots
-        @expression(m, designpower[p in cpriorpivots], # power on conditional prior pivots
+        JuMP.@expression(m, designpower[p in cpriorpivots], # power on conditional prior pivots
             sum(
                 dbinom(x1, n1, p) * _cpr(x1, n1, n, c, p) * y[x1, n, c]
                 for x1 in 0:n1, n in nvals, c in cvals
@@ -201,28 +201,25 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
         lbound = quantile(Distributions.Beta(params.a, params.b), .025)
         ubound = quantile(Distributions.Beta(params.a, params.b), .975)
         pivots = [0; collect(linspace(lbound, ubound, max(1, ngpivots - 2))); 1] # lambda formulation requires edges! exploit fact that function is locally linear!
-        @variable(m, 0 <= lambdaSOS2[cpriorpivots, pivots] <= 1)
-        @variable(m, wpwr[cpriorpivots]) # weighted power
+        JuMP.@variable(m, 0 <= lambdaSOS2[cpriorpivots, pivots] <= 1)
+        JuMP.@variable(m, wpwr[cpriorpivots]) # weighted power
         for p in cpriorpivots
             addSOS2(m, [lambdaSOS2[p, piv] for piv in pivots])
-            @constraint(m, sum(lambdaSOS2[p, piv] for piv in pivots) == 1)
-            @constraint(m, sum(lambdaSOS2[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
-            @constraint(m, sum(lambdaSOS2[p, piv]*g(params, piv) for piv in pivots) == wpwr[p])
+            JuMP.@constraint(m, sum(lambdaSOS2[p, piv] for piv in pivots) == 1)
+            JuMP.@constraint(m, sum(lambdaSOS2[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
+            JuMP.@constraint(m, sum(lambdaSOS2[p, piv]*g(params, piv) for piv in pivots) == wpwr[p])
         end
-        @expression(m, ewpwr,
+        JuMP.@expression(m, ewpwr,
             sum( wpwr[cpriorpivots[i]] * dccdf[i] for i in 1:npriorpivots)
         )
-        @constraint(m,
+        JuMP.@constraint(m,
             ewpwr >= 1 - params.beta
         )
-        # @variable(m, absewpwr >= 0)
-        # @constraint(m, absewpwr >= ewpwr - params.targetpower)
-        # @constraint(m, -absewpwr <= ewpwr - params.targetpower)
         prior_probs = zeros(n1 + 1)
         for x1 in 0:n1
             prior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), 0, 1, abstol = .001)[1]
         end
-        @objective(m, Min,
+        JuMP.@objective(m, Min,
             sum( ec[x1]*prior_probs[x1 + 1] for x1 in 0:n1 ) # + 2*nmax*absewpwr
         )
     end

@@ -54,7 +54,7 @@ minconditionalpower(params::LiuScore) = params.mincondpower
 
 beta(params::LiuScore) = params.beta
 
-function ros{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p1::Real)
+function ros{T_P<:LiuScore}(design::BinaryTwoStageDesign, params::T_P, p1::Real)
     powerreq = 1 - beta(params)
     n1 = interimsamplesize(design)
     nreq__(p, powerreq) = nreq_(p, powerreq, params.p0, params.alpha)
@@ -68,7 +68,7 @@ function ros{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p
     end
     return min(100, ros/(params.fs - 1))
 end
-function rup{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p1::Real)
+function rup{T_P<:LiuScore}(design::BinaryTwoStageDesign, params::T_P, p1::Real)
     if p1 < params.pmcrv
         return 0.0
     end
@@ -87,9 +87,9 @@ function rup{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p
     return min(100, res)
 end
 
-score{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P, p1::Real) = ros(design, params, p1) + rup(design, params, p1)
+score{T_P<:LiuScore}(design::BinaryTwoStageDesign, params::T_P, p1::Real) = ros(design, params, p1) + rup(design, params, p1)
 
-function score{T_P<:LiuScore}(design::AbstractBinaryTwoStageDesign, params::T_P)
+function score{T_P<:LiuScore}(design::BinaryTwoStageDesign, params::T_P)
     function f(p)
         res = params.prior(p)*score(design, params, p)
         return min(100, res)
@@ -117,7 +117,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
     priorpivots, dcdf   = findgrid(prior, 0, 1, npriorpivots)
     cpriorpivots, dccdf = findgrid(prior, params.pmcrv, 1, 1000) # not performance critical!
     # add type one error rate constraint
-    @constraint(m,
+    JuMP.@constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         ) <= alpha(params)
@@ -126,7 +126,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
     for x1 in 0:n1
         posterior1 = dbinom.(x1, n1, cpriorpivots) .* dccdf
         z1 = sum(posterior1)
-        @constraint(m,
+        JuMP.@constraint(m,
             sum(sum(posterior1 .* _cpr.(x1, n1, n, c, cpriorpivots))/z1*y[x1, n, c] for
                 n in nvals, c in cvalsfinite
             ) + sum(y[x1, n, c] for
@@ -137,7 +137,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
         if (x1 >= 1) & hasmonotoneconditionalpower(params)
             posterior2 = dbinom.(x1 - 1, n1, cpriorpivots) .* dccdf
             z2 = sum(posterior2)
-            @constraint(m,
+            JuMP.@constraint(m,
                 sum(sum(posterior1 .* _cpr.(x1, n1, n, c, cpriorpivots))/z1*y[x1, n, c]
                         - sum(posterior2 .* _cpr.(x1 - 1, n1, n, c, cpriorpivots))/z2*y[x1 - 1, n, c] for
                     n in nvals, c in cvals
@@ -148,20 +148,20 @@ function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
     # add optimality criterion
     nreq__(p, powerreq) = nreq_(p, powerreq, p0, alpha(params))
     # construct expressions for ROS, upper bound necessary to guarantee finteness!
-    @expression(m, ros[p in priorpivots],
+    JuMP.@expression(m, ros[p in priorpivots],
         1/(params.fs - 1) * sum(
             dbinom(x1, n1, p) * max(0, min(100.0, (n / nreq__(p, 1 - params.beta) - 1))) * y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
     # construct expressions for power
-    @expression(m, designpower[p in priorpivots],
+    JuMP.@expression(m, designpower[p in priorpivots],
         sum(dbinom(x1, n1, p) * _cpr(x1, n1, n, c, p) * y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
     pivots = [collect(linspace(0, 1 - params.beta, npivots - 1)); 1] # lambda formulaion requires edges!, rup is 0 from powerreq to 1
-    @variable(m, 0 <= lambda[priorpivots, pivots] <= 1)
+    JuMP.@variable(m, 0 <= lambda[priorpivots, pivots] <= 1)
     function frup(power, p; rupmax = 100.0)
         if p < params.pmcrv
             return 0.0
@@ -177,14 +177,14 @@ function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
         res = max(0, min(rupmax, nom / denom))
         return res
     end
-    @variable(m, rup[priorpivots])
+    JuMP.@variable(m, rup[priorpivots])
     for p in priorpivots
         addSOS2(m, [lambda[p, piv] for piv in pivots])
-        @constraint(m, sum(lambda[p, piv] for piv in pivots) == 1)
-        @constraint(m, sum(lambda[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
-        @constraint(m, sum(lambda[p, piv]*frup(piv, p) for piv in pivots) == rup[p])
+        JuMP.@constraint(m, sum(lambda[p, piv] for piv in pivots) == 1)
+        JuMP.@constraint(m, sum(lambda[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
+        JuMP.@constraint(m, sum(lambda[p, piv]*frup(piv, p) for piv in pivots) == rup[p])
     end
-    @objective(m, Min,
+    JuMP.@objective(m, Min,
         sum((rup[priorpivots[i]] + ros[priorpivots[i]])*dcdf[i] for i in 1:npriorpivots) # normalized version
     )
     return true
