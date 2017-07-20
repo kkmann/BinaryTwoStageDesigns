@@ -90,7 +90,13 @@ end
 
 function g(params::BESS, power)
     @checkprob power
-    return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
+    if !isfinite(params.a) | !isfinite(params.b)
+        # degenerate transform (point measure on target power)
+        return power >= params.targetpower ? 1 : 0
+    else
+        # smooth case
+        return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
+    end
 end
 function score(design::BinaryTwoStageDesign, params::BESS, p::Real)
     @checkprob p
@@ -132,7 +138,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
         z[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), pmcrv, 1, abstol = .001)[1]
     end
     JuMP.@expression(m, cep[x1 in 0:n1], # define expressions for conditional power given X1=x1
-        sum(quadgk(p -> prior(p)*dbinom(x1, n1, p)*_cpr.(x1, n1, n, c, p), pmcrv, 1, abstol = 0.001)[1] / z[x1 + 1] * y[x1, n, c]
+        sum(quadgk(p -> prior(p)*dbinom(x1, n1, p)*g(params, _cpr.(x1, n1, n, c, p)), pmcrv, 1, abstol = 0.001)[1] / z[x1 + 1] * y[x1, n, c]
             for n in nvals, c in cvals
         )
     )
