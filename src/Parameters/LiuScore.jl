@@ -160,7 +160,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
             x1 in 0:n1, n in nvals, c in cvals
         )
     )
-    pivots = [collect(linspace(0, 1 - params.beta, npivots - 1)); 1] # lambda formulaion requires edges!, rup is 0 from powerreq to 1
+    pivots = [collect(linspace(0, 1 - params.beta, npivots - 1)); 1] # lambda formulation requires edges!, rup is 0 from powerreq to 1
     JuMP.@variable(m, 0 <= lambda[priorpivots, pivots] <= 1)
     function frup(power, p; rupmax = 100.0)
         if p < params.pmcrv

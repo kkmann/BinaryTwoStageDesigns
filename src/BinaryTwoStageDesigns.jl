@@ -26,8 +26,9 @@ export Parameters, samplespace, maxsamplesize, isgroupsequential, allowsstopping
 
 # BinaryTwoStageDesign.jl
 export BinaryTwoStageDesign,
-        parameters, interimsamplesize, samplesize, criticalvalue, power, test, pdf,
-        simulate, support, ispossible, stoppingforfutility, score, expectedpower, jeffreysprior
+        parameters, interimsamplesize, samplesize, criticalvalue, power,
+        expectedpower, test, pdf, simulate, support, ispossible,
+        stoppingforfutility, score, expectedpower, jeffreysprior
 
 
 # SampleSize.jl
