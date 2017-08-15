@@ -21,7 +21,7 @@ functionality involving optimization.
 The package is not yet registered and the current development verions can be
 installed via:
 
-    Julia> Pgk.clone("https://github.com/imbi-heidelberg/BinaryTwoStageDesigns")
+    Julia> Pkg.clone("https://github.com/imbi-heidelberg/BinaryTwoStageDesigns")
 
 A specific patch can be installed by checking out its branch, e.g.,
 
