@@ -1,37 +1,45 @@
 """
-    SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace} <: PointAlternative
+    MESS{T_samplespace<:SampleSpace,TR<:Real} <: PointAlternative
 
 This type represents a set of parameters for finding optimal two-stage designs
 minimizing the expected sample size on a point in the parameter space subject to
 type one and  two error rate constraints.
 """
-type SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace} <: PointAlternative
-    samplespace::T_samplespace
-    p0
-    p1
-    alpha
-    beta
-    pess
-    minconditionalpower
-    MONOTONECONDITIONALPOWER
-    minstoppingforfutility
-    function SimpleMinimalExpectedSampleSize(
-        samplespace,
-        p0, p1,
-        alpha, beta,
-        pess,
-        minconditionalpower,
-        MONOTONECONDITIONALPOWER,
-        minstoppingforfutility,
+mutable struct MESS{T_samplespace<:SampleSpace,TR<:Real} <: PointAlternative
+  samplespace::T_samplespace
+  p0::TR
+  p1::TR
+  alpha::TR
+  beta::TR
+  pess::TR
+  minconditionalpower::TR
+  MONOTONECONDITIONALPOWER::Bool
+  minstoppingforfutility::TR
+
+  function MESS{T_samplespace,TR}(
+    samplespace,
+    p0, p1,
+    alpha, beta,
+    pess,
+    minconditionalpower,
+    MONOTONECONDITIONALPOWER,
+    minstoppingforfutility,
+  ) where {T_samplespace<:SampleSpace,TR<:Real}
+
+    @checkprob p0 p1 alpha beta pess minconditionalpower minstoppingforfutility
+    p0 >= p1 ? 
+      error("p0 must be smaller than p1") : nothing
+    new(
+      samplespace, p0, p1, alpha, beta, pess, minconditionalpower, 
+      MONOTONECONDITIONALPOWER, minstoppingforfutility
     )
-        @checkprob p0 p1 alpha beta pess minconditionalpower minstoppingforfutility
-        p0 >= p1 ? error("p0 must be smaller than p1") : nothing
-        new(samplespace, p0, p1, alpha, beta, pess, minconditionalpower, MONOTONECONDITIONALPOWER, minstoppingforfutility)
-    end
-end
+
+  end # inner constructor
+
+end # MESS
 
 """
-    SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
+    MESS{T_samplespace<:SampleSpace}(
         samplespace::T_samplespace,
         p0, p1,
         alpha, beta,
@@ -41,7 +49,7 @@ end
         MONOTONECONDITIONALPOWER::Bool = true
     )
 
-Constructs a parameter object of type SimpleMinimalExpectedSampleSize with the
+Constructs a parameter object of type MESS with the
 given values.
 
 # Parameters
@@ -60,40 +68,65 @@ given values.
 
 # Return Value
 
-An object of type SimpleMinimalExpectedSampleSize.
+An object of type MESS.
 
 # Examples
 ```julia-repl
 julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
+julia> params = MESS(ss, .2, .4, .05, .2, .4)
 ```
 """
-function SimpleMinimalExpectedSampleSize{T_samplespace<:SampleSpace}(
-    samplespace::T_samplespace,
-    p0, p1,
-    alpha, beta,
-    pess;
-    minstoppingforfutility::Real   = 0.0,
-    minconditionalpower::Real      = 0.0,
-    MONOTONECONDITIONALPOWER::Bool = true
-)
-    SimpleMinimalExpectedSampleSize{T_samplespace}(
-        samplespace, p0, p1, alpha, beta, pess, minconditionalpower, MONOTONECONDITIONALPOWER, minstoppingforfutility
+function MESS(
+  samplespace::T_samplespace,
+  p0::Real, p1::Real;
+  alpha::Real = 0.05, beta::Real = 0.2,
+  pess::Real = p1,
+  minstoppingforfutility::Real = 0.0,
+  minconditionalpower::Real = 0.0,
+  MONOTONECONDITIONALPOWER::Bool = true
+) where {T_samplespace<:SampleSpace}
+
+  p0, p1, alpha, beta, pess, minstoppingforfutility, minconditionalpower = 
+    promote(p0, p1, alpha, beta, pess, minstoppingforfutility, minconditionalpower)
+
+   MESS{T_samplespace,typeof(p0)}(
+        samplespace, p0, p1, alpha, beta, pess, minconditionalpower, 
+        MONOTONECONDITIONALPOWER, minstoppingforfutility
     )
-end
 
-maxsamplesize(params::SimpleMinimalExpectedSampleSize) = maxsamplesize(params.samplespace)
-isgroupsequential{T_samplespace}(params::SimpleMinimalExpectedSampleSize{T_samplespace}) = isgroupsequential(params.ss)
-hasmonotoneconditionalpower{T_samplespace}(params::SimpleMinimalExpectedSampleSize{T_samplespace}) = params.MONOTONECONDITIONALPOWER
-minconditionalpower(params::SimpleMinimalExpectedSampleSize) = params.minconditionalpower
+end # MESS
 
 
-function score{T_P<:SimpleMinimalExpectedSampleSize}(design::BinaryTwoStageDesign, params::T_P)
+maxsamplesize(params::MESS) = maxsamplesize(params.samplespace)
+
+isgroupsequential(params::MESS) = isgroupsequential(params.ss)
+
+hasmonotoneconditionalpower(params::MESS) = params.MONOTONECONDITIONALPOWER
+
+minconditionalpower(params::MESS) = params.minconditionalpower
+
+Base.show(io::IO, params::MESS) = print("MESS")
+
+
+function score(design::BinaryTwoStageDesign, params::MESS, p::T) where {T<:Real}
+    
+  @checkprob p
+  n = SampleSize(design, p)
+  return mean(n)
+    
+end # score
+
+
+function score(design::BinaryTwoStageDesign, params::MESS)
+
     n = SampleSize(design, params.pess)
     return mean(n)
-end
 
-function completemodel{T<:Integer}(ipm::IPModel, params::SimpleMinimalExpectedSampleSize, n1::T)
+end # score
+
+
+function completemodel(ipm::IPModel, params::MESS, n1::T) where {T<:Integer}
+
     ss = samplespace(params)
     !possible(n1, ss) ? warn("completemodel(EB): n1 and sample space incompatible") : nothing
     # extract ip model
@@ -158,10 +191,14 @@ function completemodel{T<:Integer}(ipm::IPModel, params::SimpleMinimalExpectedSa
         )
     )
     return true
-end
 
-function _isfeasible(design::BinaryTwoStageDesign, params::SimpleMinimalExpectedSampleSize)
+end # completemodel
+
+
+function _isfeasible(design::BinaryTwoStageDesign, params::MESS)
+
     all(power.(design, linspace(0, null(params))) .<= alpha(params) + .001) ? nothing : throw(InexactError())
     all(power.(design, linspace(alternative(params), 1)) .>= 1 - beta(params) - .001) ? nothing : throw(InexactError())
     return true
-end
+
+end # _isfeasible

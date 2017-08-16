@@ -1,50 +1,79 @@
-type LiuScore{T_samplespace<:SampleSpace} <: VagueAlternative
-    samplespace::T_samplespace
-    p0
-    pmcrv
-    prior
-    alpha
-    beta
-    mincondpower
-    fs
-    fp
-    MONOTONECONDITIONALPOWER
-    npriorpivots # number of pivots for prior evaluation
-    npivots # number of pivots for approximation of g
-    function LiuScore(
-        samplespace,
-        p0, pmcrv, prior,
-        alpha, beta,
-        mincondpower,
-        fs, fp,
-        MONOTONECONDITIONALPOWER,
-        npriorpivots, # number of pivots for prior evaluation
-        npivots, # number of pivots for approximation of g
-    )
-        any(!([alpha; beta; p0; pmcrv; mincondpower] .>= 0.0)) ? throw(InexactError()) : nothing
-        any(!([alpha; beta; p0; pmcrv; mincondpower] .<= 1.0)) ? throw(InexactError()) : nothing
-        quadgk(prior, 0, pmcrv)[1] <= 0.001 ? nothing: throw(InexactError())
-        quadgk(prior, pmcrv, 1)[1] >= 0.999 ? nothing: throw(InexactError())
-        (fp >= 0) & (fp < 1) ? nothing : throw(InexactError())
-        fs > 1 ? nothing : throw(InexactError())
-        new(samplespace, p0, pmcrv, prior, alpha, beta, mincondpower, fs, fp,
-            MONOTONECONDITIONALPOWER, npriorpivots, npivots
-        )
-    end
-end
-function LiuScore{T_samplespace<:SampleSpace}(
+mutable struct LiuScore{T_samplespace<:SampleSpace,TI<:Integer,TR<:Real} <: VagueAlternative
+    
+  samplespace::T_samplespace
+  p0::TR
+  pmcrv::TR
+  prior
+  alpha::TR
+  beta::TR
+  mincondpower::TR
+  fs::TR
+  fp::TR
+  MONOTONECONDITIONALPOWER::Bool
+  npriorpivots::TI # number of pivots for prior evaluation
+  npivots::TI # number of pivots for approximation of g
+    
+  function LiuScore{T_samplespace,TI,TR}(
     samplespace::T_samplespace,
-    p0, pmcrv, prior, alpha, beta,
-    fs, fp;
-    npriorpivots = 50,
-    npivots = 15,
-    minconditionalpower::Real = 0.0,
-    MONOTONECONDITIONALPOWER::Bool = false,
-)
-    LiuScore{T_samplespace}(
-        samplespace, p0, pmcrv, prior, alpha, beta, minconditionalpower, fs, fp, MONOTONECONDITIONALPOWER, npriorpivots, npivots
+    p0::TR, pmcrv::TR, prior,
+    alpha::TR, beta::TR,
+    mincondpower::TR,
+    fs::TR, fp::TR,
+    MONOTONECONDITIONALPOWER::Bool,
+    npriorpivots::TI, # number of pivots for prior evaluation
+    npivots::TI, # number of pivots for approximation of g
+  ) where {T_samplespace<:SampleSpace,TI<:Integer,TR<:Real}
+
+    @checkprob alpha beta p0 pmcrv mincondpower
+    z = quadgk(prior, 0, 1, abstol = .0001)[1]
+    abs(z - 1) > .001 ? 
+      error(@sprintf("prior must integrate to one, is %.6f", z)) : nothing
+    # compute conditional prior as weight function
+    zz = quadgk(prior, pmcrv, 1, abstol = 0.0001)[1] 
+    conditionalprior = p -> (p > pmcrv ? prior(p) / zz : 0)
+    fp < 0 ? 
+      error(@sprintf("fp must be positive, is %.4f", fp)) : nothing
+    fp >= 1 ? 
+      error(@sprintf("fp must be smaller than 1, is %.4f", fp)) : nothing
+    fs <= 1 ? 
+      error(@sprintf("df must be greater than 1, is %.4f", fs)) : nothing
+    new(
+      samplespace, 
+      p0, pmcrv, cprior, 
+      alpha, beta, 
+      mincondpower, 
+      fs, fp,
+      MONOTONECONDITIONALPOWER, 
+      npriorpivots, npivots
     )
-end
+
+  end # inner constructor
+
+end # LiuScore
+
+
+function LiuScore(
+  samplespace::T_samplespace,
+  p0::Real, pmcrv::Real, prior, 
+  alpha::Real, beta::Real,
+  fs::Real, fp::Real;
+  npriorpivots::Integer = 50,
+  npivots::Integer = 15,
+  minconditionalpower::Real = 0.0,
+  MONOTONECONDITIONALPOWER::Bool = false
+) where {T_samplespace<:SampleSpace}
+
+  # unify types
+  p0, pmcrv, fs, fp, alpha, beta, minconditionalpower = 
+    promote(p0, pmcrv, fs, fp, alpha, beta, minconditionalpower)    
+  npriorpivots, npivots = promote(npriorpivots, npivots)
+  LiuScore{T_samplespace,typeof(npivots),typeof(p0)}(
+    samplespace, p0, pmcrv, prior, alpha, beta, minconditionalpower, fs, fp, 
+    MONOTONECONDITIONALPOWER, npriorpivots, npivots
+  )
+
+end # LiuScore
+
 
 maxsamplesize(params::LiuScore) = maxsamplesize(params.samplespace)
 
@@ -54,7 +83,12 @@ minconditionalpower(params::LiuScore) = params.mincondpower
 
 beta(params::LiuScore) = params.beta
 
-function ros{T_P<:LiuScore}(design::BinaryTwoStageDesign, params::T_P, p1::Real)
+Base.show(io::IO, params::LiuScore) = print("LiuScore")
+
+
+function ros(design::BinaryTwoStageDesign, params::LiuScore, p1::T) where {T<:Real}
+    
+    @checkprob p1
     powerreq = 1 - beta(params)
     n1 = interimsamplesize(design)
     nreq__(p, powerreq) = nreq_(p, powerreq, params.p0, params.alpha)
@@ -64,11 +98,16 @@ function ros{T_P<:LiuScore}(design::BinaryTwoStageDesign, params::T_P, p1::Real)
     end
     ros = 0.0
     for x1 in 0:n1
-        ros += dbinom(x1, n1, p1)*max(0.0, samplesize(design, x1)/denom - 1)
+        ros += dbinom(x1, n1, p1) * max(0.0, samplesize(design, x1)/denom - 1)
     end
-    return min(100, ros/(params.fs - 1))
-end
-function rup{T_P<:LiuScore}(design::BinaryTwoStageDesign, params::T_P, p1::Real)
+    return min(100, ros / (params.fs - 1))
+
+end # ros
+
+
+function rup(design::BinaryTwoStageDesign, params::LiuScore, p1::T) where {T<:Real}
+
+    @checkprob p1
     if p1 < params.pmcrv
         return 0.0
     end
@@ -85,19 +124,33 @@ function rup{T_P<:LiuScore}(design::BinaryTwoStageDesign, params::T_P, p1::Real)
     end
     res = nom / denom
     return min(100, res)
-end
 
-score{T_P<:LiuScore}(design::BinaryTwoStageDesign, params::T_P, p1::Real) = ros(design, params, p1) + rup(design, params, p1)
+end # rup
 
-function score{T_P<:LiuScore}(design::BinaryTwoStageDesign, params::T_P)
+
+function score(
+  design::BinaryTwoStageDesign, params::LiuScore, p1::T
+) where {T<:Real} 
+  
+  return ros(design, params, p1) + rup(design, params, p1)
+
+end # score
+
+
+function score(design::BinaryTwoStageDesign, params::LiuScore)
+
     function f(p)
         res = params.prior(p)*score(design, params, p)
         return min(100, res)
     end
-    return quadgk(f, params.pmcrv, 1, reltol = .001, maxevals = 1e5)[1]
-end
 
-function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
+    return quadgk(f, params.pmcrv, 1, reltol = .001, maxevals = 1e5)[1]
+
+end # score
+
+
+function completemodel(ipm::IPModel, params::LiuScore, n1::T) where {T<:Integer}
+
     ss = samplespace(params)
     !possible(n1, ss) ? error("n1 and sample space incompatible") : nothing
     # extract ip model
@@ -188,15 +241,17 @@ function completemodel{T<:Integer}(ipm::IPModel, params::LiuScore, n1::T)
         sum((rup[priorpivots[i]] + ros[priorpivots[i]])*dcdf[i] for i in 1:npriorpivots) # normalized version
     )
     return true
-end
 
-function _isfeasible(design::BinaryTwoStageDesign, params::LiuScore)
-    return true
-end
+end # completemodel
+
+
+# ToDo: implement
+_isfeasible(design::BinaryTwoStageDesign, params::LiuScore) = true
 
 
 # utility
 function nreq_(p, power, p0, alpha; nmax = 10000.0)
+
     if alpha >= power
         return 0.0 # qnorm(1 - alpha) + qnorm(power) < 0 ....
     end
@@ -206,10 +261,11 @@ function nreq_(p, power, p0, alpha; nmax = 10000.0)
     if power == 0
         return 0.0
     end
-    if abs(power - 1.0) < 5*eps(Float64)
+    if abs(power - 1.0) < 5 * eps(Float64)
         return nmax
     end
-    res = (1 - p)*p*( (qnorm(1 - alpha) + qnorm(power)) / (p0 - p) )^2
+    res = (1 - p) * p * ( (qnorm(1 - alpha) + qnorm(power)) / (p0 - p) )^2
     res = min(nmax, max(0, res))
     return res
+
 end

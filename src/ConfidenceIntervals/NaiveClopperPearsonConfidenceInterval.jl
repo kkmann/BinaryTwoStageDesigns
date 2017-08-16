@@ -35,7 +35,7 @@ immutable NaiveClopperPearsonConfidenceInterval <: ConfidenceInterval
         checkp(confidence)
         new(design, confidence)
     end
-end #NaiveClopperPearsonConfidenceInterval
+end # NaiveClopperPearsonConfidenceInterval
 
 
 

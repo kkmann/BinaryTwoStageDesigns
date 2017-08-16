@@ -1,94 +1,92 @@
-type BESS{T_samplespace<:SampleSpace} <: VagueAlternative
-    samplespace::T_samplespace
-    p0
-    pmcrv
-    prior
-    a
-    b
-    targetpower
-    k
-    alpha
-    beta
-    minconditionalpower
-    MONOTONECONDITIONALPOWER::Bool
-    npriorpivots::Integer # number of pivots for prior evaluation
-    ngpivots::Integer # number of pivots for approximation of g
+mutable struct MBESS{T_samplespace<:SampleSpace,TI<:Integer,TR<:Real} <: VagueAlternative
 
-    function BESS(
-        samplespace,
-        p0, pmcrv, prior,
-        a, b, targetpower, k,
-        alpha, beta,
-        minconditionalpower, MONOTONECONDITIONALPOWER,
-        npriorpivots, ngpivots
-    )
-        @checkprob p0 pmcrv alpha beta minconditionalpower targetpower
-        z = quadgk(prior, 0, 1, abstol = .0001)[1]
-        abs(z - 1)   > .001 ? error(@sprintf("prior must integrate to one, is %.6f", z)) : nothing
-        a            <= 0   ? error(@sprintf("a must be positive, is %.3f", a)) : nothing
-        b            <= 0   ? error(@sprintf("b must be positive, is %.3f", b)) : nothing
-        npriorpivots < 5    ? error(@sprintf("npriorpivots must be at least 5, is %i", npriorpivots)) : nothing
-        ngpivots     < 5    ? error(@sprintf("npivots must be at least 5, is %i", ngpivots)) : nothing
-        new(
-            samplespace,
-            p0, pmcrv, prior,
-            a, b, targetpower, k,
-            alpha, beta,
-            minconditionalpower, MONOTONECONDITIONALPOWER,
-            npriorpivots, ngpivots
-        )
-    end
-end
-function BESS{T_samplespace<:SampleSpace}( # default values
+  samplespace::T_samplespace
+  p0::TR
+  pmcrv::TR
+  prior
+  a::TR
+  b::TR
+  targetpower::TR
+  k::TR
+  alpha::TR
+  beta::TR
+  minconditionalpower::TR
+  MONOTONECONDITIONALPOWER::Bool
+  npriorpivots::TI # number of pivots for prior evaluation
+  ngpivots::TI # number of pivots for approximation of g
+
+  function MBESS{T_samplespace,TI,TR}(
     samplespace::T_samplespace,
-    p0::Real, pmcrv::Real, prior;
-    a::Real = 1, b::Real = 1, targetpower::Real = .8, k::Real = 1,
-    alpha::Real = 0.05, beta::Real = 0.2,
-    minconditionalpower::Real = 0.0, MONOTONECONDITIONALPOWER::Bool = true,
-    npriorpivots::Integer = 50, ngpivots::Integer = 15
-)
-    BESS{T_samplespace}(
-        samplespace,
-        p0, pmcrv, prior,
-        a, b, targetpower, k,
-        alpha, beta,
-        minconditionalpower, MONOTONECONDITIONALPOWER,
-        npriorpivots, ngpivots
+    p0::TR, pmcrv::TR, prior,
+    a::TR, b::TR, targetpower::TR, k::TR,
+    alpha::TR, beta::TR,
+    minconditionalpower::TR, MONOTONECONDITIONALPOWER::Bool,
+    npriorpivots::TI, ngpivots::TI
+  ) where {T_samplespace<:SampleSpace,TI<:Integer,TR<:Real}
+
+    @checkprob p0 pmcrv alpha beta minconditionalpower targetpower
+    z = quadgk(prior, 0, 1, abstol = .0001)[1]
+    abs(z - 1) > .001 ? 
+      error(@sprintf("prior must integrate to one, is %.6f", z)) : nothing
+    a <= 0 ? 
+      error(@sprintf("a must be positive, is %.3f", a)) : nothing
+    b <= 0 ? 
+      error(@sprintf("b must be positive, is %.3f", b)) : nothing
+    npriorpivots < 5 ? 
+      error(@sprintf("npriorpivots must be at least 5, is %i", npriorpivots)) : nothing
+    ngpivots < 5 ? 
+      error(@sprintf("npivots must be at least 5, is %i", ngpivots)) : nothing
+    new(
+        samplespace, 
+        p0, pmcrv, prior, 
+        a, b, targetpower, k, 
+        alpha, beta, 
+        minconditionalpower, MONOTONECONDITIONALPOWER, npriorpivots, ngpivots
     )
-end
+    
+  end # inner constructor
 
-maxsamplesize(params::BESS) = maxsamplesize(params.samplespace)
-isgroupsequential{T_samplespace}(params::BESS{T_samplespace}) = isgroupsequential(params.ss)
-hasmonotoneconditionalpower{T_samplespace}(params::BESS{T_samplespace}) = params.MONOTONECONDITIONALPOWER
-minconditionalpower(params::BESS) = params.minconditionalpower
-function print(params::BESS)
-    return @sprintf(
-        """
-        Optimality criterion: Bayesian expected sample size
-        ---------------------------------------------------
-                                    p0: %4.2f
-                                  MCRV: %4.2f
-                                 alpha: %4.2f
-                                  beta: %4.2f
-                                     a: %4.1f
-                                     b: %4.1f
-                           targetpower: %4.1f
-                                     k: %4.1f
-             minimal conditional power: %4.1f
-            monotone conditional power: %s
-                        # prior pivots: %4.1f
-                 # pivots for g(power): %4.1f
+end # MBESS
 
-        %s
 
-        """,
-        params.p0, params.pmcrv, params.alpha, params.beta, params.a, params.b,
-        params.targetpower, params.k, params.minconditionalpower, params.MONOTONECONDITIONALPOWER,
-        params.npriorpivots, params.ngpivots, string(lineplot(linspace(0, 1, 100), params.prior.(linspace(0, 1, 100)), title = "prior:", canvas = AsciiCanvas))
-    )
-end
+function MBESS(
+  samplespace::T_samplespace,
+  p0::Real, pmcrv::Real, prior;
+  a::Real = 1, b::Real = 1, targetpower::Real = .8, k::Real = 1,
+  alpha::Real = 0.05, beta::Real = 0.2,
+  minconditionalpower::Real = 0.0, MONOTONECONDITIONALPOWER::Bool = true,
+  npriorpivots::Integer = 50, ngpivots::Integer = 15
+) where {T_samplespace<:SampleSpace}
 
-function g(params::BESS, power)
+  # unify types
+  p0, pmcrv, a, b, targetpower, k, alpha, beta, minconditionalpower = 
+    promote(p0, pmcrv, a, b, targetpower, k, alpha, beta, minconditionalpower)    
+  npriorpivots, ngpivots = promote(npriorpivots, ngpivots)
+
+  MBESS{T_samplespace,typeof(ngpivots),typeof(p0)}(
+    samplespace,
+    p0, pmcrv, prior,
+    a, b, targetpower, k,
+    alpha, beta,
+    minconditionalpower, MONOTONECONDITIONALPOWER,
+    npriorpivots, ngpivots
+  )
+
+end # external constructor
+
+maxsamplesize(params::MBESS) = maxsamplesize(params.samplespace)
+
+isgroupsequential(params::MBESS) = isgroupsequential(params.ss)
+
+hasmonotoneconditionalpower(params::MBESS) = params.MONOTONECONDITIONALPOWER
+
+minconditionalpower(params::MBESS) = params.minconditionalpower
+
+Base.show(io::IO, params::MBESS) = print("MBESS")
+
+
+function g(params::MBESS, power::T) where {T<:Real}
+
     @checkprob power
     if !isfinite(params.a) | !isfinite(params.b)
         # degenerate transform (point measure on target power)
@@ -97,20 +95,29 @@ function g(params::BESS, power)
         # smooth case
         return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
     end
-end
-function score(design::BinaryTwoStageDesign, params::BESS, p::Real)
+
+end # g
+
+
+function score(design::BinaryTwoStageDesign, params::MBESS, p::T) where {T<:Real}
+
     @checkprob p
     ess = SampleSize(design, p) |> mean
     return ess * (p + params.k * (1 - p))
-end
-function score(design::BinaryTwoStageDesign, params::BESS)
+
+end # score
+
+
+function score(design::BinaryTwoStageDesign, params::MBESS)
     return quadgk(
-        p -> prior(params, p)*score(design, params, p),
+        p -> prior(params, p) * score(design, params, p),
         0, 1, reltol = .001
     )[1]
 end
 
-function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
+
+function completemodel(ipm::IPModel, params::MBESS, n1::Integer)
+
     ss = samplespace(params)
     !possible(n1, ss) ? error("n1 and sample space incompatible") : nothing
     # extract ip model
@@ -129,16 +136,16 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
     ngpivots      = params.ngpivots
     # add type one error rate constraint
     JuMP.@constraint(m,
-        sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
+        sum(dbinom(x1, n1, p0) * _cpr(x1, n1, n, c, p0) * y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
         ) <= alpha(params)
     )
     z = zeros(n1 + 1) # normalizing constants for prior conditional on p >= mcrv, X1=x1
     for x1 in 0:n1
-        z[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), pmcrv, 1, abstol = .001)[1]
+        z[x1 + 1] = quadgk(p -> prior(p) * dbinom(x1, n1, p), pmcrv, 1, abstol = .001)[1]
     end
     JuMP.@expression(m, cep[x1 in 0:n1], # define expressions for conditional power given X1=x1
-        sum(quadgk(p -> prior(p)*dbinom(x1, n1, p)*g(params, _cpr.(x1, n1, n, c, p)), pmcrv, 1, abstol = 0.001)[1] / z[x1 + 1] * y[x1, n, c]
+        sum(quadgk(p -> prior(p) * dbinom(x1, n1, p) * params, _cpr.(x1, n1, n, c, p), pmcrv, 1, abstol = 0.001)[1] / z[x1 + 1] * y[x1, n, c]
             for n in nvals, c in cvals
         )
     )
@@ -158,7 +165,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
     end
     JuMP.@expression(m, ec[x1 in 0:n1], # weighted expected sample size conditional on X1=x1
         sum(
-            (x1 + params.k*(n1 - x1) + quadgk(p -> (p + params.k*(1 - p))*(n - n1) * dbinom(x1, n1, p)*prior(p)/z[x1 + 1], 0, 1, abstol = .001)[1]) * y[x1, n, c]
+            (x1 + params.k * (n1 - x1) + quadgk(p -> (p + params.k * (1 - p)) * (n - n1) * dbinom(x1, n1, p) * prior(p) / z[x1 + 1], 0, 1, abstol = .001)[1]) * y[x1, n, c]
             for n in nvals, c in cvals
         )
     )
@@ -166,7 +173,7 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
         z            = quadgk(p -> prior(p), pmcrv, 1, abstol = .0001)[1]
         cprior_probs = zeros(n1 + 1)
         for x1 in 0:n1
-            cprior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p)/z, pmcrv, 1, abstol = .0001)[1]
+            cprior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p) / z, pmcrv, 1, abstol = .0001)[1]
         end
         JuMP.@constraint(m,
             sum( cep[x1]*cprior_probs[x1 + 1] for x1 in 0:n1 ) >= 1 - params.beta
@@ -212,8 +219,8 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
         for p in cpriorpivots
             addSOS2(m, [lambdaSOS2[p, piv] for piv in pivots])
             JuMP.@constraint(m, sum(lambdaSOS2[p, piv] for piv in pivots) == 1)
-            JuMP.@constraint(m, sum(lambdaSOS2[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
-            JuMP.@constraint(m, sum(lambdaSOS2[p, piv]*g(params, piv) for piv in pivots) == wpwr[p])
+            JuMP.@constraint(m, sum(lambdaSOS2[p, piv] * piv for piv in pivots) == designpower[p]) # defines lambdas!
+            JuMP.@constraint(m, sum(lambdaSOS2[p, piv] * g(params, piv) for piv in pivots) == wpwr[p])
         end
         JuMP.@expression(m, ewpwr,
             sum( wpwr[cpriorpivots[i]] * dccdf[i] for i in 1:npriorpivots)
@@ -226,12 +233,13 @@ function completemodel{T<:Integer}(ipm::IPModel, params::BESS, n1::T)
             prior_probs[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), 0, 1, abstol = .001)[1]
         end
         JuMP.@objective(m, Min,
-            sum( ec[x1]*prior_probs[x1 + 1] for x1 in 0:n1 ) # + 2*nmax*absewpwr
+            sum( ec[x1] * prior_probs[x1 + 1] for x1 in 0:n1 ) # + 2*nmax*absewpwr
         )
     end
     return true
-end
 
-function _isfeasible(design::BinaryTwoStageDesign, params::BESS)
-    return true
-end
+end # completemodel
+
+
+# ToDo: implement!
+_isfeasible(design::BinaryTwoStageDesign, params::MBESS) = true

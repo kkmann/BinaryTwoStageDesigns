@@ -1,50 +1,63 @@
-type EB{T_samplespace<:SampleSpace} <: VagueAlternative
-    samplespace::T_samplespace
-    p0
-    pmcrv
-    prior
-    gamma
-    lambda
-    a
-    b
-    targetpower
-    k
-    alpha
-    minconditionalpower
-    MONOTONECONDITIONALPOWER::Bool
-    npriorpivots::Integer # number of pivots for prior evaluation
-    ngpivots::Integer # number of pivots for approximation of g
+mutable struct EB{T_samplespace<:SampleSpace,TI<:Integer,TR<:Real} <: VagueAlternative
+  samplespace::T_samplespace
+  p0::TR
+  pmcrv::TR
+  prior
+  gamma::TR
+  lambda::TR
+  a::TR
+  b::TR
+  targetpower::TR
+  k::TR
+  alpha::TR
+  minconditionalpower::TR
+  MONOTONECONDITIONALPOWER::Bool
+  npriorpivots::TI # number of pivots for prior evaluation
+  ngpivots::TI # number of pivots for approximation of g
 
-    function EB(
-        samplespace,
-        p0, pmcrv, prior,
-        gamma, lambda,
-        a, b, targetpower, k,
-        alpha,
-        minconditionalpower, MONOTONECONDITIONALPOWER,
-        npriorpivots, ngpivots
+  function EB{T_samplespace,TI,TR}(
+    samplespace::T_samplespace,
+    p0::TR, pmcrv::TR, prior,
+    gamma::TR, lambda::TR,
+    a::TR, b::TR, targetpower::TR, k::TR,
+    alpha::TR,
+    minconditionalpower::TR, MONOTONECONDITIONALPOWER::Bool,
+    npriorpivots::TI, ngpivots::TI
+  ) where {T_samplespace<:SampleSpace,TI<:Integer,TR<:Real}
+
+    @checkprob p0 pmcrv alpha minconditionalpower targetpower
+    z = quadgk(prior, 0, 1, abstol = .0001)[1]
+    abs(z - 1) > .001 ? 
+      error(@sprintf("prior must integrate to one, is %.6f", z)) : nothing
+    gamma < 0 ? 
+      error(@sprintf("gamma must be positive, is %.6f", gamma)) : nothing
+    lambda < 0 ? 
+      error(@sprintf("lambda must be positive, is %.6f", gamma)) : nothing
+    lambda / gamma > 500  ? 
+      warn(@sprintf("lambda/gamma is large (%.3f), potentially infeasible", lambda/gamma)) : nothing
+    a <= 0 ? 
+      error(@sprintf("a must be positive, is %.3f", a)) : nothing
+    b <= 0 ? 
+      error(@sprintf("b must be positive, is %.3f", b)) : nothing
+    npriorpivots < 5 ? 
+      error(@sprintf("npriorpivots must be at least 5, is %i", npriorpivots)) : nothing
+    ngpivots < 5 ? 
+      error(@sprintf("npivots must be at least 5, is %i", ngpivots)) : nothing
+    new(
+      samplespace,
+      p0, pmcrv, prior,
+      gamma, lambda,
+      a, b, targetpower, k,
+      alpha,
+      minconditionalpower, MONOTONECONDITIONALPOWER,
+      npriorpivots, ngpivots
     )
-        @checkprob p0 pmcrv alpha minconditionalpower targetpower
-        z = quadgk(prior, 0, 1, abstol = .0001)[1]
-        abs(z - 1)   > .001 ? error(@sprintf("prior must integrate to one, is %.6f", z)) : nothing
-        gamma        < 0    ? error(@sprintf("gamma must be positive, is %.6f", gamma)) : nothing
-        lambda       < 0    ? error(@sprintf("lambda must be positive, is %.6f", gamma)) : nothing
-        lambda/gamma > 500  ? warn(@sprintf("lambda/gamma is large (%.3f), potentially infeasible", lambda/gamma)) : nothing
-        a            <= 0   ? error(@sprintf("a must be positive, is %.3f", a)) : nothing
-        b            <= 0   ? error(@sprintf("b must be positive, is %.3f", b)) : nothing
-        npriorpivots < 5    ? error(@sprintf("npriorpivots must be at least 5, is %i", npriorpivots)) : nothing
-        ngpivots     < 5    ? error(@sprintf("npivots must be at least 5, is %i", ngpivots)) : nothing
-        new(
-            samplespace,
-            p0, pmcrv, prior,
-            gamma, lambda,
-            a, b, targetpower, k,
-            alpha,
-            minconditionalpower, MONOTONECONDITIONALPOWER,
-            npriorpivots, ngpivots
-        )
-    end
-end
+
+    end # inner constructor
+
+end # EB
+
+
 function EB{T_samplespace<:SampleSpace}( # default values
     samplespace::T_samplespace,
     p0::Real, pmcrv::Real, prior,
@@ -54,71 +67,119 @@ function EB{T_samplespace<:SampleSpace}( # default values
     minconditionalpower::Real = 0.0, MONOTONECONDITIONALPOWER::Bool = true,
     npriorpivots::Integer = 50, ngpivots::Integer = 15
 )
-    EB{T_samplespace}(
-        samplespace,
-        p0, pmcrv, prior,
-        gamma, lambda,
-        a, b, targetpower, k,
-        alpha,
-        minconditionalpower, MONOTONECONDITIONALPOWER,
-        npriorpivots, ngpivots
-    )
-end
+
+  p0, pmcrv, gamma, lambda, alpha, targetpower, a, b, k, minconditionalpower = 
+    promote(p0, pmcrv, gamma, lambda, alpha, targetpower, a, b, k, minconditionalpower)    
+  npriorpivots, ngpivots = promote(npriorpivots, ngpivots)
+
+  EB{T_samplespace,typeof(ngpivots),typeof(p0)}(
+    samplespace,
+    p0, pmcrv, prior,
+    gamma, lambda,
+    a, b, targetpower, k,
+    alpha,
+    minconditionalpower, MONOTONECONDITIONALPOWER,
+    npriorpivots, ngpivots
+  )
+
+end # EB
+
 
 maxsamplesize(params::EB) = maxsamplesize(params.samplespace)
-isgroupsequential{T_samplespace}(params::EB{T_samplespace}) = isgroupsequential(params.ss)
-hasmonotoneconditionalpower{T_samplespace}(params::EB{T_samplespace}) = params.MONOTONECONDITIONALPOWER
+
+isgroupsequential(params::EB) = isgroupsequential(params.ss)
+
+hasmonotoneconditionalpower(params::EB) = params.MONOTONECONDITIONALPOWER
+
 minconditionalpower(params::EB) = params.minconditionalpower
 
-function expectedtransformedpower(design::BinaryTwoStageDesign, params::Union{EB, BESS}, x1)
-    pmcrv    = mcrv(params)
-    phi(p)   = prior(params, p)
-    n1       = interimsamplesize(design)
-    z        = quadgk(p -> phi(p) * Distributions.pdf(Distributions.Binomial(n1, p), x1), pmcrv, 1)[1]
-    omega(p) = p < pmcrv ? 0 : phi(p) * Distributions.pdf(Distributions.Binomial(n1, p), x1) / z # conditional prior for stage 2
-    return quadgk(p -> g(params, power(design, x1, p)) * omega(p), pmcrv, 1)[1]
-end
-function expectedtransformedpower(design::BinaryTwoStageDesign, params::Union{EB, BESS})
-    pmcrv  = mcrv(params)
-    phi(p) = prior(params, p)
-    n1     = interimsamplesize(design)
-    z      = quadgk(phi, pmcrv, 1)[1]
-    omega(p) = p < pmcrv ? 0 : phi(p) / z # conditional prior given effect
-    return quadgk(p -> g(params, power(design, p)) * omega(p), pmcrv, 1)[1]
-end
+Base.show(io::IO, params::EB) = print("EB")
 
 
-function expectedcost(design::BinaryTwoStageDesign, params::EB, p::Real)
-    @checkprob p
-    ess = SampleSize(design, p) |> mean
-    return params.gamma*ess * (p + params.k*(1 - p))
-end
-function g(params::EB, power)
-    @checkprob power
-    if params.a == params.b == Inf
-        if power >= params.targetpower
-            return 1.0
-        else
-            return 0.0
-        end
+function expectedtransformedpower(
+  design::BinaryTwoStageDesign, params::Union{EB, MBESS}, x1::TI
+) where {TI<:Integer}
+    
+  x1 < 0 ?
+    error(@sprintf("x1 must be positive, is %i", x1)) : nothing
+  n1       = interimsamplesize(design)
+  x1 > n1 ?
+    error(@sprintf("x1 must be smaller than n1, is %i", x1)) : nothing
+  pmcrv    = mcrv(params)
+  phi(p)   = prior(params, p)
+  z        = quadgk(p -> phi(p) * Distributions.pdf(Distributions.Binomial(n1, p), x1), pmcrv, 1)[1]
+  omega(p) = p < pmcrv ? 0 : phi(p) * Distributions.pdf(Distributions.Binomial(n1, p), x1) / z # conditional prior for stage 2
+  return quadgk(p -> g(params, power(design, x1, p)) * omega(p), pmcrv, 1)[1]
+
+end # expectedtransformedpower
+
+
+function expectedtransformedpower(design::BinaryTwoStageDesign, params::Union{EB, MBESS})
+
+  pmcrv  = mcrv(params)
+  phi(p) = prior(params, p)
+  n1     = interimsamplesize(design)
+  z      = quadgk(phi, pmcrv, 1)[1]
+  omega(p) = p < pmcrv ? 0 : phi(p) / z # conditional prior given effect
+  return quadgk(p -> g(params, power(design, p)) * omega(p), pmcrv, 1)[1]
+
+end # expectedtransformedpower
+
+
+function expectedcost(design::BinaryTwoStageDesign, params::EB, p::T) where {T<:Real}
+    
+  @checkprob p
+  ess = SampleSize(design, p) |> mean
+  return params.gamma * ess * (p + params.k * (1 - p))
+
+end # expectedcost
+
+
+function g(params::EB, power::T) where {T<:Real}
+
+  @checkprob power
+  if params.a == params.b == Inf
+    if power >= params.targetpower
+      return 1.0
     else
-        return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
+      return 0.0
     end
-end
-function expectedbenefit(design::BinaryTwoStageDesign, params::EB, p::Real)
-    @checkprob p
-    if p < mcrv(params)
-        return 0.0
-    else
-        return params.lambda * g(params, power(design, p))
-    end
-end
-score(design::BinaryTwoStageDesign, params::EB, p::Real) = -(expectedbenefit(design, params, p) - expectedcost(design, params, p))
+  else
+    return Distributions.cdf(Distributions.Beta(params.a, params.b), power)
+  end
+
+end # g
+
+
+function expectedbenefit(design::BinaryTwoStageDesign, params::EB, p::T) where {T<:Real}
+    
+  @checkprob p
+  if p < mcrv(params)
+    return 0.0
+  else
+     return params.lambda * g(params, power(design, p))
+  end
+
+end # expectedbenefit
+
+
+function score(design::BinaryTwoStageDesign, params::EB, p::T) where {T<:Real}
+ 
+  @checkprob p
+  return -(expectedbenefit(design, params, p) - expectedcost(design, params, p))
+
+end # score
+
+
 function score(design::BinaryTwoStageDesign, params::EB)
-    return quadgk(p -> params.prior(p)*score(design, params, p), 0, 1, reltol = .001)[1]
-end
+  
+  return quadgk(p -> params.prior(p)*score(design, params, p), 0, 1, reltol = .001)[1]
 
-function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
+end # score
+
+
+function completemodel(ipm::IPModel, params::EB, n1::T) where {T<:Integer}
+
     ss = samplespace(params)
     !possible(n1, ss) ? warn("completemodel(EB): n1 and sample space incompatible") : nothing
     # extract ip model
@@ -217,8 +278,9 @@ function completemodel{T<:Integer}(ipm::IPModel, params::EB, n1::T)
         obj
     )
     return true
-end
 
-function _isfeasible(design::BinaryTwoStageDesign, params::EB)
-    return true
-end
+end # completemodel
+
+
+# ToDo: implement!
+_isfeasible(design::BinaryTwoStageDesign, params::EB) = true

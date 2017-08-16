@@ -1,10 +1,10 @@
 """
     SampleSpace
 
-Abstract type representing generic sample spaces defining the search space for
-finding optimal two stage designs.
+Generic sample spaces defining the search space for finding optimal 
+two-stage designs.
 """
-abstract SampleSpace
+abstract type SampleSpace end
 
 Base.size(::SampleSpace) = ()
 Base.getindex(ss::SampleSpace, i) = ss
@@ -81,7 +81,7 @@ julia> maxsamplesize(ss, 15)
 maxsamplesize(ss::SampleSpace, n1) = error("not implemented")
 
 """
-    possible{T<:Integer}(n1::T, ss::SampleSpace)
+    possible(n1::T, ss::SampleSpace) where {T<:Integer}
 
 Returns true if interim sample size n1 is compatible with sample space ss.
 
@@ -102,14 +102,16 @@ julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
 julia> possible(15, ss)
 ```
 """
-possible{T<:Integer}(n1::T, ss::SampleSpace) = error("not implemented")
+function possible(n1::T, ss::SampleSpace) where {T<:Integer}
+  error("not implemented")
+end
 
-"""
-    possible{T<:Integer, TR<:Real}(n1::T, n::T, c::TR, ss::SampleSpace)
 
-TODO
-"""
-possible{T<:Integer, TR<:Real}(n1::T, n::T, c::TR, ss::SampleSpace) = error("not implemented")
+function possible(
+  n1::TI, n::TI, c::TR, ss::SampleSpace
+) where {TI<:Integer,TR<:Real}
+  error("not implemented")
+end
 
 """
     isgroupsequential(ss::SampleSpace)
@@ -137,26 +139,40 @@ isgroupsequential(ss::SampleSpace) = error("not implemented")
 getnvals(ss::SampleSpace, n1) = error("not implemented")
 getcvals(ss::SampleSpace, n1) = error("not implemented")
 
-type SimpleSampleSpace{T<:Integer} <: SampleSpace
-    n1range::Vector{T}
-    nmax::T
-    n2min::T
-    maxnfact::Real
-    nmincont::T
-    maxvariables
-    GS::Bool # group sequenttial ?
-    specialnvalues # required for additional values always included in nvals
-    function SimpleSampleSpace(n1range, nmax, n2min, maxnfact, nmincont, maxvariables, GS)
-        minimum(n1range) < 1    ? error("minimal n1 must be >= 1")    : nothing
-        maximum(n1range) > nmax ? error("maximal n1 must be <= nmax") : nothing
-        maxvariables < 100      ? error("maxvariables must be >= 100") : nothing
-        maxnfact = (maxnfact == Inf) ? nmax / minimum(n1range) : maxnfact
-        new(sort(n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS, convert(Vector{T}, zeros(0)))
-    end
-end
 
-SimpleSampleSpace{T<:Integer}(n1range::Vector{T},
-    nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false) = SimpleSampleSpace{T}(n1range, nmax, n2min, maxnfact, nmincont, maxvariables, GS)
+
+mutable struct SimpleSampleSpace{TI<:Integer,TR<:Real} <: SampleSpace
+
+  n1range::Vector{TI}
+  nmax::TI
+  n2min::TI
+  maxnfact::TR
+  nmincont::TI
+  maxvariables::TI
+  GS::Bool # group sequential ?
+  specialnvalues::Vector{TI} # required for additional values always included in nvals
+
+  function SimpleSampleSpace{TI,TR}(
+    n1range::Vector{TI}, 
+    nmax::TI, 
+    n2min::TI, 
+    maxnfact::TR, 
+    nmincont::TI, 
+    maxvariables::TI,
+    GS::Bool
+  ) where {TI<:Integer,TR<:Real}
+
+    minimum(n1range) < 1    ? error("minimal n1 must be >= 1")    : nothing
+    maximum(n1range) > nmax ? error("maximal n1 must be <= nmax") : nothing
+    maxvariables < 100      ? error("maxvariables must be >= 100") : nothing
+    maxnfact = (maxnfact == Inf) ? nmax / minimum(n1range) : maxnfact
+    new(sort(n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS, convert(Vector{TI}, zeros(0)))
+
+  end # inner constructor (SimpleSampleSpace)
+
+end # SimpleSampleSpace
+
+
 """
     SimpleSampleSpace{T<:Integer}(n1range, nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false)
 
@@ -184,38 +200,101 @@ An object of type `SimpleSampleSpace` with the respective parameters.
 julia> SimpleSampleSpace(10:25, 100, n2min = 5)
 ```
 """
-SimpleSampleSpace{T<:Integer}(n1range, # unspecific, try to convert to integer vector
-    nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false) = SimpleSampleSpace{T}(convert(Vector{T}, n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS)
+function SimpleSampleSpace( # unspecific variant
+  n1range,
+  nmax::TI;
+  n2min::TI = 1, 
+  maxnfact::TR = Inf, 
+  nmincont::TI = 0, 
+  maxvariables::TI = 500000, 
+  GS::Bool = false
+) where {TI<:Integer,TR<:Real}
+
+  SimpleSampleSpace(
+    convert(Vector{TI}, n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS
+  )
+
+end # external constructor (SimpleSampleSpace)
+
+
+function SimpleSampleSpace(
+  n1range::Vector{TI},
+  nmax::TI,
+  n2min::TI, 
+  maxnfact::TR, 
+  nmincont::TI, 
+  maxvariables::TI, 
+  GS::Bool
+) where {TI<:Integer,TR<:Real}
+
+  SimpleSampleSpace{TI,TR}(
+      n1range, nmax, n2min, maxnfact, nmincont, maxvariables, GS
+  )
+
+end # external constructor (SimpleSampleSpace)
+
+
+Base.show(io::IO, ss::SimpleSampleSpace) = print("SimpleSampleSpace")
 
 interimsamplesizerange(ss::SimpleSampleSpace) = ss.n1range
+
 maxsamplesize(ss::SimpleSampleSpace) = ss.nmax
-maxsamplesize(ss::SimpleSampleSpace, n1) = convert(Integer, min(ss.nmax, floor(n1*ss.maxnfact)))
-possible{T<:Integer}(n1::T, ss::SimpleSampleSpace) = n1 in ss.n1range
-function possible{T<:Integer,TR<:Real}(n1::T, n::T, c::TR, ss::SimpleSampleSpace)
-    res = n1 in ss.n1range # well, n1 must be possible
-    res = n <= ss.nmax ? res : false # overall sample size constraint must not
+
+
+function possible(
+  n1::TI2, ss::SimpleSampleSpace{TI,TR}
+) where {TI<:Integer,TR<:Real,TI2<:Integer}
+
+  return n1 in ss.n1range
+
+end # possible
+
+
+function possible(
+  n1::TI, n::TI, c::TR, ss::SimpleSampleSpace{TI2,TR2}
+) where {TI<:Integer,TR<:Real,TI2<:Integer,TR2<:Real}
+
+  res = n1 in ss.n1range # n1 must be possible
+  res = n <= ss.nmax ? res : false # overall sample size constraint must not
                                      # be violated
-    res = n1 <= n ? res : false # n1 cannot be larger than n
-    res = n <= ss.maxnfact*n1 ? res : false # n cannot be too large in relation
+  res = n1 <= n ? res : false # n1 cannot be larger than n
+  res = n <= ss.maxnfact * n1 ? res : false # n cannot be too large in relation
                                             # to n1
-    n2  = n - n1
-    if (n2 < ss.n2min) & (c != Inf)
-        # n2 too small (also affects "early stopping" for efficacy!)
-        if (c == -Inf) & (n1 == n) & (n1 >= ss.nmincont) # fine, early stopping for efficacy
-            nothing
-        else
-            res = false
-        end
+  n2  = n - n1
+  if (n2 < ss.n2min) & (c != Inf)
+    # n2 too small (also affects "early stopping" for efficacy!)
+    if (c == -Inf) & (n1 == n) & (n1 >= ss.nmincont) # fine, early stopping for efficacy
+      nothing
+    else
+      res = false
     end
-    res = (n  < ss.nmincont) & (c != Inf) ? false : res # only stopping for futility may violate nmincount
-    return res
-end
+  end
+  res = (n  < ss.nmincont) & (c != Inf) ? false : res # only stopping for futility may violate nmincount
+  return res
+end # possible
+
+
+function maxsamplesize(
+    ss::SimpleSampleSpace{TI,TR}, n1::TI2
+  ) where {TI<:Integer,TR<:Real,TI2<:Integer}
+
+  possible(n1, ss)
+  convert(TI, min(ss.nmax, floor(n1 * ss.maxnfact)))
+
+end # maxsamplesize
+
+
 isgroupsequential(ss::SimpleSampleSpace) = ss.GS
-function getnvals(ss::SimpleSampleSpace, n1)
+
+
+function getnvals(
+  ss::SimpleSampleSpace{TI,TR}, n1::TI2
+) where {TI<:Integer,TR<:Real,TI2<:Integer}
+
     nmax    = maxsamplesize(ss, n1)
-    frac    = (nmax - n1 + 1) / sqrt(ss.maxvariables/n1)
+    frac    = (nmax - n1 + 1) / sqrt(ss.maxvariables / n1)
     if frac > 1
-        warn(@sprintf("thinning nvals by factor %.3f", 1/frac))
+        warn(@sprintf("thinning nvals by factor %.3f", 1 / frac))
     else
         frac = 1
     end
@@ -235,15 +314,22 @@ function getnvals(ss::SimpleSampleSpace, n1)
         end
     end
     return convert(Vector{Int64}, sort(nvals))
-end
-function getcvals(ss::SimpleSampleSpace, n1)
+
+end # getnvals
+
+
+function getcvals(
+  ss::SimpleSampleSpace{TI,TR}, n1::TI2
+) where {TI<:Integer,TR<:Real,TI2<:Integer}
+
     nmax        = maxsamplesize(ss, n1)
-    frac        = nmax / sqrt(ss.maxvariables/n1)
+    frac        = nmax / sqrt(ss.maxvariables / n1)
     if frac > 1
-        warn(@sprintf("thinning cvals by factor %.3f", 1/frac))
+        warn(@sprintf("thinning cvals by factor %.3f", 1 / frac))
     else
         frac = 1
     end
     cvalsfinite = round.(collect(0:frac:(nmax - 1)))
     return cvalsfinite
-end
+
+end # getcvals

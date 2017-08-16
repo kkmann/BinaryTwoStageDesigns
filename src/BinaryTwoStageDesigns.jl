@@ -5,7 +5,7 @@ module BinaryTwoStageDesigns
 import JuMP
 import QuadGK
 import UnicodePlots
-import Base.show, Base.print, Base.Multimedia.display
+import Base.show, Base.print
 import Base.convert
 import Distributions, Distributions.minimum, Distributions.maximum,
     Distributions.pdf, Distributions.cdf, Distributions.rand,
@@ -42,7 +42,7 @@ export SampleSpace,
 export IPModel, extractsolution
 
 # SimpleMinimalExpectedSampleSize.jl
-export SimpleMinimalExpectedSampleSize,
+export MESS,
     minconditionalpower, getnvals, getcvals, isgroupsequential
 
 # LiuScore.jl
@@ -52,7 +52,7 @@ export LiuScore,
 export EB,
     expectedtransformedpower, expectedcost, expectedbenefit
 
-export BESS
+export MBESS
 
 # optimal.jl
 export getoptimaldesign
@@ -73,20 +73,29 @@ export ConfidenceInterval,
     MinimumMeanWidthConfidenceInterval
 
 include("util.jl")
+
 include("Parameters.jl")
+
 include("BinaryTwoStageDesign.jl")
+
 include("SampleSize.jl")
+
 include("SampleSpace.jl")
+
 include("ipmodel.jl")
-include("Parameters/SimpleMinimalExpectedSampleSize.jl")
+
+include("Parameters/MESS.jl")
 include("Parameters/LiuScore.jl")
-include("Parameters/BESS.jl")
+include("Parameters/MBESS.jl")
 include("Parameters/EB.jl")
+
 include("getoptimaldesign.jl")
+
 include("estimate.jl")
 include("Estimators/mle.jl")
 include("Estimators/rbe.jl")
 include("Estimators/CompatibleEstimator.jl")
+
 include("ConfidenceInterval.jl")
 include("ConfidenceIntervals/ClopperPearsonConfidenceInterval.jl")
 include("ConfidenceIntervals/NaiveClopperPearsonConfidenceInterval.jl")
