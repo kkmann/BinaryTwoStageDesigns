@@ -198,6 +198,70 @@ function power{T<:Real}(design::BinaryTwoStageDesign, p::T)
     return min(1, max(0, vecdot(Distributions.pdf(X1, x1range), power.(design, x1range, p))))
 end
 
+
+
+function expectedpower(
+    design::BinaryTwoStageDesign, x1::Integer, prior
+)
+    checkx1(x1, design)
+    z   = QuadGK.quadgk(
+        p -> prior(p),             # f(p)
+        mcrv(parameters(design)),  # p_min
+        1,                         # p_max
+        abstol = 0.001             # tolerance
+    )[1]
+    res = QuadGK.quadgk(
+        p -> prior(p)*power(design, x1, p)/z, # f(p)
+        mcrv(parameters(design)),    # p_min
+        1,                           # p_max
+        abstol = 0.001               # tolerance
+    )[1]
+    return min(1, max(0, res)) # guarantee bounds!
+end
+"""
+    expectedpower(design::BinaryTwoStageDesign, prior)
+
+Compute the expected power of a given design.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | a BinaryTwoStageDesign |
+| prior        | prior function prior(p) for response probability p |
+
+# Details
+
+A conditional expected power method is also implemented as `power{T1<:Integer, T2<:Real}(design::BinaryTwoStageDesign, x1::T1, p::T2)`
+where `x1` is the stage-one number of responses.
+
+# Return Value
+
+(Conditional) expected power of `design`.
+
+# Examples
+
+ToDo
+```
+"""
+function expectedpower(design::BinaryTwoStageDesign, prior)
+    z   = QuadGK.quadgk(
+        p -> prior(p),             # f(p)
+        mcrv(parameters(design)),  # p_min
+        1,                         # p_max
+        abstol = 0.001             # tolerance
+    )[1]
+    res = QuadGK.quadgk(
+        p -> prior(p)*power(design, p)/z, # f(p)
+        mcrv(parameters(design)),    # p_min
+        1,                           # p_max
+        abstol = 0.001               # tolerance
+    )[1]
+    return min(1, max(0, res)) # guarantee bounds!
+end
+
+
+
 """
     stoppingforfutility{T<:Real}(design::BinaryTwoStageDesign, p::T)
 

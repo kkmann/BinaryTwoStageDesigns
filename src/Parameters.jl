@@ -74,3 +74,13 @@ two-stage designs which are characterized by a specific point alternative.
 abstract PointAlternative <: Parameters
 alternative(par::PointAlternative) = try par.p1 catch error("not implemented") end
 beta(par::PointAlternative) = try par.beta catch error("not implemented") end
+
+
+"""
+    VagueAlternative <: Parameters
+
+Abstract type representing a generic set of paramters for finding optimal
+two-stage designs which are characterized by a prior distribution over the response probability.
+"""
+abstract VagueAlternative <: Parameters
+prior{T<:Real}(par::VagueAlternative, p::T) = try par.prior(p) catch error("not implemented") end
