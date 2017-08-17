@@ -1,10 +1,11 @@
-mutable struct LiuScore{T_samplespace<:SampleSpace,TI<:Integer,TR<:Real} <: VagueAlternative
+mutable struct LiuScore{TI<:Integer,TR<:Real} <: VagueAlternative
     
-  samplespace::T_samplespace
+  label::String
+  samplespace::SampleSpace
   p0::TR
   pmcrv::TR
   prior
-  alpha::TR
+  mtoer::TR
   beta::TR
   mincondpower::TR
   fs::TR
@@ -13,8 +14,9 @@ mutable struct LiuScore{T_samplespace<:SampleSpace,TI<:Integer,TR<:Real} <: Vagu
   npriorpivots::TI # number of pivots for prior evaluation
   npivots::TI # number of pivots for approximation of g
     
-  function LiuScore{T_samplespace,TI,TR}(
-    samplespace::T_samplespace,
+  function LiuScore{TI,TR}(
+    label::String,
+    samplespace::SampleSpace,
     p0::TR, pmcrv::TR, prior,
     alpha::TR, beta::TR,
     mincondpower::TR,
@@ -22,7 +24,7 @@ mutable struct LiuScore{T_samplespace<:SampleSpace,TI<:Integer,TR<:Real} <: Vagu
     MONOTONECONDITIONALPOWER::Bool,
     npriorpivots::TI, # number of pivots for prior evaluation
     npivots::TI, # number of pivots for approximation of g
-  ) where {T_samplespace<:SampleSpace,TI<:Integer,TR<:Real}
+  ) where {TI<:Integer,TR<:Real}
 
     @checkprob alpha beta p0 pmcrv mincondpower
     z = quadgk(prior, 0, 1, abstol = .0001)[1]
@@ -38,6 +40,7 @@ mutable struct LiuScore{T_samplespace<:SampleSpace,TI<:Integer,TR<:Real} <: Vagu
     fs <= 1 ? 
       error(@sprintf("df must be greater than 1, is %.4f", fs)) : nothing
     new(
+      label,
       samplespace, 
       p0, pmcrv, cprior, 
       alpha, beta, 
@@ -53,22 +56,23 @@ end # LiuScore
 
 
 function LiuScore(
-  samplespace::T_samplespace,
+  samplespace::SampleSpace,
   p0::Real, pmcrv::Real, prior, 
   alpha::Real, beta::Real,
   fs::Real, fp::Real;
   npriorpivots::Integer = 50,
   npivots::Integer = 15,
   minconditionalpower::Real = 0.0,
-  MONOTONECONDITIONALPOWER::Bool = false
-) where {T_samplespace<:SampleSpace}
+  MONOTONECONDITIONALPOWER::Bool = false,
+  label::String = ""
+)
 
   # unify types
   p0, pmcrv, fs, fp, alpha, beta, minconditionalpower = 
     promote(p0, pmcrv, fs, fp, alpha, beta, minconditionalpower)    
   npriorpivots, npivots = promote(npriorpivots, npivots)
-  LiuScore{T_samplespace,typeof(npivots),typeof(p0)}(
-    samplespace, p0, pmcrv, prior, alpha, beta, minconditionalpower, fs, fp, 
+  LiuScore{typeof(npivots),typeof(p0)}(
+    label, samplespace, p0, pmcrv, prior, alpha, beta, minconditionalpower, fs, fp, 
     MONOTONECONDITIONALPOWER, npriorpivots, npivots
   )
 
@@ -81,17 +85,17 @@ hasmonotoneconditionalpower(params::LiuScore) = params.MONOTONECONDITIONALPOWER
 
 minconditionalpower(params::LiuScore) = params.mincondpower
 
-beta(params::LiuScore) = params.beta
+targetpower(params::LiuScore) = 1 - params.beta
 
 Base.show(io::IO, params::LiuScore) = print("LiuScore")
 
 
-function ros(design::BinaryTwoStageDesign, params::LiuScore, p1::T) where {T<:Real}
+function ros(design::Design, params::LiuScore, p1::T) where {T<:Real}
     
     @checkprob p1
-    powerreq = 1 - beta(params)
+    powerreq = targetpower(params)
     n1 = interimsamplesize(design)
-    nreq__(p, powerreq) = nreq_(p, powerreq, params.p0, params.alpha)
+    nreq__(p, powerreq) = nreq_(p, powerreq, params.p0, mtoer(params))
     denom = nreq__(p1, powerreq)
     if denom == 0
         return 100
@@ -105,15 +109,15 @@ function ros(design::BinaryTwoStageDesign, params::LiuScore, p1::T) where {T<:Re
 end # ros
 
 
-function rup(design::BinaryTwoStageDesign, params::LiuScore, p1::T) where {T<:Real}
+function rup(design::Design, params::LiuScore, p1::T) where {T<:Real}
 
     @checkprob p1
     if p1 < params.pmcrv
         return 0.0
     end
-    powerreq = 1 - beta(params) # we can minimize this if we set power to zero!
+    powerreq = targetpower(params) # we can minimize this if we set power to zero!
     n1 = interimsamplesize(design)
-    nreq__(p, powerreq) = nreq_(p, powerreq, params.p0, params.alpha)
+    nreq__(p, powerreq) = nreq_(p, powerreq, params.p0, mtoer(params))
     nom   = max(0, nreq__(p1, powerreq) - nreq__(p1, power(design, p1)))
     denom = nreq__(p1, powerreq) - nreq__(p1, (1 - params.fp)*powerreq)
     if (denom == 0.0) & (nom > 0)
@@ -129,7 +133,7 @@ end # rup
 
 
 function score(
-  design::BinaryTwoStageDesign, params::LiuScore, p1::T
+  design::Design, params::LiuScore, p1::T
 ) where {T<:Real} 
   
   return ros(design, params, p1) + rup(design, params, p1)
@@ -137,7 +141,7 @@ function score(
 end # score
 
 
-function score(design::BinaryTwoStageDesign, params::LiuScore)
+function score(design::Design, params::LiuScore)
 
     function f(p)
         res = params.prior(p)*score(design, params, p)
@@ -173,7 +177,7 @@ function completemodel(ipm::IPModel, params::LiuScore, n1::T) where {T<:Integer}
     JuMP.@constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
-        ) <= alpha(params)
+        ) <= mtoer(params)
     )
     # add conditional type two error rate constraint (power)
     for x1 in 0:n1
@@ -199,7 +203,7 @@ function completemodel(ipm::IPModel, params::LiuScore, n1::T) where {T<:Integer}
         end
     end
     # add optimality criterion
-    nreq__(p, powerreq) = nreq_(p, powerreq, p0, alpha(params))
+    nreq__(p, powerreq) = nreq_(p, powerreq, p0, mtoer(params))
     # construct expressions for ROS, upper bound necessary to guarantee finteness!
     JuMP.@expression(m, ros[p in priorpivots],
         1/(params.fs - 1) * sum(
@@ -232,7 +236,7 @@ function completemodel(ipm::IPModel, params::LiuScore, n1::T) where {T<:Integer}
     end
     JuMP.@variable(m, rup[priorpivots])
     for p in priorpivots
-        addSOS2(m, [lambda[p, piv] for piv in pivots])
+        JuMP.addSOS2(m, [lambda[p, piv] for piv in pivots])
         JuMP.@constraint(m, sum(lambda[p, piv] for piv in pivots) == 1)
         JuMP.@constraint(m, sum(lambda[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
         JuMP.@constraint(m, sum(lambda[p, piv]*frup(piv, p) for piv in pivots) == rup[p])
@@ -246,7 +250,7 @@ end # completemodel
 
 
 # ToDo: implement
-_isfeasible(design::BinaryTwoStageDesign, params::LiuScore) = true
+_isfeasible(design::Design, params::LiuScore) = true
 
 
 # utility

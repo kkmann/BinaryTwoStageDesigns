@@ -1,5 +1,7 @@
-mutable struct EB{T_samplespace<:SampleSpace,TI<:Integer,TR<:Real} <: VagueAlternative
-  samplespace::T_samplespace
+mutable struct EB{TI<:Integer,TR<:Real} <: VagueAlternative
+
+  label::String
+  samplespace::SampleSpace
   p0::TR
   pmcrv::TR
   prior
@@ -9,21 +11,22 @@ mutable struct EB{T_samplespace<:SampleSpace,TI<:Integer,TR<:Real} <: VagueAlter
   b::TR
   targetpower::TR
   k::TR
-  alpha::TR
+  mtoer::TR
   minconditionalpower::TR
   MONOTONECONDITIONALPOWER::Bool
   npriorpivots::TI # number of pivots for prior evaluation
   ngpivots::TI # number of pivots for approximation of g
 
-  function EB{T_samplespace,TI,TR}(
-    samplespace::T_samplespace,
+  function EB{TI,TR}(
+    label::String,
+    samplespace::SampleSpace,
     p0::TR, pmcrv::TR, prior,
     gamma::TR, lambda::TR,
     a::TR, b::TR, targetpower::TR, k::TR,
     alpha::TR,
     minconditionalpower::TR, MONOTONECONDITIONALPOWER::Bool,
     npriorpivots::TI, ngpivots::TI
-  ) where {T_samplespace<:SampleSpace,TI<:Integer,TR<:Real}
+  ) where {TI<:Integer,TR<:Real}
 
     @checkprob p0 pmcrv alpha minconditionalpower targetpower
     z = quadgk(prior, 0, 1, abstol = .0001)[1]
@@ -44,6 +47,7 @@ mutable struct EB{T_samplespace<:SampleSpace,TI<:Integer,TR<:Real} <: VagueAlter
     ngpivots < 5 ? 
       error(@sprintf("npivots must be at least 5, is %i", ngpivots)) : nothing
     new(
+      label,
       samplespace,
       p0, pmcrv, prior,
       gamma, lambda,
@@ -58,21 +62,23 @@ mutable struct EB{T_samplespace<:SampleSpace,TI<:Integer,TR<:Real} <: VagueAlter
 end # EB
 
 
-function EB{T_samplespace<:SampleSpace}( # default values
-    samplespace::T_samplespace,
+function EB( # default values
+    samplespace::SampleSpace,
     p0::Real, pmcrv::Real, prior,
     gamma::Real, lambda::Real;
     a::Real = 1, b::Real = 1, targetpower::Real = .8, k::Real = 1,
     alpha::Real = 0.05,
     minconditionalpower::Real = 0.0, MONOTONECONDITIONALPOWER::Bool = true,
-    npriorpivots::Integer = 50, ngpivots::Integer = 15
+    npriorpivots::Integer = 50, ngpivots::Integer = 15,
+    label::String = ""
 )
 
   p0, pmcrv, gamma, lambda, alpha, targetpower, a, b, k, minconditionalpower = 
     promote(p0, pmcrv, gamma, lambda, alpha, targetpower, a, b, k, minconditionalpower)    
   npriorpivots, ngpivots = promote(npriorpivots, ngpivots)
 
-  EB{T_samplespace,typeof(ngpivots),typeof(p0)}(
+  EB{typeof(ngpivots),typeof(p0)}(
+    label,
     samplespace,
     p0, pmcrv, prior,
     gamma, lambda,
@@ -97,7 +103,7 @@ Base.show(io::IO, params::EB) = print("EB")
 
 
 function expectedtransformedpower(
-  design::BinaryTwoStageDesign, params::Union{EB, MBESS}, x1::TI
+  design::Design, params::Union{EB, MBESS}, x1::TI
 ) where {TI<:Integer}
     
   x1 < 0 ?
@@ -114,7 +120,7 @@ function expectedtransformedpower(
 end # expectedtransformedpower
 
 
-function expectedtransformedpower(design::BinaryTwoStageDesign, params::Union{EB, MBESS})
+function expectedtransformedpower(design::Design, params::Union{EB, MBESS})
 
   pmcrv  = mcrv(params)
   phi(p) = prior(params, p)
@@ -126,7 +132,7 @@ function expectedtransformedpower(design::BinaryTwoStageDesign, params::Union{EB
 end # expectedtransformedpower
 
 
-function expectedcost(design::BinaryTwoStageDesign, params::EB, p::T) where {T<:Real}
+function expectedcost(design::Design, params::EB, p::T) where {T<:Real}
     
   @checkprob p
   ess = SampleSize(design, p) |> mean
@@ -151,7 +157,7 @@ function g(params::EB, power::T) where {T<:Real}
 end # g
 
 
-function expectedbenefit(design::BinaryTwoStageDesign, params::EB, p::T) where {T<:Real}
+function expectedbenefit(design::Design, params::EB, p::T) where {T<:Real}
     
   @checkprob p
   if p < mcrv(params)
@@ -163,7 +169,7 @@ function expectedbenefit(design::BinaryTwoStageDesign, params::EB, p::T) where {
 end # expectedbenefit
 
 
-function score(design::BinaryTwoStageDesign, params::EB, p::T) where {T<:Real}
+function score(design::Design, params::EB, p::T) where {T<:Real}
  
   @checkprob p
   return -(expectedbenefit(design, params, p) - expectedcost(design, params, p))
@@ -171,7 +177,7 @@ function score(design::BinaryTwoStageDesign, params::EB, p::T) where {T<:Real}
 end # score
 
 
-function score(design::BinaryTwoStageDesign, params::EB)
+function score(design::Design, params::EB)
   
   return quadgk(p -> params.prior(p)*score(design, params, p), 0, 1, reltol = .001)[1]
 
@@ -202,7 +208,7 @@ function completemodel(ipm::IPModel, params::EB, n1::T) where {T<:Integer}
     JuMP.@constraint(m,
         sum(dbinom(x1, n1, p0)*_cpr(x1, n1, n, c, p0)*y[x1, n, c] for
             x1 in 0:n1, n in nvals, c in cvals
-        ) <= alpha(params)
+        ) <= mtoer(params)
     )
     z = zeros(n1 + 1) # normalizing constants for prior conditional on p >= mcrv, X1=x1
     for x1 in 0:n1
@@ -261,7 +267,7 @@ function completemodel(ipm::IPModel, params::EB, n1::T) where {T<:Integer}
         JuMP.@variable(m, 0 <= lambdaSOS2[cpriorpivots, pivots] <= 1)
         JuMP.@variable(m, wpwr[cpriorpivots]) # weighted power
         for p in cpriorpivots
-            addSOS2(m, [lambdaSOS2[p, piv] for piv in pivots])
+            JuMP.addSOS2(m, [lambdaSOS2[p, piv] for piv in pivots])
             JuMP.@constraint(m, sum(lambdaSOS2[p, piv] for piv in pivots) == 1)
             JuMP.@constraint(m, sum(lambdaSOS2[p, piv]*piv for piv in pivots) == designpower[p]) # defines lambdas!
             if p >= params.pmcrv
@@ -283,4 +289,4 @@ end # completemodel
 
 
 # ToDo: implement!
-_isfeasible(design::BinaryTwoStageDesign, params::EB) = true
+_isfeasible(design::Design, params::EB) = true

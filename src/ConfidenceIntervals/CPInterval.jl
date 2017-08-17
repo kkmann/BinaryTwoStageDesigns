@@ -1,8 +1,8 @@
 """
-    NaiveClopperPearsonConfidenceInterval <: ConfidenceInterval
+    CPInterval <: ConfidenceInterval
 
-    NaiveClopperPearsonConfidenceInterval{T<:Real}(
-        design::BinaryTwoStageDesign;
+    CPInterval{T<:Real}(
+        design::Design;
         confidence::T = .9
     )
 
@@ -21,25 +21,37 @@ julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
 julia> interimsamplesize(ss)
 julia> design = getoptimaldesign(15, params, Gurobi.GurobiSolver())
 julia> est = MaximumLikelihoodEstimator(design, Gurobi.GurobiSolver())
-julia> ci = NaiveClopperPearsonConfidenceInterval(est, confidence = .9)
+julia> ci = CPInterval(est, confidence = .9)
 ```
 """
-immutable NaiveClopperPearsonConfidenceInterval <: ConfidenceInterval
-    design::BinaryTwoStageDesign
-    confidence::Float64
+struct CPInterval{TD<:Design,TR<:Real} <: ConfidenceInterval
 
-    function NaiveClopperPearsonConfidenceInterval{T<:Real}(
-        design::BinaryTwoStageDesign;
-        confidence::T = .9
-    )
-        checkp(confidence)
-        new(design, confidence)
-    end
-end # NaiveClopperPearsonConfidenceInterval
+  design::TD
+  confidence::TR
+
+  function CPInterval{TD,TR}(
+    design::TD, confidence::TR
+  ) where {TD<:Design,TR<:Real}
+
+    @checkprob confidence
+    new(design, confidence)
+
+  end # inner constructor
+
+end # CPInterval
 
 
+function CPInterval(
+  design::TD, confidence::TR = .9
+) where {TD<:Design,TR<:Real}
 
-function limits{T<:Integer}(ci::NaiveClopperPearsonConfidenceInterval, x1::T, x2::T)
+  return CPInterval{TD,TR}(design::TD, confidence::TR)
+  
+end # CPInterval
+
+
+function limits(ci::CPInterval, x1::T, x2::T) where {T<:Integer}
+
     d              = design(ci)
     ispossible(d, x1, x2) ? nothing : error("(x1, x2) not compatible with underlying design")
     alpha::Float64 = 1 - confidence(ci)
@@ -55,4 +67,5 @@ function limits{T<:Integer}(ci::NaiveClopperPearsonConfidenceInterval, x1::T, x2
         limits = [quantile(Distributions.Beta(x, n - x + 1), alpha/2); quantile(Distributions.Beta(x + 1, n - x), 1 - alpha/2)]
     end
     return limits
+    
 end

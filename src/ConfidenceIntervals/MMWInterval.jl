@@ -1,8 +1,8 @@
 """
-    MinimumMeanWidthConfidenceInterval <: ConfidenceInterval
+    MMWInterval <: ConfidenceInterval
 
-    MinimumMeanWidthConfidenceInterval{TS<:MathProgBase.AbstractMathProgSolver}(
-        estimator::BinaryTwoStageDesignEstimator,
+    MMWInterval{TS<:MathProgBase.AbstractMathProgSolver}(
+        estimator::Estimator,
         rho0::Float64,
         prior::Function,
         solver::TS;
@@ -32,20 +32,21 @@ julia> est = MaximumLikelihoodEstimator(design, Gurobi.GurobiSolver())
 julia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)
 ```
 """
-immutable MinimumMeanWidthConfidenceInterval <: ConfidenceInterval
-    estimator::BinaryTwoStageDesignEstimator
-    confidence::Float64
-    limits::Array{Float64}
+struct MMWInterval{TE<:Estimator,TR<:Real} <: ConfidenceInterval
+
+    estimator::TE
+    confidence::TR
+    limits::Array{TR}
     prior::Function
 
-    function MinimumMeanWidthConfidenceInterval{TS<:MathProgBase.AbstractMathProgSolver}(
-        estimator::BinaryTwoStageDesignEstimator,
-        rho0::Float64,
+    function MMWInterval{TE,TR}(
+        estimator::TE,
+        rho0::TR,
         prior::Function,
-        solver::TS;
-        confidence::Float64 = .9,
-        ngrid::Int64  = 100
-    )
+        solver::MathProgBase.AbstractMathProgSolver,
+        confidence::TR,
+        ngrid::Integer #   = 100
+    ) where {TE<:Estimator,TR<:Real}
         alpha =  1 - confidence
         ngrid += 1 # number of gridpoints is number of intervals + 1
         d     = design(estimator)
@@ -251,12 +252,12 @@ immutable MinimumMeanWidthConfidenceInterval <: ConfidenceInterval
     end
 end
 
-estimator(ci::MinimumMeanWidthConfidenceInterval) = ci.estimator
+estimator(ci::MMWInterval) = ci.estimator
 
-design(ci::MinimumMeanWidthConfidenceInterval) = ci |> estimator |> design
+design(ci::MMWInterval) = ci |> estimator |> design
 
 
-function limits{T<:Integer}(ci::MinimumMeanWidthConfidenceInterval, x1::T, x2::T)
+function limits{T<:Integer}(ci::MMWInterval, x1::T, x2::T)
     ispossible(design(ci), x1, x2) ? nothing : throw(InexactError())
     return convert(Vector{Float64}, view([ci.limits[x1 + 1, x2 + 1, 1] ci.limits[x1 + 1, x2 + 1, 2]], 1:2))
 end

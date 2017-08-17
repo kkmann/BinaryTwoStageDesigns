@@ -1,9 +1,9 @@
 struct SampleSize{T<:Real} <: Distributions.DiscreteUnivariateDistribution
 
-  design::BinaryTwoStageDesign
+  design::Design
   p::T
 
-  function SampleSize{T}(design::BinaryTwoStageDesign, p::T) where {T<:Real}
+  function SampleSize{T}(design::Design, p::T) where {T<:Real}
     
     @checkprob p
     new(design, p)
@@ -12,7 +12,7 @@ struct SampleSize{T<:Real} <: Distributions.DiscreteUnivariateDistribution
 
 end # SampleSize
 
-SampleSize(design::BinaryTwoStageDesign, p::T) where {T<:Real} = SampleSize{T}(design, p)
+SampleSize(design::Design, p::T) where {T<:Real} = SampleSize{T}(design, p)
 
 design(ss::SampleSize) = ss.design
 

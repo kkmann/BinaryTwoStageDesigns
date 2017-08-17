@@ -3,10 +3,10 @@ __precompile__()
 module BinaryTwoStageDesigns
 
 import JuMP
-import QuadGK
+import QuadGK, Roots
 import UnicodePlots
 import Base.show, Base.print
-import Base.convert
+import Base.convert, Base.writecsv
 import Distributions, Distributions.minimum, Distributions.maximum,
     Distributions.pdf, Distributions.cdf, Distributions.rand,
     Distributions.quantile, Distributions.mean, Distributions.var
@@ -16,89 +16,105 @@ import MathProgBase
 
 
 # Parameters.jl
-export Parameters, samplespace, maxsamplesize, isgroupsequential, allowsstoppingforefficacy,
-    NoParameters,
-    PointAlternative,
-        null, alpha, alternative, beta,
-    VagueAlternative,
-        prior
+export 
+  Parameters, 
+    samplespace, maxsamplesize, isgroupsequential, allowsstoppingforefficacy, label,
+  NoParameters,
+  PointAlternative,
+    null, mtoer, alternative, mtter,
+  VagueAlternative,
+    prior
 
 
-# BinaryTwoStageDesign.jl
-export BinaryTwoStageDesign,
-        parameters, interimsamplesize, samplesize, criticalvalue, power,
-        expectedpower, test, pdf, simulate, support, ispossible,
-        stoppingforfutility, score, expectedpower, jeffreysprior
+# Design.jl
+export 
+  Design,
+    parameters, interimsamplesize, samplesize, criticalvalue, power,
+    expectedpower, test, pdf, simulate, support, ispossible,
+    stoppingforfutility, score, expectedpower, jeffreysprior,
+    save, writepropertiescsv
 
 
 # SampleSize.jl
-export SampleSize
+export 
+  SampleSize
 
 
 # SampleSpace.jl
-export SampleSpace,
-    SimpleSampleSpace, interimsamplesizerange, maxsamplesize, possible
+export 
+  SampleSpace,
+    interimsamplesizerange, maxsamplesize, possible
 
-export IPModel, extractsolution
 
-# SimpleMinimalExpectedSampleSize.jl
-export MESS,
-    minconditionalpower, getnvals, getcvals, isgroupsequential
+# IPModel.jl
+export 
+  IPModel, 
+    extractsolution
+
+# MESS.jl
+export 
+  MESS,
+    minconditionalpower, isgroupsequential
 
 # LiuScore.jl
-export LiuScore,
+export 
+  LiuScore,
     ros, rup
 
-export EB,
+export 
+  EB,
     expectedtransformedpower, expectedcost, expectedbenefit
 
-export MBESS
+export 
+  MBESS
 
 # optimal.jl
-export getoptimaldesign
+export optimaldesign
 
 # estimate.jl
-export BinaryTwoStageDesignEstimator,
-    design, estimate, p, bias, rmse, incompatibleoutcomes,
-    MaximumLikelihoodEstimator, # include("Estimators/mle.jl")
-    RaoBlackwellizedEstimator, # inlcude("Estimators/rbe.jl")
-    CompatibleEstimator
+export 
+  Estimator,
+    design, estimate, pvalue, bias, rmse, incompatibleoutcomes,
+  MLEstimator, # include("Estimators/mle.jl")
+  RBEstimator, # inlcude("Estimators/rbe.jl")
+  OCEstimator
 
 #
-export ConfidenceInterval,
+export 
+  ConfidenceInterval,
     limits, confidence, design, coverage, estimator, findinconsistencies,
     meanwidth, meaninterval,
-    ClopperPearsonConfidenceInterval,
-    NaiveClopperPearsonConfidenceInterval,
-    MinimumMeanWidthConfidenceInterval
+  ECPInterval,
+  CPInterval,
+  MinimumMeanWidthConfidenceInterval
 
 include("util.jl")
 
 include("Parameters.jl")
 
-include("BinaryTwoStageDesign.jl")
+include("Design.jl")
 
 include("SampleSize.jl")
 
 include("SampleSpace.jl")
 
-include("ipmodel.jl")
+include("IPModel.jl")
 
 include("Parameters/MESS.jl")
 include("Parameters/LiuScore.jl")
 include("Parameters/MBESS.jl")
 include("Parameters/EB.jl")
 
-include("getoptimaldesign.jl")
+include("optimaldesign.jl")
 
-include("estimate.jl")
-include("Estimators/mle.jl")
-include("Estimators/rbe.jl")
-include("Estimators/CompatibleEstimator.jl")
+include("Estimator.jl")
+include("Estimators/MLEstimator.jl")
+include("Estimators/RBEstimator.jl")
+include("Estimators/OCEstimator.jl")
 
 include("ConfidenceInterval.jl")
-include("ConfidenceIntervals/ClopperPearsonConfidenceInterval.jl")
-include("ConfidenceIntervals/NaiveClopperPearsonConfidenceInterval.jl")
-include("ConfidenceIntervals/MinimumMeanWidthConfidenceInterval.jl")
+include("ConfidenceIntervals/ECPInterval.jl")
+include("ConfidenceIntervals/CPInterval.jl")
+include("ConfidenceIntervals/MMWInterval.jl")
 
 end # module

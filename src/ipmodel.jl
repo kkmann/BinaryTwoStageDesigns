@@ -1,4 +1,5 @@
-type IPModel
+mutable struct IPModel
+
     y # the binary assignment variables
     m # the JuMP model
     nvals
@@ -6,6 +7,7 @@ type IPModel
     cvals
     n1
     ss
+
     function IPModel(ss::SampleSpace, n1::Integer)
         n1 <= 1           ? error("IPModel: n1 must be >= 1")                    : nothing
         !possible(n1, ss) ? warn("IPModel: n1 not compatible with sample space") : nothing
@@ -106,12 +108,14 @@ type IPModel
         end
         new(y, m, nvals, cvalsfinite, cvals, n1, ss)
     end
+    
 end
 
 getnvals(ipm::IPModel, n1::Integer) = getnvals(ipm.ss, n1)
 getcvals(ipm::IPModel, n1::Integer) = getcvals(ipm.ss, n1)
 
 function extractsolution(ipm::IPModel, params)
+
     nvec = zeros(Int64, ipm.n1 + 1)
     cvec = zeros(Float64, ipm.n1 + 1) # need float for +/- Inf
     val::Real = 0.0
@@ -129,5 +133,6 @@ function extractsolution(ipm::IPModel, params)
             end
         end
     end
-    return BinaryTwoStageDesign(nvec, cvec, params)
+    return Design(nvec, cvec, params)
+
 end

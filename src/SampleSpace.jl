@@ -1,147 +1,4 @@
-"""
-    SampleSpace
-
-Generic sample spaces defining the search space for finding optimal 
-two-stage designs.
-"""
-abstract type SampleSpace end
-
-Base.size(::SampleSpace) = ()
-Base.getindex(ss::SampleSpace, i) = ss
-
-"""
-    interimsamplesizerange(ss::SimpleSampleSpace)
-
-Extract the interim sample size range of a `SampleSpace` object.
-
-# Parameters
-
-| Parameter    | Description |
-| -----------: | :---------- |
-| ss           | SampleSpace object |
-
-# Return Value
-
-The n1range as integer vector.
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> interimsamplesize(ss)
-```
-"""
-interimsamplesizerange(ss::SampleSpace) = error("not implemented")
-
-"""
-    maxsamplesize(ss::SampleSpace)
-
-Extract the maximal sample size of a `SampleSpace` object.
-
-# Parameters
-
-| Parameter    | Description |
-| -----------: | :---------- |
-| ss           | SampleSpace object |
-
-# Return Value
-
-The maximal overall sample size.
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> maxsamplesize(ss)
-```
-"""
-maxsamplesize(ss::SampleSpace) = error("not implemented")
-
-"""
-    maxsamplesize(ss::SampleSpace, n1)
-
-Extract the maximal sample size of a `SampleSpace` object given stage-one sample size n1. This might
-differ from the maximal sample size due to the factor `maxnfactor`.
-
-# Parameters
-
-| Parameter    | Description |
-| -----------: | :---------- |
-| ss           | SampleSpace object |
-| n1           | interim sample size |
-
-# Return Value
-
-The maximal overall sample size given n1.
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> maxsamplesize(ss, 15)
-```
-"""
-maxsamplesize(ss::SampleSpace, n1) = error("not implemented")
-
-"""
-    possible(n1::T, ss::SampleSpace) where {T<:Integer}
-
-Returns true if interim sample size n1 is compatible with sample space ss.
-
-# Parameters
-
-| Parameter    | Description |
-| -----------: | :---------- |
-| n1           | interim sample size |
-| ss           | SampleSpace object |
-
-# Return Value
-
-true if n1 is valid for ss, false otherwise
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> possible(15, ss)
-```
-"""
-function possible(n1::T, ss::SampleSpace) where {T<:Integer}
-  error("not implemented")
-end
-
-
-function possible(
-  n1::TI, n::TI, c::TR, ss::SampleSpace
-) where {TI<:Integer,TR<:Real}
-  error("not implemented")
-end
-
-"""
-    isgroupsequential(ss::SampleSpace)
-
-Returns true if ss is restricted to group-sequential sample spaces.
-
-# Parameters
-
-| Parameter    | Description |
-| -----------: | :---------- |
-| ss           | SampleSpace object |
-
-# Return Value
-
-true if ss is group-sequential, false otherwise
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> isgroupsequential(ss)
-```
-"""
-isgroupsequential(ss::SampleSpace) = error("not implemented")
-
-getnvals(ss::SampleSpace, n1) = error("not implemented")
-getcvals(ss::SampleSpace, n1) = error("not implemented")
-
-
-
-mutable struct SimpleSampleSpace{TI<:Integer,TR<:Real} <: SampleSpace
+mutable struct SampleSpace{TI<:Integer,TR<:Real}
 
   n1range::Vector{TI}
   nmax::TI
@@ -152,7 +9,7 @@ mutable struct SimpleSampleSpace{TI<:Integer,TR<:Real} <: SampleSpace
   GS::Bool # group sequential ?
   specialnvalues::Vector{TI} # required for additional values always included in nvals
 
-  function SimpleSampleSpace{TI,TR}(
+  function SampleSpace{TI,TR}(
     n1range::Vector{TI}, 
     nmax::TI, 
     n2min::TI, 
@@ -168,15 +25,15 @@ mutable struct SimpleSampleSpace{TI<:Integer,TR<:Real} <: SampleSpace
     maxnfact = (maxnfact == Inf) ? nmax / minimum(n1range) : maxnfact
     new(sort(n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS, convert(Vector{TI}, zeros(0)))
 
-  end # inner constructor (SimpleSampleSpace)
+  end # inner constructor (SampleSpace)
 
-end # SimpleSampleSpace
+end # SampleSpace
 
 
 """
-    SimpleSampleSpace{T<:Integer}(n1range, nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false)
+    SampleSpace{T<:Integer}(n1range, nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false)
 
-Constructs an object of type `SimpleSampleSpace` defining the search space for
+Constructs an object of type `SampleSpace` defining the search space for
 finding optimal two stage designs.
 
 # Parameters
@@ -193,14 +50,14 @@ finding optimal two stage designs.
 
 # Return Value
 
-An object of type `SimpleSampleSpace` with the respective parameters.
+An object of type `SampleSpace` with the respective parameters.
 
 # Examples
 ```julia-repl
-julia> SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> SampleSpace(10:25, 100, n2min = 5)
 ```
 """
-function SimpleSampleSpace( # unspecific variant
+function SampleSpace( # unspecific variant
   n1range,
   nmax::TI;
   n2min::TI = 1, 
@@ -210,14 +67,14 @@ function SimpleSampleSpace( # unspecific variant
   GS::Bool = false
 ) where {TI<:Integer,TR<:Real}
 
-  SimpleSampleSpace(
+  SampleSpace(
     convert(Vector{TI}, n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS
   )
 
-end # external constructor (SimpleSampleSpace)
+end # external constructor (SampleSpace)
 
 
-function SimpleSampleSpace(
+function SampleSpace(
   n1range::Vector{TI},
   nmax::TI,
   n2min::TI, 
@@ -227,22 +84,26 @@ function SimpleSampleSpace(
   GS::Bool
 ) where {TI<:Integer,TR<:Real}
 
-  SimpleSampleSpace{TI,TR}(
+  SampleSpace{TI,TR}(
       n1range, nmax, n2min, maxnfact, nmincont, maxvariables, GS
   )
 
-end # external constructor (SimpleSampleSpace)
+end # external constructor (SampleSpace)
 
 
-Base.show(io::IO, ss::SimpleSampleSpace) = print("SimpleSampleSpace")
+Base.size(::SampleSpace) = ()
 
-interimsamplesizerange(ss::SimpleSampleSpace) = ss.n1range
+Base.getindex(ss::SampleSpace, i) = ss
 
-maxsamplesize(ss::SimpleSampleSpace) = ss.nmax
+Base.show(io::IO, ss::SampleSpace) = print("SampleSpace")
+
+interimsamplesizerange(ss::SampleSpace) = ss.n1range
+
+maxsamplesize(ss::SampleSpace) = ss.nmax
 
 
 function possible(
-  n1::TI2, ss::SimpleSampleSpace{TI,TR}
+  n1::TI2, ss::SampleSpace{TI,TR}
 ) where {TI<:Integer,TR<:Real,TI2<:Integer}
 
   return n1 in ss.n1range
@@ -251,7 +112,7 @@ end # possible
 
 
 function possible(
-  n1::TI, n::TI, c::TR, ss::SimpleSampleSpace{TI2,TR2}
+  n1::TI, n::TI, c::TR, ss::SampleSpace{TI2,TR2}
 ) where {TI<:Integer,TR<:Real,TI2<:Integer,TR2<:Real}
 
   res = n1 in ss.n1range # n1 must be possible
@@ -275,7 +136,7 @@ end # possible
 
 
 function maxsamplesize(
-    ss::SimpleSampleSpace{TI,TR}, n1::TI2
+    ss::SampleSpace{TI,TR}, n1::TI2
   ) where {TI<:Integer,TR<:Real,TI2<:Integer}
 
   possible(n1, ss)
@@ -284,11 +145,11 @@ function maxsamplesize(
 end # maxsamplesize
 
 
-isgroupsequential(ss::SimpleSampleSpace) = ss.GS
+isgroupsequential(ss::SampleSpace) = ss.GS
 
 
 function getnvals(
-  ss::SimpleSampleSpace{TI,TR}, n1::TI2
+  ss::SampleSpace{TI,TR}, n1::TI2
 ) where {TI<:Integer,TR<:Real,TI2<:Integer}
 
     nmax    = maxsamplesize(ss, n1)
@@ -319,7 +180,7 @@ end # getnvals
 
 
 function getcvals(
-  ss::SimpleSampleSpace{TI,TR}, n1::TI2
+  ss::SampleSpace{TI,TR}, n1::TI2
 ) where {TI<:Integer,TR<:Real,TI2<:Integer}
 
     nmax        = maxsamplesize(ss, n1)

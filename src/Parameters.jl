@@ -14,10 +14,11 @@ Base.length(par::Parameters) = 1
 
 Base.getindex(par::Parameters, i) = par
 
+label(par::Parameters) = try par.label catch error("not implemented") end
 
 null(par::Parameters) = try par.p0 catch error("not implemented") end
 
-alpha(par::Parameters) = try par.alpha catch error("not implemented") end
+mtoer(par::Parameters) = try par.mtoer catch error("not implemented") end
 
 mcrv(par::Parameters) = try par.pmcrv catch error("not implemented") end
 
@@ -39,7 +40,7 @@ struct NoParameters <: Parameters end
 
 null(par::NoParameters) = error("NoParameters do not have null hypothesis")
 
-alpha(par::NoParameters) = error("NoParameters do not have alpha")
+mtoer(par::NoParameters) = error("NoParameters do not have mtoer")
 
 samplespace(par::NoParameters) = error("NoParameters do not have sample space")
 
@@ -58,7 +59,7 @@ abstract type PointAlternative <: Parameters end
 
 alternative(par::PointAlternative) = try par.p1 catch error("not implemented") end
 
-beta(par::PointAlternative) = try par.beta catch error("not implemented") end
+mtter(par::PointAlternative) = try par.beta catch error("not implemented") end
 
 
 """

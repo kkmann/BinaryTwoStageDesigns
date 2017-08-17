@@ -3,10 +3,11 @@
 
 Abstract base type for all confidence interval types.
 """
-abstract ConfidenceInterval
+abstract type ConfidenceInterval end
 
 # these two enable array broadcasting of all methods!
 Base.size(::ConfidenceInterval) = ()
+
 Base.getindex(ci::ConfidenceInterval, i) = ci
 
 """
@@ -36,7 +37,7 @@ julia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)
 julia> limits(ci, 0, 0)
 ```
 """
-limits{T<:Integer}(ci::ConfidenceInterval, x1::T, x2::T) = error("not implemented!")
+limits(ci::ConfidenceInterval, x1::T, x2::T) where {T<:Integer}= error("not implemented!")
 
 confidence(ci::ConfidenceInterval) = try return ci.confidence catch error("not implemented") end
 
@@ -69,23 +70,26 @@ julia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)
 julia> coverage(ci, .5)
 ```
 """
-function coverage{T<:Real}(ci::ConfidenceInterval, p::T; orientation = "overall") # or upper or lower
-    checkp(p)
-    supp   = support(design(ci))
-    res    = 0.0
-    for i in 1:size(supp, 1)
-        x1, x2 = supp[i, :]
-        lim = limits(ci, x1, x2)
-        if (orientation == "overall") & (lim[1] <= p) & (lim[2] >= p)
-            res += pdf(design(ci), x1, x2, p)
-        elseif (orientation == "upper") & (lim[2] >= p)
-            res += pdf(design(ci), x1, x2, p)
-        elseif (orientation == "lower") & (lim[1] <= p)
-            res += pdf(design(ci), x1, x2, p)
-        end
+function coverage(ci::ConfidenceInterval, p::T; orientation::String = "overall") where {T<:Real} # or upper or lower
+
+  @checkprob p 
+  supp   = support(design(ci))
+  res    = 0.0
+  for i in 1:size(supp, 1)
+    x1, x2 = supp[i, :]
+    lim = limits(ci, x1, x2)
+    if (orientation == "overall") & (lim[1] <= p) & (lim[2] >= p)
+        res += pdf(design(ci), x1, x2, p)
+    elseif (orientation == "upper") & (lim[2] >= p)
+        res += pdf(design(ci), x1, x2, p)
+    elseif (orientation == "lower") & (lim[1] <= p)
+        res += pdf(design(ci), x1, x2, p)
     end
-    return res
+  end
+  return res
+
 end
+
 
 """
     meanwidth{T<:Real}(ci::ConfidenceInterval, p::T)
@@ -113,16 +117,19 @@ julia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)
 julia> meanwidth(ci, .5)
 ```
 """
-function meanwidth{T<:Real}(ci::ConfidenceInterval, p::T)
-    d = design(ci)
-    supp   = support(d)
-    res    = 0.0
-    for i in 1:size(supp, 1)
-        x1, x2 = supp[i, :]
-        res = res + pdf(d, x1, x2, p)*(limits(ci, x1, x2)[2] - limits(ci, x1, x2)[1])
-    end
-    return res
+function meanwidth(ci::ConfidenceInterval, p::T) where {T<:Real}
+
+  d = design(ci)
+  supp   = support(d)
+  res    = 0.0
+  for i in 1:size(supp, 1)
+    x1, x2 = supp[i, :]
+    res = res + pdf(d, x1, x2, p)*(limits(ci, x1, x2)[2] - limits(ci, x1, x2)[1])
+  end
+  return res
+
 end
+
 
 """
     meaninterval{T<:Real}(ci::ConfidenceInterval, p::T)
@@ -150,16 +157,19 @@ julia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)
 julia> meaninterval(ci, .5)
 ```
 """
-function meaninterval{T<:Real}(ci::ConfidenceInterval, p::T)
-    d = design(ci)
-    supp   = support(d)
-    mean_limits = [0.0; 0.0]
-    for i in 1:size(supp, 1)
-        x1, x2      = supp[i, :]
-        mean_limits = mean_limits + pdf(d, x1, x2, p)*limits(ci, x1, x2)
-    end
-    return mean_limits
+function meaninterval(ci::ConfidenceInterval, p::T) where {T<:Real}
+
+  d = design(ci)
+  supp   = support(d)
+  mean_limits = [0.0; 0.0]
+  for i in 1:size(supp, 1)
+      x1, x2      = supp[i, :]
+      mean_limits = mean_limits + pdf(d, x1, x2, p)*limits(ci, x1, x2)
+  end
+  return mean_limits
+
 end
+
 
 """
     findinconsistencies{T<:Real}(ci::ConfidenceInterval)
@@ -187,19 +197,21 @@ julia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)
 julia> findinconsistencies(ci)
 ```
 """
-function findinconsistencies{T<:Real}(ci::ConfidenceInterval, p0::T)
-    d = design(ci)
-    supp   = support(d)
-    res    = []
-    for i in 1:1:size(supp, 1)
-        x1, x2 = supp[i, :]
-        if (limits(ci, x1, x2)[1] <= p0) & (x1 + x2 > d.c[x1 + 1])
-            push!(res, [x1 x2 d.c[x1 + 1] limits(ci, x1, x2)[1] p0])
-        end
-        if (limits(ci, x1, x2)[1] > p0) & (x1 + x2 <= d.c[x1 + 1])
-            push!(res, [x1 x2 d.c[x1 + 1] limits(ci, x1, x2)[1] p0])
-        end
-    end
-    res = vcat(res...)
-    return res
+function findinconsistencies(ci::ConfidenceInterval, p0::T) where {T<:Real}
+
+  d = design(ci)
+  supp   = support(d)
+  res    = []
+  for i in 1:1:size(supp, 1)
+      x1, x2 = supp[i, :]
+      if (limits(ci, x1, x2)[1] <= p0) & (x1 + x2 > d.c[x1 + 1])
+          push!(res, [x1 x2 d.c[x1 + 1] limits(ci, x1, x2)[1] p0])
+      end
+      if (limits(ci, x1, x2)[1] > p0) & (x1 + x2 <= d.c[x1 + 1])
+          push!(res, [x1 x2 d.c[x1 + 1] limits(ci, x1, x2)[1] p0])
+      end
+  end
+  res = vcat(res...)
+  return res
+  
 end
