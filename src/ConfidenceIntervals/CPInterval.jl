@@ -50,6 +50,9 @@ function CPInterval(
 end # CPInterval
 
 
+Base.show(io::IO, ci::CPInterval) = print("CPInterval")
+
+
 function limits(ci::CPInterval, x1::T, x2::T) where {T<:Integer}
 
     d              = design(ci)

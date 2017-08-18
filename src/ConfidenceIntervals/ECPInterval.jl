@@ -86,6 +86,8 @@ function ECPInterval(
 end
 
 
+Base.show(io::IO, ci::ECPInterval) = print("ECPInterval")
+
 estimator(ci::ECPInterval) = ci.estimator
 
 design(ci::ECPInterval) = ci |> estimator |> design

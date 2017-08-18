@@ -26,6 +26,8 @@ end # RBEstimator
 
 RBEstimator(design::TD) where {TD<:Design} = RBEstimator{TD}(design)
 
+Base.show(io::IO, estimator::RBEstimator) = print("RBEstimator")
+
 
 function estimate(estimator::RBEstimator, x1::T, x2::T) where {T<:Integer}
 

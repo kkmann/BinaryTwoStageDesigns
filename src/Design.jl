@@ -237,21 +237,21 @@ end
 
 
 function expectedpower(
-    design::Design, x1::T, prior
+    design::Design, x1::T, prior::Function; mcrv::Real = mcrv(parameters(design))
 ) where {T<:Integer}
 
   checkx1(x1, design)
   z   = QuadGK.quadgk(
-      p -> prior(p),             # f(p)
-      mcrv(parameters(design)),  # p_min
-      1,                         # p_max
-      abstol = 0.001             # tolerance
+      p -> prior(p),  # f(p)
+      mcrv,           # p_min
+      1,              # p_max
+      abstol = 0.001  # tolerance
   )[1]
   res = QuadGK.quadgk(
       p -> prior(p)*power(design, x1, p)/z, # f(p)
-      mcrv(parameters(design)),    # p_min
-      1,                           # p_max
-      abstol = 0.001               # tolerance
+      mcrv,         # p_min
+      1,             # p_max
+      abstol = 0.001 # tolerance
   )[1]
   return min(1, max(0, res)) # guarantee bounds!
 
@@ -284,17 +284,17 @@ where `x1` is the stage-one number of responses.
 ToDo
 ```
 """
-function expectedpower(design::Design, prior)
+function expectedpower(design::Design, prior::Function; mcrv::Real = mcrv(parameters(design)) )
 
   z   = QuadGK.quadgk(
       p -> prior(p),             # f(p)
-      mcrv(parameters(design)),  # p_min
+      mcrv,  # p_min
       1,                         # p_max
       abstol = 0.001             # tolerance
   )[1]
   res = QuadGK.quadgk(
       p -> prior(p)*power(design, p)/z, # f(p)
-      mcrv(parameters(design)),    # p_min
+      mcrv,    # p_min
       1,                           # p_max
       abstol = 0.001               # tolerance
   )[1]
@@ -336,9 +336,9 @@ function stoppingforfutility(design::Design, p::T) where {T<:Real}
   res = 0.0
   c   = criticalvalue(design)
   for x1 in 0:n1
-      if c[x1 + 1] == Inf
-          res += Distributions.pdf(X1, x1)
-      end
+    if c[x1 + 1] == Inf
+      res += Distributions.pdf(X1, x1)
+    end
   end
   return res
 
@@ -407,13 +407,13 @@ julia> df = simulate(design, .3, 1000)
 """
 function simulate(design::Design, p::T2, nsim::T1) where {T1<:Integer, T2<:Real}
 
-  x2    = SharedArray(Int, nsim)
-  n     = SharedArray(Int, nsim)
-  c     = SharedArray(Float64, nsim)
-  rej   = SharedArray(Bool, nsim)
+  x2    = SharedArray{Int}(nsim)
+  n     = SharedArray{Int}(nsim)
+  c     = SharedArray{Float64}(nsim)
+  rej   = SharedArray{Bool}(nsim)
   n1    = interimsamplesize(design)
   rv_x1 = Distributions.Binomial(n1, p)
-  x1    = SharedArray(Int, nsim)
+  x1    = SharedArray{Int}(nsim)
   @sync @parallel for i in 1:nsim
       x1[i]  = rand(rv_x1)
       n2     = samplesize(design, x1[i]) - n1

@@ -21,6 +21,13 @@ struct MLEstimator{TD<:Design} <: Estimator
 
 end # MLEStimator
 
+
+MLEstimator(design::TD) where {TD<:Design} = MLEstimator{TD}(design)
+
+
+Base.show(io::IO, estimator::MLEstimator) = print("MLEstimator")
+
+
 function estimate(estimator::MLEstimator, x1::T, x2::T) where {T<:Integer}
 
     checkx1x2(x1, x2, design(estimator))

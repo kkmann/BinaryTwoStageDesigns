@@ -252,6 +252,23 @@ struct MMWInterval{TE<:Estimator,TR<:Real} <: ConfidenceInterval
     end
 end
 
+
+function MMWInterval(
+  estimator::TE,
+  rho0::TR,
+  prior::Function,
+  solver::MathProgBase.AbstractMathProgSolver;
+  confidence::TR = 0.9,
+  ngrid::Integer = 100
+) where {TE<:Estimator,TR<:Real}
+
+  return MMWInterval{TE,TR}(estimator, rho0, prior, solver, confidence, ngrid)
+
+end
+
+
+Base.show(io::IO, ci::MMWInterval) = print("MMWInterval")
+
 estimator(ci::MMWInterval) = ci.estimator
 
 design(ci::MMWInterval) = ci |> estimator |> design

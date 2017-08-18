@@ -79,7 +79,8 @@ julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
 function optimaldesign(
   parameters::Parameters,
   solver::MathProgBase.AbstractMathProgSolver;
-  VERBOSE::Integer = 1
+  VERBOSE::Integer = 1,
+  EARLYTERMINATION::Bool = false
 )
 
   n1range   = samplespace(parameters) |> interimsamplesizerange
@@ -101,6 +102,17 @@ function optimaldesign(
     ))
   end
 
+  function reldiff(newval, best)  
+    
+    diff = best - newval
+    if diff == 0
+      return 0.0
+    else 
+      return -sign(diff) * abs(diff/best)
+    end
+
+  end
+
   for i in 1:length(n1range)
     t0i = now()
     try
@@ -108,8 +120,8 @@ function optimaldesign(
       scores[i]  = score(designs[i])
       if VERBOSE > 0
         println()
-        println("    time    n1   % done   sol. time [s]   cum. time [min]       score        best   % of best")
-        print(@sprintf("\r%s   %3i    %5.1f   %13i   %15.1f   %+.2e   %+.2e   %9.1f", 
+        println("    time    n1   % done   sol. time [s]   cum. time [min]       score        best   % diff to best")
+        print(@sprintf("\r%s   %3i    %5.1f   %13i   %15.1f   %+.2e   %+.2e   %14.1f", 
           Dates.format(t0i, "HH:MM:SS"), 
           n1range[i], 
           i / length(n1range) * 100, 
@@ -117,7 +129,7 @@ function optimaldesign(
           Int(Dates.value(now() - t0)) / 60 / 1000, 
           scores[i],
           scores[findmin(scores)[2]],
-          scores[i] / scores[findmin(scores)[2]] * 100
+          reldiff(scores[i], scores[findmin(scores)[2]]) * 100
         ))
         println()
       end
@@ -143,6 +155,15 @@ function optimaldesign(
       end
     end
     print("\n")
+    if (EARLYTERMINATION == true) & (i > 3)
+      try
+        if all(reldiff.(scores[[i - 2; i - 1; i]], scores[findmin(scores)[2]]) .>= .1)
+          info("terminating optimization early")
+          break
+        end
+      catch e
+      end
+    end
   end
   print("\n\n")
   if VERBOSE > 1
@@ -153,8 +174,10 @@ function optimaldesign(
     catch e
     end
   end
-  print(@sprintf("\rdone after %i minutes.\n\r", Int(round(Int(Dates.value(now() - t0)) / 60 / 1000))))
-  print(@sprintf("\rOptimal stage-one sample size is %i resulting in a minimal score of %.2e\n\n\r", findmin(scores)[2], scores[findmin(scores)[2]]))
+  if VERBOSE > 0
+    print(@sprintf("\rdone after %i minutes.\n\r", Int(round(Int(Dates.value(now() - t0)) / 60 / 1000))))
+    print(@sprintf("\rOptimal stage-one sample size is %i resulting in a minimal score of %.2e\n\n\r", n1range[findmin(scores)[2]], scores[findmin(scores)[2]]))
+  end
   return designs[findmin(scores)[2]], Dict("n1" => n1range, "scores" => scores, "designs" => designs)
 
 end

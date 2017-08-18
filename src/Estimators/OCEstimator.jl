@@ -125,7 +125,10 @@ function OCEstimator(
     error("k must be even") : nothing
   return OCEstimator{TD}(design, solver, prior, k)
 
-end
+end # outer constructor
+
+
+Base.show(io::IO, estimator::OCEstimator) = print("OCEstimator")
 
 
 function estimate(estimator::OCEstimator, x1::T, x2::T) where {T<:Integer}

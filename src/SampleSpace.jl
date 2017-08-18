@@ -155,7 +155,7 @@ function getnvals(
     nmax    = maxsamplesize(ss, n1)
     frac    = (nmax - n1 + 1) / sqrt(ss.maxvariables / n1)
     if frac > 1
-        warn(@sprintf("thinning nvals by factor %.3f", 1 / frac))
+        info(@sprintf("thinning nvals by factor %.3f", 1 / frac))
     else
         frac = 1
     end
@@ -186,7 +186,7 @@ function getcvals(
     nmax        = maxsamplesize(ss, n1)
     frac        = nmax / sqrt(ss.maxvariables / n1)
     if frac > 1
-        warn(@sprintf("thinning cvals by factor %.3f", 1 / frac))
+        info(@sprintf("thinning cvals by factor %.3f", 1 / frac))
     else
         frac = 1
     end
