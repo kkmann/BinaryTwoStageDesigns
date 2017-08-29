@@ -1,9 +1,8 @@
 """
-    getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
-        n1::T,
-        parameters::Parameters,
-        solver::TS;
-        VERBOSE::Integer = 0
+    optimaldesign(
+      n1::Integer,
+      parameters::Parameters,
+      solver::MathProgBase.AbstractMathProgSolver
     )
 
 Find the optimal two-stage design for given parameters and fixed stage-one
@@ -24,9 +23,8 @@ Design object optimized for given parameter set.
 
 # Examples
 ```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> interimsamplesize(ss)
-julia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())
+julia> ss     = SimpleSampleSpace(10:25, 100, n2min = 5)
+julia> design = optimaldesign(15, params, solver = Gurobi.GurobiSolver())
 ```
 """
 function optimaldesign(

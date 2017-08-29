@@ -36,7 +36,7 @@ struct MMWInterval{TE<:Estimator,TR<:Real} <: ConfidenceInterval
 
     estimator::TE
     confidence::TR
-    limits::Array{TR}
+    limits::Array{TR,3}
     prior::Function
 
     function MMWInterval{TE,TR}(

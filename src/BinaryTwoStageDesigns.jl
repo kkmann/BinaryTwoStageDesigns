@@ -21,7 +21,7 @@ export
     samplespace, maxsamplesize, isgroupsequential, allowsstoppingforefficacy, label,
   NoParameters,
   PointAlternative,
-    null, mtoer, alternative, mtter,
+    null, mtoer, alternative, mtter, mcrv,
   VagueAlternative,
     prior
 
@@ -31,7 +31,7 @@ export
   Design,
     parameters, interimsamplesize, samplesize, criticalvalue, power,
     expectedpower, test, pdf, simulate, support, ispossible,
-    stoppingforfutility, score, expectedpower, jeffreysprior,
+    stoppingforfutility, stoppingforefficacy, score, expectedpower, jeffreysprior,
     save, writepropertiescsv
 
 

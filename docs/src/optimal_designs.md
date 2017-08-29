@@ -1,18 +1,7 @@
 # Optimal Two-Stage Designs
 
-The principle technical background in available at [arxiv.org](https://arxiv.org/abs/1605.00249).
+The technical background in available at [arxiv.org](https://arxiv.org/abs/1605.00249).
 
 ```@docs
-getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
-    n1::T,
-    parameters::Parameters,
-    solver::TS;
-    VERBOSE::Integer = 0
-)
-
-getoptimaldesign{T<:Integer, TS<:MathProgBase.AbstractMathProgSolver}(
-    parameters::Parameters,
-    solver::TS;
-    VERBOSE::Integer = 1
-)
+optimaldesign(n1::Integer, parameters::Parameters, solver::MathProgBase.AbstractMathProgSolver)
 ```

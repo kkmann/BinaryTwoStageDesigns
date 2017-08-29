@@ -42,10 +42,10 @@ end # CPInterval
 
 
 function CPInterval(
-  design::TD, confidence::TR = .9
+  design::TD; confidence::TR = .9
 ) where {TD<:Design,TR<:Real}
 
-  return CPInterval{TD,TR}(design::TD, confidence::TR)
+  return CPInterval{TD,TR}(design, confidence)
   
 end # CPInterval
 

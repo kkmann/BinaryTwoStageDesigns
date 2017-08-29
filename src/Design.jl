@@ -1,24 +1,9 @@
 """
     Design{T1<:Integer, T2<:Real, PType<:Parameters}
 
-Immutable type representing a binary two-stage design. Two constructors are
-implemented: `Design{T1<:Integer, T2<:Real}(n::Vector{T1}, c::Vector{T2})`
-does not require any additional parameters but only vectors n and c of
-final sample sizes and critical values for x1 = 0:n1, n1 + 1 = length(c) = length(n).
-The second option `Design{T1<:Integer, T2<:Real, PType<:Parameters}(n::Vector{T1},c::Vector{T2},params::PType)`
-also stores the passed paramter object.
-
-# Parameters
-
-| Parameter    | Description |
-| -----------: | :---------- |
-| n            | integer vector of length n1 + 1 with sample size n(x1) |
-| c            | real vector of length n1 + 1 with critical values c(x1), c(x1) = +/- Inf indicates early stopping and must imply n(x1) = n1 |
-| [params]     | parameter object |
-
-# Details
-
-Note that the test rejects whenever x1 + x2 > c(x1)
+Binary two-stage design object defining a discrete sampe size function 
+``n(x_1)`` and ``c(x_1)``, where ``x_1`` is the observed number of stage-one events 
+and the test rejects the superiority null hypothesis whenever ``x_1 + x_2 > c(x_1)``.
 """
 mutable struct Design{T1<:Integer, T2<:Real, PType<:Parameters}
     
@@ -41,24 +26,6 @@ mutable struct Design{T1<:Integer, T2<:Real, PType<:Parameters}
 end # Design
 
 
-function Design(n, c, params::PType) where {PType<:Parameters}
-  
-  n = convert(Vector{Int}, n)
-  c = convert(Vector{Float64}, c)
-  return Design{Int,Float64,Ptype}(n, c, params)
-
-end
-
-
-function Design(n, c)
-  
-  n = convert(Vector{Int}, n)
-  c = convert(Vector{Float64}, c)
-  return Design{Int,Float64,NoParameters}(n, c, NoParameters())
-
-end
-
-
 function Design(
   n::Vector{T1}, c::Vector{T2}, params::PType
 ) where {T1<:Integer,T2<:Real,PType<:Parameters}
@@ -69,9 +36,62 @@ end
 
 
 """
+    Design(n, c, params::PType) where {PType<:Parameters}
+
+Construct a [`Design`](@ref) object from `n` and `c` directly. 
+Here, `n` must be convertable to an integer vector and `c` to a real vector 
+(both of same length ``n_1``). 
+Then, `n[x1 + 1]` is the final sample size after observing `x1` responses in
+stage one and `c[x1 + 1]` the corresponding critical value.
+A constructor without explicitly specifying a set of parameters with respect to
+which thee design is optimal also exists.
+
+# Parameters
+
+| Parameter  | Description |
+| ---------: | :---------- |
+| n          | sample size function (must be convertable to integer vector) |
+| c          | critical value function (must be convertable to real vector) |
+| params     | parameter object |
+
+"""
+function Design(n, c, params::PType) where {PType<:Parameters}
+  
+  n = convert(Vector{Int}, n)
+  c = convert(Vector{Float64}, c)
+  return Design{Int,Float64,Ptype}(n, c, params)
+
+end
+
+
+"""
+    Design(n, c)
+
+Construct a [`Design`](@ref) object from `n` and `c` directly. 
+Here, `n` must be convertable to an integer vector and `c` to a real vector 
+(both of same length ``n_1``). 
+
+# Parameters
+
+| Parameter  | Description |
+| ---------: | :---------- |
+| n          | sample size function (must be convertable to integer vector) |
+| c          | critical value function (must be convertable to real vector) |
+
+"""
+function Design(n, c)
+  
+  n = convert(Vector{Int}, n)
+  c = convert(Vector{Float64}, c)
+  return Design{Int,Float64,NoParameters}(n, c, NoParameters())
+
+end
+
+
+"""
     convert(::Type{DataFrames.DataFrame}, design::Design)
 
-Convert a design to a DataFrame with columns x1, n, c.
+Convert a design to a `DataFrame` with column names `x1`, `n`, and `c`.
 """
 convert(::Type{DataFrames.DataFrame}, design::Design) =
     DataFrames.DataFrame(
@@ -97,9 +117,11 @@ Base.show(io::IO, design::Design) = print("Design")
 """
     interimsamplesize(design::Design)
 
-Return inter sample size n1 of a design.
+Return interim sample size ``n_1`` of a design.
 """
 interimsamplesize(design::Design) = length(design.n) - 1
+
+
 """
     parameters(design::Design)
 
@@ -107,32 +129,43 @@ Return stored parameter object of a design.
 """
 parameters(design::Design) = design.params
 
+
 """
     samplesize(design::Design)
 
-Return vector of final sample sizes for x1 = 0:n1, or via
-`samplesize{T<:Integer}(design::Design, x1::T)` only for specific
-`x1`.
+Return vector of final sample sizes.
 """
 samplesize(design::Design) = design.n
+
+"""
+    samplesize(design::Design, x1::T) where {T<:Integer}
+
+Return final sample size for `x1`.
+"""
 samplesize(design::Design, x1::T) where {T<:Integer} =
     (checkx1(x1, design); design.n[x1 + 1])
+
 
 """
     criticalvalue(design::Design)
 
-Return vector of critical values for x1 = 0:n1, or via
-`criticalvalue(design::Design, x1)` only for specific `x1`.
+Return vector of critical values.
 """
 criticalvalue(design::Design) = design.c
+
+"""
+    criticalvalue(design::Design, x1::T) where {T<:Integer}
+
+Return critical value for `x1`.
+"""
 criticalvalue(design::Design, x1::T) where {T<:Integer} =
     (checkx1(x1, design); design.c[x1 + 1])
 
 """
     pdf{T1<:Integer, T2<:Real}(design::Design, x1::T1, x2::T1, p::T2)
 
-Probability density function of (x1, x2) responses in stage one and two respectively
-under `design` given response rate `p`.
+Probability density function of ``(x1, x2)`` responses in stage one and two, 
+respectively, under `design` given response rate ``p``.
 
 # Parameters
 
@@ -143,17 +176,6 @@ under `design` given response rate `p`.
 | x2           | number of stage-two responses |
 | p            | response probability |
 
-# Return Value
-
-PDF of (x1, x2) given design, p
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
-julia> pdf(design, 0, 0, .4)
-```
 """
 function pdf(
   design::Design,
@@ -177,6 +199,21 @@ function pdf(
 end
 
 
+"""
+    power(design::Design, x1::T1, p::T2) where {T1<:Integer, T2<:Real}
+
+conditional power of a design for a given response rate ``p`` and
+the observed number of stage-one responses `x1`.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | a [`Design`](@ref) |
+| p            | response probability |
+| x1           | number of stage-one responses |
+
+"""
 function power(
   design::Design, x1::T1, p::T2
 ) where {T1<:Integer, T2<:Real}
@@ -196,34 +233,17 @@ end
 
 
 """
-    power{T<:Real}(design::Design, p::T)
+    power(design::Design, p::T) where {T<:Real}
 
-Compute the power of a given design.
+Power of a design for a given response rate ``p`` .
 
 # Parameters
 
 | Parameter    | Description |
 | -----------: | :---------- |
-| design       | a Design |
+| design       | a [`Design`](@ref) |
 | p            | response probability |
 
-# Details
-
-A conditional power method is also implemented as `power{T1<:Integer, T2<:Real}(design::Design, x1::T1, p::T2)`
-where `x1` is the stage-one number of responses.
-
-# Return Value
-
-Conditional power of `design` at `p` given `x1` responses in stage one.
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
-julia> power(design, .4)
-julia> power(design, 0, .4)
-```
 """
 function power(design::Design, p::T) where {T<:Real}
     
@@ -236,6 +256,23 @@ function power(design::Design, p::T) where {T<:Real}
 end
 
 
+"""
+    expectedpower(
+      design::Design, x1::T, prior::Function; mcrv::Real = mcrv(parameters(design))
+    ) where {T<:Integer}
+
+Compute the conditional expected power of a design given `x1`.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | a Design |
+| x1           | stage one number of responses |
+| prior        | prior function prior(p) for response probability p |
+| mcrv         | minimal clinically relevant value for expected power calculation |
+
+"""
 function expectedpower(
     design::Design, x1::T, prior::Function; mcrv::Real = mcrv(parameters(design))
 ) where {T<:Integer}
@@ -259,7 +296,7 @@ end
 
 
 """
-    expectedpower(design::Design, prior)
+    expectedpower(design::Design, prior::Function; mcrv::Real = mcrv(parameters(design)))
 
 Compute the expected power of a given design.
 
@@ -270,19 +307,6 @@ Compute the expected power of a given design.
 | design       | a Design |
 | prior        | prior function prior(p) for response probability p |
 
-# Details
-
-A conditional expected power method is also implemented as `power{T1<:Integer, T2<:Real}(design::Design, x1::T1, p::T2)`
-where `x1` is the stage-one number of responses.
-
-# Return Value
-
-(Conditional) expected power of `design`.
-
-# Examples
-
-ToDo
-```
 """
 function expectedpower(design::Design, prior::Function; mcrv::Real = mcrv(parameters(design)) )
 
@@ -305,7 +329,7 @@ end
 
 
 """
-    stoppingforfutility{T<:Real}(design::Design, p::T)
+    stoppingforfutility{T<:Real}(design::Design, p::T) where {T<:Real}
 
 Compute probability of stopping early for futility of a given design.
 
@@ -313,20 +337,9 @@ Compute probability of stopping early for futility of a given design.
 
 | Parameter    | Description |
 | -----------: | :---------- |
-| design       | a Design |
+| design       | a [`Design`](@ref) |
 | p            | response probability |
 
-# Return Value
-
-Probablity of stopping-for-futility
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
-julia> stoppingforfutility(design, .2)
-```
 """
 function stoppingforfutility(design::Design, p::T) where {T<:Real}
 
@@ -346,7 +359,37 @@ end
 
 
 """
-    test{T<:Integer}(design::Design, x1::T, x2::T)::Bool
+    stoppingforefficacy{T<:Real}(design::Design, p::T) where {T<:Real}
+
+Compute probability of stopping early for futility of a given design.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | a [`Design`](@ref) |
+| p            | response probability |
+
+"""
+function stoppingforefficacy(design::Design, p::T) where {T<:Real}
+
+  @checkprob p
+  n1  = interimsamplesize(design)
+  X1  = Distributions.Binomial(n1, p) # stage one responses
+  res = 0.0
+  c   = criticalvalue(design)
+  for x1 in 0:n1
+    if c[x1 + 1] == -Inf
+      res += Distributions.pdf(X1, x1)
+    end
+  end
+  return res
+
+end
+
+
+"""
+    test(design::Design, x1::T, x2::T)::Bool where {T<:Integer}
 
 Binary test decision of `design` when observing `x1` responses in stage one and
 `x2` responses in stage two.
@@ -355,21 +398,10 @@ Binary test decision of `design` when observing `x1` responses in stage one and
 
 | Parameter    | Description |
 | -----------: | :---------- |
-| design       | a Design |
+| design       | a [`Design`](@ref) |
 | x1           | number of stage-one responses |
 | x2           | number of stage-two responses |
 
-# Return Value
-
-Boolean, true if x1 + x2 > c(x1), i.e., if the null hypothesis can be rejected.
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
-julia> test(design, 0, 0)
-```
 """
 function test(design::Design, x1::T, x2::T)::Bool where {T<:Integer}
 
@@ -380,7 +412,7 @@ end
 
 
 """
-    simulate{T1<:Integer, T2<:Real}(design::Design, p::T2, nsim::T1)
+    simulate(design::Design, p::T2, nsim::T1) where {T1<:Integer, T2<:Real}
 
 Simulate `nsim` trials of design `design` with true response probability `p`.
 
@@ -388,22 +420,15 @@ Simulate `nsim` trials of design `design` with true response probability `p`.
 
 | Parameter    | Description |
 | -----------: | :---------- |
-| design       | a Design |
+| design       | a [`Design`](@ref) |
 | p            | true response probability |
-| nsim         | number of simulated trials|
+| nsim         | number of simulated trials |
 
 # Return Value
 
-A DataFrame with columns x1 (stage one responses) n (overall sample size)
-c (critical value), x2 (stage-two responses), and rejectedH0 (test decision).
+A `DataFrame` with columns `x1` (stage one responses) `n` (overall sample size)
+`c` (critical value), `x2` (stage-two responses), and `rejectedH0` (test decision).
 
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
-julia> df = simulate(design, .3, 1000)
-```
 """
 function simulate(design::Design, p::T2, nsim::T1) where {T1<:Integer, T2<:Real}
 
@@ -442,7 +467,7 @@ Evaluates the score of a design for a given set of parameters.
 
 | Parameter    | Description |
 | -----------: | :---------- |
-| design       | a Design |
+| design       | a [`Design`](@ref) |
 | params       | a parameters object holding the required information about the score |
 
 # Details
@@ -452,22 +477,11 @@ uses the parameter object stored within the design object after optimization.
 Note that this is only possible if the design was created as result of calling
 `getoptimaldesign()`.
 
-# Return Value
-
-A single real value, i.e., the score.
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> params = SimpleMinimalExpectedSampleSize(ss, .2, .4, .05, .2, .4)
-julia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())
-julia> score(design, params)
-julia> score(design)
-```
 """
 score(design::Design, params::Parameters)::Real = error("not implemented")
 
 score(design::Design)::Real = score(design, parameters(design))
+
 
 """
     jeffreysprior(design::Design)
@@ -526,6 +540,19 @@ function jeffreysprior(design::Design)
 end
 
 
+"""
+    save(filename::String, design::Design)
+
+Save design as .jls file.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| filename     | filename for sving design |
+| design       | a [`Design`](@ref) |
+
+"""
 function save(filename::String, design::Design)
   
   file = open(filename, "w")
@@ -535,6 +562,19 @@ function save(filename::String, design::Design)
 end
 
 
+"""
+    writecsv(filename::String, design::Design; label::String = "") 
+
+Save design as .csv file.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| filename     | filename for sving design |
+| design       | a [`Design`](@ref) |
+| label        | string name of design |
+"""
 function writecsv(filename::String, design::Design; label::String = "") 
 
   df = DataFrames.DataFrame(design)

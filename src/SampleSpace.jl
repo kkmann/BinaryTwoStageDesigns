@@ -1,3 +1,9 @@
+"""
+    SampleSpace
+
+Defines restrictions on the sample space of a two-stage design to be used during
+optimization.
+""" 
 mutable struct SampleSpace{TI<:Integer,TR<:Real}
 
   n1range::Vector{TI}
@@ -31,31 +37,32 @@ end # SampleSpace
 
 
 """
-    SampleSpace{T<:Integer}(n1range, nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false)
+    SampleSpace(
+      n1range,
+      nmax::TI;
+      n2min::TI = 1, 
+      maxnfact::TR = Inf, 
+      nmincont::TI = 0, 
+      maxvariables::TI = 500000, 
+      GS::Bool = false
+    ) where {TI<:Integer,TR<:Real}
 
-Constructs an object of type `SampleSpace` defining the search space for
-finding optimal two stage designs.
+Creates a [`SampleSpace`](@ref)-object which defines the search space for finding 
+optimal two-stage designs using [`optimaldesign`](@ref).
+The primary use of dedicated sample sapce objects is the incoporation of 
+specific operational constraints on optimal designs (e.g. maximal sample size).
 
 # Parameters
 
-| Parameter    | Description |
-| -----------: | :---------- |
-| n1range      | possible stage-one sample sizes, can be anything which is convertable to an integer vector |
-| n2min        | minimal stage-two sample size |
-| nmax         | maximal overall sample size (stage one and two combined) |
-| maxnfact     | nmax must be smaller than maxnfact*n1 |
-| nmincont     | minimal sample size upon rejection of the null hypothesis |
-| maxvariables | (approximate) maximal number of binary variables used when finding optimal design; if the sample space is too big this can be used to find approximate solutions to the optimization problem |
-| GS           | flag indicating wheather the design should be group-sequential (constant stage two sample size upon continuation) |
-
-# Return Value
-
-An object of type `SampleSpace` with the respective parameters.
-
-# Examples
-```julia-repl
-julia> SampleSpace(10:25, 100, n2min = 5)
-```
+| Parameter      | Description |
+| -------------: | :---------- |
+| n1range        | possible stage-one sample sizes, can be anything which is convertable to an integer vector |
+| nmax           | maximal overall sample size (stage one and two combined) |
+| [n2min]        | minimal stage-two sample size |
+| [maxnfact]     | maximal overall sample size must be smaller than `maxnfact * n1`  |
+| [nmincont]     | minimal sample size upon rejection of the null hypothesis |
+| [maxvariables] | (approximate) maximal number of binary variables used when finding optimal design; if the sample space is too big this can be used to find approximate solutions to the optimization problem |
+| [GS]           | flag indicating wheather the design should be group-sequential (constant stage two sample size upon continuation) |
 """
 function SampleSpace( # unspecific variant
   n1range,
@@ -97,11 +104,28 @@ Base.getindex(ss::SampleSpace, i) = ss
 
 Base.show(io::IO, ss::SampleSpace) = print("SampleSpace")
 
+"""
+    interimsamplesizerange(ss::SampleSpace)
+
+Return integer vector of valid ``n_1`` values.
+"""
 interimsamplesizerange(ss::SampleSpace) = ss.n1range
 
+"""
+    maxsamplesize(ss::SampleSpace)
+
+Return maximal overal sample size as integer.
+"""
 maxsamplesize(ss::SampleSpace) = ss.nmax
 
 
+"""
+    possible(
+      n1::TI2, ss::SampleSpace{TI,TR}
+    ) where {TI<:Integer,TR<:Real,TI2<:Integer}
+
+Return Bool indicating wheather `n1` is possible under `ss`.
+"""
 function possible(
   n1::TI2, ss::SampleSpace{TI,TR}
 ) where {TI<:Integer,TR<:Real,TI2<:Integer}
@@ -110,7 +134,14 @@ function possible(
 
 end # possible
 
+"""
+    possible(
+      n1::TI, n::TI, c::TR, ss::SampleSpace{TI2,TR2}
+    ) where {TI<:Integer,TR<:Real,TI2<:Integer,TR2<:Real}
 
+Return Bool indicating wheather the combination of `n1`, `n`, and `c` is 
+possible under `ss`.
+"""
 function possible(
   n1::TI, n::TI, c::TR, ss::SampleSpace{TI2,TR2}
 ) where {TI<:Integer,TR<:Real,TI2<:Integer,TR2<:Real}
@@ -135,9 +166,16 @@ function possible(
 end # possible
 
 
+"""
+    maxsamplesize(
+      ss::SampleSpace{TI,TR}, n1::TI2
+    ) where {TI<:Integer,TR<:Real,TI2<:Integer}
+
+Return maximal sample size given `n1` as integer.
+"""
 function maxsamplesize(
-    ss::SampleSpace{TI,TR}, n1::TI2
-  ) where {TI<:Integer,TR<:Real,TI2<:Integer}
+  ss::SampleSpace{TI,TR}, n1::TI2
+) where {TI<:Integer,TR<:Real,TI2<:Integer}
 
   possible(n1, ss)
   convert(TI, min(ss.nmax, floor(n1 * ss.maxnfact)))
@@ -145,6 +183,11 @@ function maxsamplesize(
 end # maxsamplesize
 
 
+"""
+    isgroupsequential(ss::SampleSpace)
+
+Indicate whether the sample space is restricted to group-sequential designs.
+"""
 isgroupsequential(ss::SampleSpace) = ss.GS
 
 

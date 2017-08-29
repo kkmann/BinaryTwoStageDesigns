@@ -99,7 +99,7 @@ struct OCEstimator{TD<:Design} <: Estimator
       end
     end
     JuMP.solve(model)
-    estimates = Array(Float64, n1 + 1, nmax - n1 + 1)
+    estimates = Array{Float64}(n1 + 1, nmax - n1 + 1)
     for x1 in 0:n1
       for x2 in 0:(nmax - n1) # brute force, not all possible
         if ispossible(design, x1, x2)
