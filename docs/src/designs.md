@@ -1,29 +1,49 @@
 # Binary Two-Stage Designs
 
 ```@docs
-BinaryTwoStageDesign{T1<:Integer, T2<:Real, PType<:Parameters}
+Design{T1<:Integer, T2<:Real, PType<:Parameters}
 
-convert(::Type{DataFrames.DataFrame}, design::BinaryTwoStageDesign)
+Design(n, c, params::PType) where {PType<:Parameters}
 
-interimsamplesize(design::BinaryTwoStageDesign)
+Design(n, c)
 
-parameters(design::BinaryTwoStageDesign)
+convert(::Type{DataFrames.DataFrame}, design::Design)
 
-samplesize(design::BinaryTwoStageDesign)
+interimsamplesize(design::Design)
 
-criticalvalue(design::BinaryTwoStageDesign)
+parameters(design::Design)
 
-power{T<:Real}(design::BinaryTwoStageDesign, p::T)
+samplesize(design::Design)
 
-stoppingforfutility{T<:Real}(design::BinaryTwoStageDesign, p::T)
+samplesize(design::Design, x1::T) where {T<:Integer}
 
-test{T<:Integer}(design::BinaryTwoStageDesign, x1::T, x2::T)
+criticalvalue(design::Design)
 
-simulate{T1<:Integer, T2<:Real}(design::BinaryTwoStageDesign, p::T2, nsim::T1)
+criticalvalue(design::Design, x1::T) where {T<:Integer}
 
-score(design::BinaryTwoStageDesign, params::Parameters)
+power{T<:Real}(design::Design, p::T)
 
-jeffreysprior(design::BinaryTwoStageDesign)
+power(design::Design, x1::T1, p::T2) where {T1<:Integer, T2<:Real}
 
-pdf{T1<:Integer, T2<:Real}(design::BinaryTwoStageDesign, x1::T1, x2::T1, p::T2)
+expectedpower(design::Design, x1::T, prior::Function; mcrv::Real = mcrv(parameters(design))) where {T<:Integer}
+
+expectedpower(design::Design, prior::Function; mcrv::Real = mcrv(parameters(design)))
+
+stoppingforfutility{T<:Real}(design::Design, p::T)
+
+stoppingforefficacy{T<:Real}(design::Design, p::T)
+
+score(design::Design, params::Parameters)
+
+test(design::Design, x1::T, x2::T) where {T<:Integer}
+
+simulate(design::Design, p::T2, nsim::T1) where {T1<:Integer, T2<:Real}
+
+jeffreysprior(design::Design)
+
+pdf(design::Design, x1::T1, x2::T1, p::T2) where {T1<:Integer, T2<:Real}
+
+save(filename::String, design::Design)
+
+writecsv(filename::String, design::Design; label::String = "") 
 ```

@@ -1,9 +1,37 @@
 """
     MESS{T_samplespace<:SampleSpace,TR<:Real} <: PointAlternative
 
+    MESS{T_samplespace<:SampleSpace}(
+      samplespace::T_samplespace,
+      p0, p1,
+      alpha, beta,
+      pess;
+      minstoppingforfutility::Real   = 0.0,
+      minconditionalpower::Real      = 0.0,
+      MONOTONECONDITIONALPOWER::Bool = true
+    )
+
 This type represents a set of parameters for finding optimal two-stage designs
 minimizing the expected sample size on a point in the parameter space subject to
-type one and  two error rate constraints.
+type one and two error rate constraints.
+
+    > [1] Simon R. Optimal two-stage designs for phase II clinical trials. `Controlled Clinical Trials` 1989; 10, 1-10.
+    
+    > [2] Kunzmann K and Kieser M. Optimal adaptive two-stage designs for single-arm trials with binary endpoint. `arxive.org` 2016; arXiv:1605.00249.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| samplespace  | a sample space object |
+| p0           | upper boundary of the null hypothesis |
+| p1           | point alternative to power on |
+| alpha        | maximal tolerable type one error rate |
+| beta         | maximal tolerable type two error rate on p1 |
+| pess         | response rate under which to minimize expected sample size |
+| minstoppingforfutility | minimal probability for stopping for futility under p0 |
+| minconditionalpower | minimal conditional power upon continuation to stage two |
+| MONOTONECONDITIONALPOWER | if true, the conditional power must be monotonously increasing, this constraint is only relevant if nmax is set very restrictively |
 """
 mutable struct MESS{TR<:Real} <: PointAlternative
 
@@ -41,44 +69,6 @@ mutable struct MESS{TR<:Real} <: PointAlternative
 
 end # MESS
 
-"""
-    MESS{T_samplespace<:SampleSpace}(
-        samplespace::T_samplespace,
-        p0, p1,
-        alpha, beta,
-        pess;
-        minstoppingforfutility::Real   = 0.0,
-        minconditionalpower::Real      = 0.0,
-        MONOTONECONDITIONALPOWER::Bool = true
-    )
-
-Constructs a parameter object of type MESS with the
-given values.
-
-# Parameters
-
-| Parameter    | Description |
-| -----------: | :---------- |
-| samplespacer | a sample space object |
-| p0           | upper boundary of the null hypothesis |
-| p1           | point alternative to power on |
-| alpha        | maximal tolerable type one error rate |
-| beta         | maximal tolerable type two error rate on p1 |
-| pess         | response rate under which to minimize expected sample size |
-| minstoppingforfutility | minimal probability for stopping for futility under p0 |
-| minconditionalpower | minimal conditional power upon continuation to stage two |
-| MONOTONECONDITIONALPOWER | if true, the conditional power must be monotonously increasing, this constraint is only relevant if nmax is set very restrictively |
-
-# Return Value
-
-An object of type MESS.
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> params = MESS(ss, .2, .4, .05, .2, .4)
-```
-"""
 function MESS(
   samplespace::SampleSpace,
   p0::Real, p1::Real;

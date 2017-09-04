@@ -1,3 +1,40 @@
+"""
+    MBESS{TI<:Integer,TR<:Real} <: VagueAlternative
+
+    MBESS(
+      samplespace::SampleSpace,
+      p0::Real, pmcrv::Real, prior;
+      a::Real = 1, b::Real = 1, targetpower::Real = .8, k::Real = 1,
+      alpha::Real = 0.05, beta::Real = 0.2,
+      minconditionalpower::Real = 0.0, MONOTONECONDITIONALPOWER::Bool = true,
+      npriorpivots::Integer = 50, ngpivots::Integer = 15,
+      label::String = ""
+    )
+
+This type represents a set of parameters for finding optimal two-stage designs
+minimizing expected sample size subject to a constraint on expected (transformed)
+power.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| samplespace  | a sample space object |
+| p0           | upper boundary of the null hypothesis |
+| pmcrv        | point alternative to power on |
+| prior        | prior distribution on true response rate, expected score under the prior conditional on a relevant effect is minimized |
+| a            | scaling parameter of nonlinear power transfrom (set to infinity for thresholding) |
+| b            | scaling parameter of nonlinear power transfrom |
+| targetpower  | target power for thresholding |
+| k            | factor for non-responder costs |
+| alpha        | maximal type one error rate |
+| beta         | expected transformed power must be larger than 1 - beta |
+| minconditionalpower | minimal conditional power upon continuation to stage two |
+| MONOTONECONDITIONALPOWER | if true, the conditional power must be monotonously increasing, this constraint is only relevant if nmax is set very restrictively |
+| npriorpivots | number of pivot points for integration of prior |
+| npivots      | number of pivot points piecewise linear approximation of local score |
+| label        | descriptive string for parameter set |
+"""
 mutable struct MBESS{TI<:Integer,TR<:Real} <: VagueAlternative
 
   label::String

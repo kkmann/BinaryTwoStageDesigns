@@ -30,12 +30,12 @@ struct ECPInterval{TE<:Estimator,TR<:Real} <: ConfidenceInterval
 
   estimator::TE
   confidence::TR
-  limits::Array{TR,2}
+  limits::Array{TR,3}
 
   function ECPInterval{TE,TR}(
     estimator::TE,
     confidence::TR,
-    k::Integer #  = 1001
+    k::Integer
   ) where {TE<:Estimator,TR<:Real}
 
     @checkprob confidence
@@ -66,8 +66,8 @@ struct ECPInterval{TE<:Estimator,TR<:Real} <: ConfidenceInterval
     pvals_geq = sortrows(pvals_geq, by = x -> x[4], rev = true)
 
     for i in 1:size(supp, 1)
-        x1, x2 = supp[i, :]
-        limits[x1 + 1, x2 + 1, :] = get_limits(d, x1, x2, confidence, pvals_leq, pvals_geq, grid, k)
+      x1, x2 = supp[i, :]
+      limits[x1 + 1, x2 + 1, :] = get_limits(d, x1, x2, confidence, pvals_leq, pvals_geq, grid, k)
     end
     new(estimator, confidence, limits)
 
@@ -78,10 +78,11 @@ end # ECPInterval
 
 function ECPInterval(
   estimator::TE; 
-  confidence::TR = .9, k::Integer = 1001
+  confidence::TR = .9, 
+  k::Integer = 1001
 ) where {TE<:Estimator,TR<:Real} 
 
-  return ECPInterval{TE,TR}(estimator; confidence, k)
+  return ECPInterval{TE,TR}(estimator, confidence, k)
 
 end
 
@@ -97,8 +98,8 @@ function get_limits(
   d::Design, x1::T1, x2::T1, confidence::T2, pvals_leq, pvals_geq, grid, k::T1
 ) where {T1<:Integer, T2<:Real}
 
-  pvals_leq = pvals_leq[(pvals_leq[:, 1] .== x1) & (pvals_leq[:, 2] .== x2), 5:(k + 4)][1, :]
-  pvals_geq = pvals_geq[(pvals_geq[:, 1] .== x1) & (pvals_geq[:, 2] .== x2), 5:(k + 4)][1, :]
+  pvals_leq = pvals_leq[(pvals_leq[:, 1] .== x1) .& (pvals_leq[:, 2] .== x2), 5:(k + 4)][1, :]
+  pvals_geq = pvals_geq[(pvals_geq[:, 1] .== x1) .& (pvals_geq[:, 2] .== x2), 5:(k + 4)][1, :]
 
   indlow = findfirst(pvals_leq .>= (1 - confidence)/2.0)
   indlow = indlow == 0 ? 1 : indlow

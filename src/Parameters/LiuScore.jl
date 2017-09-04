@@ -1,3 +1,41 @@
+"""
+    LiuScore{TI<:Integer,TR<:Real}
+
+    LiuScore(
+      samplespace::SampleSpace,
+      p0::Real, pmcrv::Real, prior, 
+      alpha::Real, beta::Real,
+      fs::Real, fp::Real;
+      npriorpivots::Integer = 50,
+      npivots::Integer = 15,
+      minconditionalpower::Real = 0.0,
+      MONOTONECONDITIONALPOWER::Bool = false,
+      label::String = ""
+    )
+
+This type represents a set of parameters for finding optimal two-stage designs
+minimizing a variant of the criterion proposed by Liu et al. in [1]. 
+
+> [1] Liu G, Frank G, Zhu C, and Lu C. Evaluating the adaptive performance of flexible sample size designs with treatment difference in an interval. `Statistics in Medicine` 2008; 27(4): 584-596.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| samplespace  | a sample space object |
+| p0           | upper boundary of the null hypothesis |
+| pmcrv        | point alternative to power on |
+| prior        | prior distribution on true response rate, expected score under the prior conditional on a relevant effect is minimized |
+| alpha        | maximal tolerable type one error rate |
+| beta         | maximal tolerable type two error rate on p1 |
+| fs           | scaling parameter as described in [1] |
+| fp           | scaling parameter as described in [1] |
+| npriorpivots | number of pivot points for integration of prior |
+| npivots      | number of pivot points piecewise linear approximation of local score |
+| minconditionalpower | minimal conditional power upon continuation to stage two |
+| MONOTONECONDITIONALPOWER | if true, the conditional power must be monotonously increasing, this constraint is only relevant if nmax is set very restrictively |
+| label        | descriptive string for parameter set |
+"""
 mutable struct LiuScore{TI<:Integer,TR<:Real} <: VagueAlternative
     
   label::String

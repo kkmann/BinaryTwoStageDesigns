@@ -8,7 +8,7 @@ Depth = 3
 ## Point estimation
 
 ```@docs
-BinaryTwoStageDesignEstimator
+Estimator
 
 estimate{T<:Integer}(estimator::BinaryTwoStageDesignEstimator, x1::T, x2::T)
 

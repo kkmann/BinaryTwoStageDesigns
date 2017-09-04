@@ -22,6 +22,12 @@ A quickstart guide is available as [jupyter notebook](https://github.com/imbi-he
 
 ```@contents
 Depth = 3
+Pages = [
+  "sample_space.md",
+  "parameters.md",
+  "designs.md",
+  "optimal_designs.md"
+]
 ```
 
 ## Index

@@ -1,14 +1,16 @@
-# Sample Spaces
+# The Sample Space
 
-Sample spaces are used to encode the feasible space of binary two-stage designs
-for optimization.
-Currently, only a single option `SimpleSampleSpace` exists which allows to
-specify a range of possible stage-one sample sizes, maximal overall sample size
-and various nicety constraints.
+Sample space objects can be used to encode the feasible space of binary 
+two-stage designs for optimization.
 
 ```@docs
 SampleSpace
 
-SimpleSampleSpace{T<:Integer}(n1range, nmax::T; n2min::T = 1, maxnfact::Real = Inf, nmincont::T = 0, maxvariables::T = 500000, GS::Bool = false)
+interimsamplesizerange(ss::SampleSpace)
 
+maxsamplesize(ss::SampleSpace)
+
+maxsamplesize(ss::SampleSpace{TI,TR}, n1::TI2) where {TI<:Integer,TR<:Real,TI2<:Integer}
+
+isgroupsequential(ss::SampleSpace)
 ```
