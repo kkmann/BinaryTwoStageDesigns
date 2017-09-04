@@ -284,7 +284,7 @@ where `x1` is the stage-one number of responses.
 ToDo
 ```
 """
-function expectedpower(design::Design, prior::Function; mcrv::Real = mcrv(parameters(design)) )
+function expectedpower(design::Design, prior::Function; mcrv::Real = BinaryTwoStageDesigns.mcrv(parameters(design)) )
 
   z   = QuadGK.quadgk(
       p -> prior(p),             # f(p)

@@ -42,7 +42,7 @@ mutable struct LiuScore{TI<:Integer,TR<:Real} <: VagueAlternative
     new(
       label,
       samplespace, 
-      p0, pmcrv, cprior, 
+      p0, pmcrv, conditionalprior, 
       alpha, beta, 
       mincondpower, 
       fs, fp,

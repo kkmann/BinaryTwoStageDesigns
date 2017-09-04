@@ -215,7 +215,7 @@ function completemodel(ipm::IPModel, params::EB, n1::T) where {T<:Integer}
         z[x1 + 1] = quadgk(p -> prior(p)*dbinom(x1, n1, p), pmcrv, 1, abstol = .001)[1]
     end
     JuMP.@expression(m, cep[x1 in 0:n1], # define expressions for conditional power given X1=x1
-        sum(quadgk(p -> prior(p)*dbinom(x1, n1, p)*g(params, _cpr.(x1, n1, n, c, p)), pmcrv, 1, abstol = 0.001)[1] / z[x1 + 1] * y[x1, n, c]
+        sum(quadgk(p -> prior(p) * dbinom(x1, n1, p) * _cpr.(x1, n1, n, c, p), pmcrv, 1, abstol = 0.001)[1] / z[x1 + 1] * y[x1, n, c]
             for n in nvals, c in cvals
         )
     )

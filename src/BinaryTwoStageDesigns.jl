@@ -18,7 +18,7 @@ import MathProgBase
 # Parameters.jl
 export 
   Parameters, 
-    samplespace, maxsamplesize, isgroupsequential, allowsstoppingforefficacy, label,
+    samplespace, maxsamplesize, isgroupsequential, allowsstoppingforefficacy, label, mcrv,
   NoParameters,
   PointAlternative,
     null, mtoer, alternative, mtter,
