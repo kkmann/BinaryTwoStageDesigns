@@ -37,14 +37,14 @@ julia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)
 julia> limits(ci, 0, 0)
 ```
 """
-limits(ci::ConfidenceInterval, x1::T, x2::T) where {T<:Integer}= error("not implemented!")
+limits(ci::ConfidenceInterval, x1::T, x2::T) where {T<:Integer} = error("not implemented!")
 
 confidence(ci::ConfidenceInterval) = try return ci.confidence catch error("not implemented") end
 
 design(ci::ConfidenceInterval) = try return ci.design catch error("not implemented") end
 
 """
-    coverage{T<:Real}(ci::ConfidenceInterval, p::T; orientation = "overall")
+    coverage(ci::ConfidenceInterval, p::T; orientation::String = "overall") where {T<:Real}
 
 Return coverage of given confidence interval and response rate `p`.
 
@@ -92,7 +92,7 @@ end
 
 
 """
-    meanwidth{T<:Real}(ci::ConfidenceInterval, p::T)
+    meanwidth(ci::ConfidenceInterval, p::T) where {T<:Real}
 
 Mean width of given confidence interval and response rate `p`.
 
@@ -132,7 +132,7 @@ end
 
 
 """
-    meaninterval{T<:Real}(ci::ConfidenceInterval, p::T)
+    meaninterval(ci::ConfidenceInterval, p::T) where {T<:Real}
 
 Mean interval (average limits) of given confidence interval and response rate `p`.
 
@@ -172,7 +172,7 @@ end
 
 
 """
-    findinconsistencies{T<:Real}(ci::ConfidenceInterval)
+    findinconsistencies(ci::ConfidenceInterval, p0::T) where {T<:Real}
 
 Return outcomes where the confidence interval contradicts the designs test decision.
 

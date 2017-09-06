@@ -1,19 +1,9 @@
 """
     RBEstimator <: Estimator
 
-    RBEstimator(design::Design)
-
 Unbiased estimator for response rate `p` see also:
 
-Kunzmann K, Kieser M. Point estimation and p‐values in phase II adaptive two‐stage designs with a binary endpoint. Statistics in medicine. 2017 Mar 15;36(6):971-84.
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> interimsamplesize(ss)
-julia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())
-julia> est = RBEstimator(design)
-```
+> Kunzmann K, Kieser M. Point estimation and p‐values in phase II adaptive two‐stage designs with a binary endpoint. Statistics in medicine. 2017 Mar 15;36(6):971-84.
 """
 struct RBEstimator{TD<:Design} <: Estimator
     
@@ -23,7 +13,14 @@ struct RBEstimator{TD<:Design} <: Estimator
 
 end # RBEstimator
 
+"""
+    RBEstimator(design::TD) where {TD<:Design}
 
+Create unbiased estimator for response rate `p` see also:
+
+> Kunzmann K, Kieser M. Point estimation and p‐values in phase II adaptive two‐stage designs with a binary endpoint. Statistics in medicine. 2017 Mar 15;36(6):971-84.
+
+"""
 RBEstimator(design::TD) where {TD<:Design} = RBEstimator{TD}(design)
 
 Base.show(io::IO, estimator::RBEstimator) = print("RBEstimator")

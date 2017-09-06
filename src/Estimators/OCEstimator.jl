@@ -1,33 +1,9 @@
 """
     OCEstimator <: Estimator
 
-    OCEstimator{TS<:MathProgBase.AbstractMathProgSolver}(
-        design::Design,
-        solver::TS;
-        prior::Function = jeffreysprior(design),
-        k = 100
-    )
-
 Compatible estimator minimizing expected MSE for response rate `p` see also:
 
-Kunzmann K, Kieser M. Point estimation and p‐values in phase II adaptive two‐stage designs with a binary endpoint. Statistics in medicine. 2017 Mar 15;36(6):971-84.
-
-# Parameters
-
-| Parameter    | Description |
-| -----------: | :---------- |
-| design       | Design |
-| solver       | MathProgBase solver, must support quadratic expressions |
-| prior        | weight function for MSE values at different `p`, must be of form `f(p::Real)::Real` |
-| k            | number of equally spaced grid-points for evaluation of MSE and prior |
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> interimsamplesize(ss)
-julia> design = getoptimaldesign(15, params, Gurobi.GurobiSolver())
-julia> est = OCEstimator(design, Gurobi.GurobiSolver())
-```
+> Kunzmann K, Kieser M. Point estimation and p‐values in phase II adaptive two‐stage designs with a binary endpoint. Statistics in medicine. 2017 Mar 15;36(6):971-84.
 """
 struct OCEstimator{TD<:Design} <: Estimator
   
@@ -115,7 +91,27 @@ struct OCEstimator{TD<:Design} <: Estimator
 
 end
 
+"""
+    OCEstimator{TS<:MathProgBase.AbstractMathProgSolver}(
+      design::Design,
+      solver::TS;
+      prior::Function = jeffreysprior(design),
+      k = 100
+    )
 
+Create compatible estimator minimizing expected MSE for response rate `p` see also:
+
+> Kunzmann K, Kieser M. Point estimation and p‐values in phase II adaptive two‐stage designs with a binary endpoint. Statistics in medicine. 2017 Mar 15;36(6):971-84.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | Design |
+| solver       | MathProgBase solver, must support quadratic expressions |
+| prior        | weight function for MSE values at different `p`, must be of form `f(p::Real)::Real` |
+| k            | number of equally spaced grid-points for evaluation of MSE and prior |
+"""
 function OCEstimator(
   design::TD, solver::TS; 
   prior::Function = jeffreysprior(design), k::Integer = 100

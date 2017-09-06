@@ -13,7 +13,7 @@
 
 This type represents a set of parameters for finding optimal two-stage designs
 minimizing expected sample size subject to a constraint on expected (transformed)
-power.
+power (Minimal Bayesian Expected Sample Size).
 
 # Parameters
 

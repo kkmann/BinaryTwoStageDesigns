@@ -57,6 +57,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "sample_space.html#BinaryTwoStageDesigns.SampleSpace-Union{Tuple{Any,TI}, Tuple{TI}, Tuple{TR}} where TR<:Real where TI<:Integer",
+    "page": "Sample Spaces",
+    "title": "BinaryTwoStageDesigns.SampleSpace",
+    "category": "Method",
+    "text": "SampleSpace(\n  n1range,\n  nmax::TI;\n  n2min::TI = 1, \n  maxnfact::TR = Inf, \n  nmincont::TI = 0, \n  maxvariables::TI = 500000, \n  GS::Bool = false\n) where {TI<:Integer,TR<:Real}\n\nCreates a SampleSpace-object which defines the search space for finding  optimal two-stage designs using optimaldesign. The primary use of dedicated sample sapce objects is the incoporation of  specific operational constraints on optimal designs (e.g. maximal sample size).\n\nParameters\n\nParameter Description\nn1range possible stage-one sample sizes, can be anything which is convertable to an integer vector\nnmax maximal overall sample size (stage one and two combined)\n[n2min] minimal stage-two sample size\n[maxnfact] maximal overall sample size must be smaller than maxnfact * n1\n[nmincont] minimal sample size upon rejection of the null hypothesis\n[maxvariables] (approximate) maximal number of binary variables used when finding optimal design; if the sample space is too big this can be used to find approximate solutions to the optimization problem\n[GS] flag indicating wheather the design should be group-sequential (constant stage two sample size upon continuation)\n\n\n\n"
+},
+
+{
     "location": "sample_space.html#BinaryTwoStageDesigns.interimsamplesizerange-Tuple{BinaryTwoStageDesigns.SampleSpace}",
     "page": "Sample Spaces",
     "title": "BinaryTwoStageDesigns.interimsamplesizerange",
@@ -93,7 +101,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Sample Spaces",
     "title": "The Sample Space",
     "category": "section",
-    "text": "Sample space objects can be used to encode the feasible space of binary  two-stage designs for optimization.SampleSpace\n\ninterimsamplesizerange(ss::SampleSpace)\n\nmaxsamplesize(ss::SampleSpace)\n\nmaxsamplesize(ss::SampleSpace{TI,TR}, n1::TI2) where {TI<:Integer,TR<:Real,TI2<:Integer}\n\nisgroupsequential(ss::SampleSpace)"
+    "text": "Sample space objects can be used to encode the feasible space of binary  two-stage designs for optimization.SampleSpace\n\n SampleSpace(\n  n1range,\n  nmax::TI;\n  n2min::TI = 1, \n  maxnfact::TR = Inf, \n  nmincont::TI = 0, \n  maxvariables::TI = 500000, \n  GS::Bool = false\n) where {TI<:Integer,TR<:Real}\n\ninterimsamplesizerange(ss::SampleSpace)\n\nmaxsamplesize(ss::SampleSpace)\n\nmaxsamplesize(ss::SampleSpace{TI,TR}, n1::TI2) where {TI<:Integer,TR<:Real,TI2<:Integer}\n\nisgroupsequential(ss::SampleSpace)"
 },
 
 {
@@ -173,7 +181,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Design Parameters",
     "title": "BinaryTwoStageDesigns.MESS",
     "category": "Type",
-    "text": "MESS{T_samplespace<:SampleSpace,TR<:Real} <: PointAlternative\n\nMESS{T_samplespace<:SampleSpace}(\n  samplespace::T_samplespace,\n  p0, p1,\n  alpha, beta,\n  pess;\n  minstoppingforfutility::Real   = 0.0,\n  minconditionalpower::Real      = 0.0,\n  MONOTONECONDITIONALPOWER::Bool = true\n)\n\nThis type represents a set of parameters for finding optimal two-stage designs minimizing the expected sample size on a point in the parameter space subject to type one and two error rate constraints.\n\n> [1] Simon R. Optimal two-stage designs for phase II clinical trials. `Controlled Clinical Trials` 1989; 10, 1-10.\n\n> [2] Kunzmann K and Kieser M. Optimal adaptive two-stage designs for single-arm trials with binary endpoint. `arxive.org` 2016; arXiv:1605.00249.\n\nParameters\n\nParameter Description\nsamplespace a sample space object\np0 upper boundary of the null hypothesis\np1 point alternative to power on\nalpha maximal tolerable type one error rate\nbeta maximal tolerable type two error rate on p1\npess response rate under which to minimize expected sample size\nminstoppingforfutility minimal probability for stopping for futility under p0\nminconditionalpower minimal conditional power upon continuation to stage two\nMONOTONECONDITIONALPOWER if true, the conditional power must be monotonously increasing, this constraint is only relevant if nmax is set very restrictively\n\n\n\n"
+    "text": "MESS{T_samplespace<:SampleSpace,TR<:Real} <: PointAlternative\n\nMESS{T_samplespace<:SampleSpace}(\n  samplespace::T_samplespace,\n  p0, p1,\n  alpha, beta,\n  pess;\n  minstoppingforfutility::Real   = 0.0,\n  minconditionalpower::Real      = 0.0,\n  MONOTONECONDITIONALPOWER::Bool = true\n)\n\nThis type represents a set of parameters for finding optimal two-stage designs minimizing the expected sample size on a point in the parameter space subject to type one and two error rate constraints (Minimal Expected Sample Size).\n\n> [1] Simon R. Optimal two-stage designs for phase II clinical trials. `Controlled Clinical Trials` 1989; 10, 1-10.\n\n> [2] Kunzmann K and Kieser M. Optimal adaptive two-stage designs for single-arm trials with binary endpoint. `arxive.org` 2016; arXiv:1605.00249.\n\nParameters\n\nParameter Description\nsamplespace a sample space object\np0 upper boundary of the null hypothesis\np1 point alternative to power on\nalpha maximal tolerable type one error rate\nbeta maximal tolerable type two error rate on p1\npess response rate under which to minimize expected sample size\nminstoppingforfutility minimal probability for stopping for futility under p0\nminconditionalpower minimal conditional power upon continuation to stage two\nMONOTONECONDITIONALPOWER if true, the conditional power must be monotonously increasing, this constraint is only relevant if nmax is set very restrictively\n\n\n\n"
 },
 
 {
@@ -205,7 +213,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Design Parameters",
     "title": "BinaryTwoStageDesigns.EB",
     "category": "Type",
-    "text": "EB{TI<:Integer,TR<:Real} <: VagueAlternative\n\nEB( # default values\n  samplespace::SampleSpace,\n  p0::Real, pmcrv::Real, prior,\n  gamma::Real, lambda::Real;\n  a::Real = 1, b::Real = 1, targetpower::Real = .8, k::Real = 1,\n  alpha::Real = 0.05,\n  minconditionalpower::Real = 0.0, MONOTONECONDITIONALPOWER::Bool = true,\n  npriorpivots::Integer = 50, ngpivots::Integer = 15,\n  label::String = \"\"\n)\n\nThis type represents a set of parameters for finding optimal two-stage designs maximizing the expected benefit.\n\nParameters\n\nParameter Description\nsamplespace a sample space object\np0 upper boundary of the null hypothesis\npmcrv point alternative to power on\nprior prior distribution on true response rate, expected score under the prior conditional on a relevant effect is minimized\ngamma per patient costs\nlambda benefit of correctly rejecting null if relevant effect exists\na scaling parameter of nonlinear power transfrom (set to infinity for thresholding)\nb scaling parameter of nonlinear power transfrom\ntargetpower target power for thresholding\nk factor for non-responder costs\nalpha maximal type one error rate\nminconditionalpower minimal conditional power upon continuation to stage two\nMONOTONECONDITIONALPOWER if true, the conditional power must be monotonously increasing, this constraint is only relevant if nmax is set very restrictively\nnpriorpivots number of pivot points for integration of prior\nnpivots number of pivot points piecewise linear approximation of local score\nlabel descriptive string for parameter set\n\n\n\n"
+    "text": "EB{TI<:Integer,TR<:Real} <: VagueAlternative\n\nEB( # default values\n  samplespace::SampleSpace,\n  p0::Real, pmcrv::Real, prior,\n  gamma::Real, lambda::Real;\n  a::Real = 1, b::Real = 1, targetpower::Real = .8, k::Real = 1,\n  alpha::Real = 0.05,\n  minconditionalpower::Real = 0.0, MONOTONECONDITIONALPOWER::Bool = true,\n  npriorpivots::Integer = 50, ngpivots::Integer = 15,\n  label::String = \"\"\n)\n\nThis type represents a set of parameters for finding optimal two-stage designs maximizing the expected benefit (EB).\n\nParameters\n\nParameter Description\nsamplespace a sample space object\np0 upper boundary of the null hypothesis\npmcrv point alternative to power on\nprior prior distribution on true response rate, expected score under the prior conditional on a relevant effect is minimized\ngamma per patient costs\nlambda benefit of correctly rejecting null if relevant effect exists\na scaling parameter of nonlinear power transfrom (set to infinity for thresholding)\nb scaling parameter of nonlinear power transfrom\ntargetpower target power for thresholding\nk factor for non-responder costs\nalpha maximal type one error rate\nminconditionalpower minimal conditional power upon continuation to stage two\nMONOTONECONDITIONALPOWER if true, the conditional power must be monotonously increasing, this constraint is only relevant if nmax is set very restrictively\nnpriorpivots number of pivot points for integration of prior\nnpivots number of pivot points piecewise linear approximation of local score\nlabel descriptive string for parameter set\n\n\n\n"
 },
 
 {
@@ -221,7 +229,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Design Parameters",
     "title": "BinaryTwoStageDesigns.MBESS",
     "category": "Type",
-    "text": "MBESS{TI<:Integer,TR<:Real} <: VagueAlternative\n\nMBESS(\n  samplespace::SampleSpace,\n  p0::Real, pmcrv::Real, prior;\n  a::Real = 1, b::Real = 1, targetpower::Real = .8, k::Real = 1,\n  alpha::Real = 0.05, beta::Real = 0.2,\n  minconditionalpower::Real = 0.0, MONOTONECONDITIONALPOWER::Bool = true,\n  npriorpivots::Integer = 50, ngpivots::Integer = 15,\n  label::String = \"\"\n)\n\nThis type represents a set of parameters for finding optimal two-stage designs minimizing expected sample size subject to a constraint on expected (transformed) power.\n\nParameters\n\nParameter Description\nsamplespace a sample space object\np0 upper boundary of the null hypothesis\npmcrv point alternative to power on\nprior prior distribution on true response rate, expected score under the prior conditional on a relevant effect is minimized\na scaling parameter of nonlinear power transfrom (set to infinity for thresholding)\nb scaling parameter of nonlinear power transfrom\ntargetpower target power for thresholding\nk factor for non-responder costs\nalpha maximal type one error rate\nbeta expected transformed power must be larger than 1 - beta\nminconditionalpower minimal conditional power upon continuation to stage two\nMONOTONECONDITIONALPOWER if true, the conditional power must be monotonously increasing, this constraint is only relevant if nmax is set very restrictively\nnpriorpivots number of pivot points for integration of prior\nnpivots number of pivot points piecewise linear approximation of local score\nlabel descriptive string for parameter set\n\n\n\n"
+    "text": "MBESS{TI<:Integer,TR<:Real} <: VagueAlternative\n\nMBESS(\n  samplespace::SampleSpace,\n  p0::Real, pmcrv::Real, prior;\n  a::Real = 1, b::Real = 1, targetpower::Real = .8, k::Real = 1,\n  alpha::Real = 0.05, beta::Real = 0.2,\n  minconditionalpower::Real = 0.0, MONOTONECONDITIONALPOWER::Bool = true,\n  npriorpivots::Integer = 50, ngpivots::Integer = 15,\n  label::String = \"\"\n)\n\nThis type represents a set of parameters for finding optimal two-stage designs minimizing expected sample size subject to a constraint on expected (transformed) power (Minimal Bayesian Expected Sample Size).\n\nParameters\n\nParameter Description\nsamplespace a sample space object\np0 upper boundary of the null hypothesis\npmcrv point alternative to power on\nprior prior distribution on true response rate, expected score under the prior conditional on a relevant effect is minimized\na scaling parameter of nonlinear power transfrom (set to infinity for thresholding)\nb scaling parameter of nonlinear power transfrom\ntargetpower target power for thresholding\nk factor for non-responder costs\nalpha maximal type one error rate\nbeta expected transformed power must be larger than 1 - beta\nminconditionalpower minimal conditional power upon continuation to stage two\nMONOTONECONDITIONALPOWER if true, the conditional power must be monotonously increasing, this constraint is only relevant if nmax is set very restrictively\nnpriorpivots number of pivot points for integration of prior\nnpivots number of pivot points piecewise linear approximation of local score\nlabel descriptive string for parameter set\n\n\n\n"
 },
 
 {
@@ -449,11 +457,251 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "optimal_designs.html#BinaryTwoStageDesigns.optimaldesign-Tuple{BinaryTwoStageDesigns.Parameters,MathProgBase.SolverInterface.AbstractMathProgSolver}",
+    "page": "Finding Optimal Designs",
+    "title": "BinaryTwoStageDesigns.optimaldesign",
+    "category": "Method",
+    "text": "getoptimaldesign{TS<:MathProgBase.AbstractMathProgSolver}(\n    parameters::Parameters,\n    solver::TS;\n    VERBOSE::Integer = 1\n)\n\nFind the optimal two-stage design for given parameters (optimizes over n1 as well).\n\nParameters\n\nParameter Description\nnparameters paramters object defining the optimality criterion\nsolver MathProgBase solver used for optimization\nVERBOSE control verbosity during optimization\n\nReturn Value\n\nTuple, first element is the Design object optimized for given parameter set and the second element is a dictionary with n1, scores and respective optimal designs.\n\nExamples\n\njulia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)\njulia> interimsamplesize(ss)\njulia> design, res = getoptimaldesign(params, solver = Gurobi.GurobiSolver())\n\n\n\n"
+},
+
+{
     "location": "optimal_designs.html#Optimal-Two-Stage-Designs-1",
     "page": "Finding Optimal Designs",
     "title": "Optimal Two-Stage Designs",
     "category": "section",
-    "text": "The technical background in available at arxiv.org.optimaldesign(n1::Integer, parameters::Parameters, solver::MathProgBase.AbstractMathProgSolver)"
+    "text": "The technical background in available at arxiv.org.optimaldesign(n1::Integer, parameters::Parameters, solver::MathProgBase.AbstractMathProgSolver)\n\noptimaldesign(\n  parameters::Parameters,\n  solver::MathProgBase.AbstractMathProgSolver;\n  VERBOSE::Integer = 1,\n  EARLYTERMINATION::Bool = false\n)"
+},
+
+{
+    "location": "inference.html#",
+    "page": "Inference",
+    "title": "Inference",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "inference.html#Inference-1",
+    "page": "Inference",
+    "title": "Inference",
+    "category": "section",
+    "text": "Pages = [\"inference.md\"]\nDepth = 3"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.Estimator",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.Estimator",
+    "category": "Type",
+    "text": "Estimator\n\nAbstract base type for all estimators.\n\n\n\n"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.estimate-Union{Tuple{BinaryTwoStageDesigns.Estimator,T,T}, Tuple{T}} where T<:Integer",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.estimate",
+    "category": "Method",
+    "text": "estimate{T<:Integer}(estimator::Estimator, x1::T, x2::T)\n\nEstimate the response rate from observed x1 and x2.\n\nParameters\n\nParameter Description\nestimator any BinaryTwoStageDeisgnEstimator object\nx1 stage-one responses\nx2 stage-two responses\n\nReturn Value\n\nReal, estimated response rate.\n\nExamples\n\njulia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)\njulia> interimsamplesize(ss)\njulia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())\njulia> est = MLE(design)\njulia> estimate(est, 0, 0)\n\n\n\n"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.bias-Union{Tuple{BinaryTwoStageDesigns.Estimator,T}, Tuple{T}} where T<:Real",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.bias",
+    "category": "Method",
+    "text": "bias{T<:Real}(estimator::Estimator, p::T)\n\nBias of estimator given response rate p.\n\nParameters\n\nParameter Description\nestimator any BinaryTwoStageDeisgnEstimator object\np0 upper boundary of null hypothesis\n\nReturn Value\n\nReal, bias given p.\n\nExamples\n\njulia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)\njulia> interimsamplesize(ss)\njulia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())\njulia> est = MLE(design)\njulia> bias(est, .3)\n\n\n\n"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.rmse-Union{Tuple{BinaryTwoStageDesigns.Estimator,T}, Tuple{T}} where T<:Real",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.rmse",
+    "category": "Method",
+    "text": "rmse{T<:Real}(estimator::Estimator, p::T)\n\nRoot mean squared error of estimator given response rate p.\n\nParameters\n\nParameter Description\nestimator any BinaryTwoStageDeisgnEstimator object\np0 upper boundary of null hypothesis\n\nReturn Value\n\nReal, RMSE given p.\n\nExamples\n\njulia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)\njulia> interimsamplesize(ss)\njulia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())\njulia> est = MLE(design)\njulia> rmse(est, .3)\n\n\n\n"
+},
+
+{
+    "location": "inference.html#Point-estimation-1",
+    "page": "Inference",
+    "title": "Point estimation",
+    "category": "section",
+    "text": "Estimator\n\nestimate{T<:Integer}(estimator::Estimator, x1::T, x2::T)\n\nbias{T<:Real}(estimator::Estimator, p::T)\n\nrmse{T<:Real}(estimator::Estimator, p::T)"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.MLEstimator-Tuple{BinaryTwoStageDesigns.Design}",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.MLEstimator",
+    "category": "Method",
+    "text": "MLEstimator(design::TD) where {TD<:Design}\n\nCreate maximum likelihood estimator for response rate under given design.\n\n\n\n"
+},
+
+{
+    "location": "inference.html#Maximum-likelihood-estimator-1",
+    "page": "Inference",
+    "title": "Maximum likelihood estimator",
+    "category": "section",
+    "text": "MLEstimator(design::Design)"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.RBEstimator-Tuple{BinaryTwoStageDesigns.Design}",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.RBEstimator",
+    "category": "Method",
+    "text": "RBEstimator(design::TD) where {TD<:Design}\n\nCreate unbiased estimator for response rate p see also:\n\nKunzmann K, Kieser M. Point estimation and p‐values in phase II adaptive two‐stage designs with a binary endpoint. Statistics in medicine. 2017 Mar 15;36(6):971-84.\n\n\n\n"
+},
+
+{
+    "location": "inference.html#Unbiased-estimator-1",
+    "page": "Inference",
+    "title": "Unbiased estimator",
+    "category": "section",
+    "text": "RBEstimator(design::Design)"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.OCEstimator-Union{Tuple{BinaryTwoStageDesigns.Design,TS}, Tuple{TS}} where TS<:MathProgBase.SolverInterface.AbstractMathProgSolver",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.OCEstimator",
+    "category": "Method",
+    "text": "OCEstimator{TS<:MathProgBase.AbstractMathProgSolver}(\n  design::Design,\n  solver::TS;\n  prior::Function = jeffreysprior(design),\n  k = 100\n)\n\nCreate compatible estimator minimizing expected MSE for response rate p see also:\n\nKunzmann K, Kieser M. Point estimation and p‐values in phase II adaptive two‐stage designs with a binary endpoint. Statistics in medicine. 2017 Mar 15;36(6):971-84.\n\nParameters\n\nParameter Description\ndesign Design\nsolver MathProgBase solver, must support quadratic expressions\nprior weight function for MSE values at different p, must be of form f(p::Real)::Real\nk number of equally spaced grid-points for evaluation of MSE and prior\n\n\n\n"
+},
+
+{
+    "location": "inference.html#Optimal-compatible-estimator-1",
+    "page": "Inference",
+    "title": "Optimal compatible estimator",
+    "category": "section",
+    "text": "OCEstimator{TS<:MathProgBase.AbstractMathProgSolver}(\n    design::Design,\n    solver::TS;\n    prior::Function = jeffreysprior(design),\n    k = 100\n)"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.pvalue-Union{Tuple{BinaryTwoStageDesigns.Estimator,T1,T1,T2}, Tuple{T1}, Tuple{T2}} where T2<:Real where T1<:Integer",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.pvalue",
+    "category": "Method",
+    "text": "p{T1<:Integer, T2<:Real}(estimator::Estimator, x1::T1, x2::T1, p0::T2)\n\nCompute the p value after observing (x1, x2) for null hypothesis H0: p <= p0 with respect to ordering induced by estimator.\n\nParameters\n\nParameter Description\nestimator any BinaryTwoStageDeisgnEstimator object\nx1 stage-one responses\nx2 stage-two responses\np0 upper boundary of null hypothesis\n\nReturn Value\n\nReal, p value.\n\nExamples\n\njulia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)\njulia> interimsamplesize(ss)\njulia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())\njulia> est = MLE(design)\njulia> p(est, 0, 0, .2)\n\n\n\n"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.incompatibleoutcomes-Tuple{BinaryTwoStageDesigns.Estimator}",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.incompatibleoutcomes",
+    "category": "Method",
+    "text": "incompatibleoutcomes(estimator::Estimator)\n\nFind outcomes where the induced p value implies different decision than the underlying design\n\nParameters\n\nParameter Description\nestimator any BinaryTwoStageDeisgnEstimator object\n\nReturn Value\n\nArray with respective outcomes\n\nExamples\n\njulia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)\njulia> interimsamplesize(ss)\njulia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())\njulia> est = MLE(design)\njulia> incompatibleoutcomes(est)\n\n\n\n"
+},
+
+{
+    "location": "inference.html#P-values-1",
+    "page": "Inference",
+    "title": "P values",
+    "category": "section",
+    "text": "pvalue(estimator::Estimator, x1::T1, x2::T1, p0::T2) where {T1<:Integer, T2<:Real}\n\nincompatibleoutcomes(estimator::Estimator)"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.ConfidenceInterval",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.ConfidenceInterval",
+    "category": "Type",
+    "text": "ConfidenceInterval\n\nAbstract base type for all confidence interval types.\n\n\n\n"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.limits-Union{Tuple{BinaryTwoStageDesigns.ConfidenceInterval,T,T}, Tuple{T}} where T<:Integer",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.limits",
+    "category": "Method",
+    "text": "limits{T<:Integer}(ci::ConfidenceInterval, x1::T, x2::T)\n\nReturn the confidence interval limits for observed x1 and x2.\n\nParameters\n\nParameter Description\nci any ConfidenceInterval object\nx1 stage-one responses\nx2 stage-two responses\n\nReturn Value\n\nTwo element Real vector of limits [lower, upper].\n\nExamples\n\njulia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)\njulia> interimsamplesize(ss)\njulia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())\njulia> est = MLE(design)\njulia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)\njulia> limits(ci, 0, 0)\n\n\n\n"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.coverage-Union{Tuple{BinaryTwoStageDesigns.ConfidenceInterval,T}, Tuple{T}} where T<:Real",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.coverage",
+    "category": "Method",
+    "text": "coverage(ci::ConfidenceInterval, p::T; orientation::String = \"overall\") where {T<:Real}\n\nReturn coverage of given confidence interval and response rate p.\n\nParameters\n\nParameter Description\nci any ConfidenceInterval object\np response rate\norientation string indicating the coverage type - \"overall\", \"lower\", or \"upper\"\n\nReturn Value\n\nCoverage probability given p.\n\nExamples\n\njulia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)\njulia> interimsamplesize(ss)\njulia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())\njulia> est = MLE(design)\njulia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)\njulia> coverage(ci, .5)\n\n\n\n"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.meanwidth-Union{Tuple{BinaryTwoStageDesigns.ConfidenceInterval,T}, Tuple{T}} where T<:Real",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.meanwidth",
+    "category": "Method",
+    "text": "meanwidth(ci::ConfidenceInterval, p::T) where {T<:Real}\n\nMean width of given confidence interval and response rate p.\n\nParameters\n\nParameter Description\nci any ConfidenceInterval object\np response rate\n\nReturn Value\n\nMean width given p.\n\nExamples\n\njulia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)\njulia> interimsamplesize(ss)\njulia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())\njulia> est = MLE(design)\njulia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)\njulia> meanwidth(ci, .5)\n\n\n\n"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.meaninterval-Union{Tuple{BinaryTwoStageDesigns.ConfidenceInterval,T}, Tuple{T}} where T<:Real",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.meaninterval",
+    "category": "Method",
+    "text": "meaninterval(ci::ConfidenceInterval, p::T) where {T<:Real}\n\nMean interval (average limits) of given confidence interval and response rate p.\n\nParameters\n\nParameter Description\nci any ConfidenceInterval object\np response rate\n\nReturn Value\n\nMean interval given p.\n\nExamples\n\njulia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)\njulia> interimsamplesize(ss)\njulia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())\njulia> est = MLE(design)\njulia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)\njulia> meaninterval(ci, .5)\n\n\n\n"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.findinconsistencies-Union{Tuple{BinaryTwoStageDesigns.ConfidenceInterval,T}, Tuple{T}} where T<:Real",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.findinconsistencies",
+    "category": "Method",
+    "text": "findinconsistencies(ci::ConfidenceInterval, p0::T) where {T<:Real}\n\nReturn outcomes where the confidence interval contradicts the designs test decision.\n\nParameters\n\nParameter Description\nci any ConfidenceInterval object\np response rate\n\nReturn Value\n\nMean interval given p.\n\nExamples\n\njulia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)\njulia> interimsamplesize(ss)\njulia> design = getoptimaldesign(15, params, solver = Gurobi.GurobiSolver())\njulia> est = MLE(design)\njulia> ci = ClopperPearsonConfidenceInterval(est, confidence = .9)\njulia> findinconsistencies(ci)\n\n\n\n"
+},
+
+{
+    "location": "inference.html#Confidence-intervals-1",
+    "page": "Inference",
+    "title": "Confidence intervals",
+    "category": "section",
+    "text": "ConfidenceInterval\n\nlimits(ci::ConfidenceInterval, x1::T, x2::T) where {T<:Integer}\n\ncoverage(ci::ConfidenceInterval, p::T; orientation::String = \"overall\") where {T<:Real}\n\nmeanwidth(ci::ConfidenceInterval, p::T) where {T<:Real}\n\nmeaninterval(ci::ConfidenceInterval, p::T) where {T<:Real}\n\nfindinconsistencies(ci::ConfidenceInterval, p0::T) where {T<:Real}"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.CPInterval-Union{Tuple{BinaryTwoStageDesigns.Design}, Tuple{T}} where T<:Real",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.CPInterval",
+    "category": "Method",
+    "text": "CPInterval{T<:Real}(\n  design::Design;\n  confidence::T = .9\n)\n\nNaive Clopper-Pearson confidence interval using default ordering.\n\nParameters\n\nParameter Description\nestimator estimator object defining the sample space ordering\nconfidence confidence level of the interval\n\n\n\n"
+},
+
+{
+    "location": "inference.html#Naive-Clopper-Pearson-confidence-interval-1",
+    "page": "Inference",
+    "title": "Naive Clopper-Pearson confidence interval",
+    "category": "section",
+    "text": "CPInterval{T<:Real}(\n  design::Design;\n  confidence::T = .9\n)"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.ECPInterval-Union{Tuple{BinaryTwoStageDesigns.Estimator}, Tuple{T}} where T<:Real",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.ECPInterval",
+    "category": "Method",
+    "text": "ECPInterval{T<:Real}(\n  estimator::Estimator;\n  confidence::T = .9,\n  k::Integer = 1001\n)\n\nExact Clopper-Pearson type confidence interval based on ordering induced by estimator.\n\nParameters\n\nParameter Description\nestimator estimator object defining the sample space ordering\nconfidence confidence level of the interval\nk number of equally spaced grid-points for invertign the test\n\n\n\n"
+},
+
+{
+    "location": "inference.html#Clopper-Pearson-confidence-interval-1",
+    "page": "Inference",
+    "title": "Clopper-Pearson confidence interval",
+    "category": "section",
+    "text": "ECPInterval{T<:Real}(\n  estimator::Estimator;\n  confidence::T = .9,\n  k::Integer = 1001\n)"
+},
+
+{
+    "location": "inference.html#BinaryTwoStageDesigns.MMWInterval-Union{Tuple{TE,TR,Function,MathProgBase.SolverInterface.AbstractMathProgSolver}, Tuple{TE}, Tuple{TR}} where TR<:Real where TE<:BinaryTwoStageDesigns.Estimator",
+    "page": "Inference",
+    "title": "BinaryTwoStageDesigns.MMWInterval",
+    "category": "Method",
+    "text": "MMWInterval(\n  estimator::TE,\n  rho0::TR,\n  prior::Function,\n  solver::MathProgBase.AbstractMathProgSolver;\n  confidence::TR = 0.9,\n  ngrid::Integer = 100\n) where {TE<:Estimator,TR<:Real}\n\nExact confidence interval based on ordering induced by estimator minimizing the expected squared width with respect to weight function prior(p::Real).\n\nParameters\n\nParameter Description\nestimator estimator object defining the sample space ordering\nrho0 upper boundary of null hypothesis\nconfidence confidence level of the interval\nsolver MathProgBase solver used for optimization, must support quadratic expressions\nngrid number of equally spaced grid-points on which to check coverage\n\n\n\n"
+},
+
+{
+    "location": "inference.html#Minimum-mean-width-confidence-interval-1",
+    "page": "Inference",
+    "title": "Minimum mean width confidence interval",
+    "category": "section",
+    "text": "MMWInterval(\n  estimator::TE,\n  rho0::TR,\n  prior::Function,\n  solver::MathProgBase.AbstractMathProgSolver;\n  confidence::TR = 0.9,\n  ngrid::Integer = 100\n) where {TE<:Estimator,TR<:Real}"
 },
 
 ]}

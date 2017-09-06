@@ -13,7 +13,7 @@
     )
 
 This type represents a set of parameters for finding optimal two-stage designs
-maximizing the expected benefit.
+maximizing the expected benefit (EB).
 
 # Parameters
 

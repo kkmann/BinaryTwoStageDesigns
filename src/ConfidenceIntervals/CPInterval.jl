@@ -1,28 +1,7 @@
 """
     CPInterval <: ConfidenceInterval
 
-    CPInterval{T<:Real}(
-        design::Design;
-        confidence::T = .9
-    )
-
 Naive Clopper-Pearson confidence interval using default ordering.
-
-# Parameters
-
-| Parameter    | Description |
-| -----------: | :---------- |
-| estimator    | estimator object defining the sample space ordering |
-| confidence   | confidence level of the interval |
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> interimsamplesize(ss)
-julia> design = getoptimaldesign(15, params, Gurobi.GurobiSolver())
-julia> est = MaximumLikelihoodEstimator(design, Gurobi.GurobiSolver())
-julia> ci = CPInterval(est, confidence = .9)
-```
 """
 struct CPInterval{TD<:Design,TR<:Real} <: ConfidenceInterval
 
@@ -40,12 +19,26 @@ struct CPInterval{TD<:Design,TR<:Real} <: ConfidenceInterval
 
 end # CPInterval
 
+"""
+    CPInterval{T<:Real}(
+      design::Design;
+      confidence::T = .9
+    )
 
+Naive Clopper-Pearson confidence interval using default ordering.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| design       | binary two-stage design |
+| confidence   | confidence level of the interval |
+"""
 function CPInterval(
-  design::TD; confidence::TR = .9
-) where {TD<:Design,TR<:Real}
+  design::TD; confidence::Real = .9
+) where {TD<:Design}
 
-  return CPInterval{TD,TR}(design, confidence)
+  return CPInterval{TD,typeof(confidence)}(design, confidence)
   
 end # CPInterval
 

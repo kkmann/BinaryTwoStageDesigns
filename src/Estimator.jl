@@ -181,7 +181,7 @@ function incompatibleoutcomes(estimator::Estimator)
     supp = support(design(estimator))
     res  = []
     p0   = estimator |> design |> parameters |> null
-    a    = estimator |> design |> parameters |> alpha
+    a    = estimator |> design |> parameters |> mtoer
     for i in 1:size(supp, 1)
         x1, x2 = supp[i, :]
         if (pvalue(estimator, x1, x2, p0) <= a) != test(design(estimator), x1, x2)

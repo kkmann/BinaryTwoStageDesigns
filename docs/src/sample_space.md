@@ -6,6 +6,16 @@ two-stage designs for optimization.
 ```@docs
 SampleSpace
 
+ SampleSpace(
+  n1range,
+  nmax::TI;
+  n2min::TI = 1, 
+  maxnfact::TR = Inf, 
+  nmincont::TI = 0, 
+  maxvariables::TI = 500000, 
+  GS::Bool = false
+) where {TI<:Integer,TR<:Real}
+
 interimsamplesizerange(ss::SampleSpace)
 
 maxsamplesize(ss::SampleSpace)

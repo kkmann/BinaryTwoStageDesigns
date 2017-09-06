@@ -13,7 +13,7 @@
 
 This type represents a set of parameters for finding optimal two-stage designs
 minimizing the expected sample size on a point in the parameter space subject to
-type one and two error rate constraints.
+type one and two error rate constraints (Minimal Expected Sample Size).
 
     > [1] Simon R. Optimal two-stage designs for phase II clinical trials. `Controlled Clinical Trials` 1989; 10, 1-10.
     

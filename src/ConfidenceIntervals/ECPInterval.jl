@@ -1,30 +1,7 @@
 """
     ECPInterval <: ConfidenceInterval
 
-    ECPInterval{T<:Real}(
-        estimator::Estimator;
-        confidence::T = .9,
-        k::Integer = 1001
-    )
-
 Exact Clopper-Pearson type confidence interval based on ordering induced by `estimator`.
-
-# Parameters
-
-| Parameter    | Description |
-| -----------: | :---------- |
-| estimator    | estimator object defining the sample space ordering |
-| confidence   | confidence level of the interval |
-| k            | number of equally spaced grid-points for invertign the test |
-
-# Examples
-```julia-repl
-julia> ss = SimpleSampleSpace(10:25, 100, n2min = 5)
-julia> interimsamplesize(ss)
-julia> design = getoptimaldesign(15, params, Gurobi.GurobiSolver())
-julia> est = MaximumLikelihoodEstimator(design, Gurobi.GurobiSolver())
-julia> ci = ECPInterval(est, confidence = .9)
-```
 """
 struct ECPInterval{TE<:Estimator,TR<:Real} <: ConfidenceInterval
 
@@ -75,7 +52,23 @@ struct ECPInterval{TE<:Estimator,TR<:Real} <: ConfidenceInterval
 
 end # ECPInterval
 
+"""
+    ECPInterval{T<:Real}(
+      estimator::Estimator;
+      confidence::T = .9,
+      k::Integer = 1001
+    )
 
+Exact Clopper-Pearson type confidence interval based on ordering induced by `estimator`.
+
+# Parameters
+
+| Parameter    | Description |
+| -----------: | :---------- |
+| estimator    | estimator object defining the sample space ordering |
+| confidence   | confidence level of the interval |
+| k            | number of equally spaced grid-points for invertign the test |
+"""
 function ECPInterval(
   estimator::TE; 
   confidence::TR = .9, 

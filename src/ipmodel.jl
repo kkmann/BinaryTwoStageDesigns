@@ -39,12 +39,12 @@ mutable struct IPModel
             )
             if x1 > 0 # contiguous stopping for futility
                 JuMP.@constraint(m,
-                    y[x1 - 1, n1, Inf] - y[x1, n1, Inf] >= 0
+                    sum(y[x1 - 1, n, Inf] for n in nvals) - sum(y[x1, n, Inf] for n in nvals) >= 0
                 )
             end
             if (x1 < n1)
                 JuMP.@constraint(m, # contiguous stopping for efficacy
-                    y[x1 + 1, n1, -Inf] - y[x1, n1, -Inf] >= 0
+                    sum(y[x1 + 1, n, -Inf] for n in nvals) - sum(y[x1, n1, -Inf] for n in nvals) >= 0
                 )
             end
             for n in nvals
@@ -106,6 +106,21 @@ mutable struct IPModel
                 sum(_is_mode[x1] for x1 in 0:n1) >= 1 # at least one mode (can be on boundary as well!)
             )
         end
+        # ensure that stopping early regions are anchored at the boundaries
+        # 1) If there is any stopping for futiltiy (n = n1, c = Inf), you must 
+        # also stop early for futility at x1 = 0
+        # together with the other constraints, this ensures that stopping for futility
+        # is contiguous and achored at the left boundary of x1 = 0:n1
+        JuMP.@constraint(m,
+          sum(y[x1, n, Inf] for x1 in 0:n1, n in nvals) - 2 * nmax * sum(y[0, n, Inf] for n in nvals) <= 0   
+        )
+        # 2) If there is any stopping for efficacy (n = n1, c = -Inf), you must 
+        # also stop early for efficacy at x1 = n1
+        # together with the other constraints, this ensures that stopping for efficacy
+        # is contiguous and achored at the right boundary of x1 = 0:n1
+        JuMP.@constraint(m,
+          sum(y[x1, n, -Inf] for x1 in 0:n1, n in nvals) - 2 * nmax * sum(y[n1, n, -Inf] for n in nvals) <= 0   
+        )
         new(y, m, nvals, cvalsfinite, cvals, n1, ss)
     end
     
@@ -132,6 +147,16 @@ function extractsolution(ipm::IPModel, params)
                 end
             end
         end
+    end
+    # sometimes the probelm is degenerate and stopping regions are not contiguous,
+    # manually enforce contiguous stopping:
+    inds_futility = find(cvec .== Inf)
+    if length(inds_futility) > 0
+      cvec[1:inds_futility[1]] = Inf
+    end
+    inds_efficacy = find(cvec .== -Inf)
+    if length(inds_efficacy) > 0
+      cvec[inds_efficacy[1]:(ipm.n1 + 1)] = -Inf
     end
     return Design(nvec, cvec, params)
 

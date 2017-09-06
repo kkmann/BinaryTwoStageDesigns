@@ -86,7 +86,7 @@ export
     meanwidth, meaninterval,
   ECPInterval,
   CPInterval,
-  MinimumMeanWidthConfidenceInterval
+  MMWInterval
 
 include("util.jl")
 

@@ -151,11 +151,13 @@ function optimaldesign(
         print("\n\n")
       catch e
       end
+      println("c(x1):")
+      println(designs[i].c)
     end
     print("\n")
     if (EARLYTERMINATION == true) & (i > 3)
       try
-        if all(reldiff.(scores[[i - 2; i - 1; i]], scores[findmin(scores)[2]]) .>= .1)
+        if all(reldiff.(scores[[i - 2; i - 1; i]], scores[findmin(scores)[2]]) .>= .05)
           info("terminating optimization early")
           break
         end
