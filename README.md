@@ -23,11 +23,10 @@ installed via:
 
     Julia> Pkg.clone("https://github.com/imbi-heidelberg/BinaryTwoStageDesigns")
 
-A specific patch can be installed by checking out its branch, e.g.,
-
-    Julia> Pkg.checkout("BinaryTwoStageDesigns", "0.1")
-
-Note that these versions need not be stable (minor fixes and documentation changes). A specific release, which is just a tagged commit, must be checked out using git directly. I.e. swtich to the .julia/0.5/BinaryTwoStageDesigns in your user folder and checkout the tag directly (git must be installed), e.g. by:
+Note that these versions need not be stable (minor fixes and documentation changes). 
+A specific release, which is just a tagged commit, must be checked out using git directly. 
+I.e. switch to  ~/.julia/v0.6/BinaryTwoStageDesigns in your user folder and checkout the tag 
+directly (git must be installed) by e.g.:
 
     git checkout v0.1.0
 
