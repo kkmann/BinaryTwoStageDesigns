@@ -24,14 +24,18 @@ installed via:
     Julia> Pkg.clone("https://github.com/imbi-heidelberg/BinaryTwoStageDesigns")
 
 Note that these versions need not be stable (minor fixes and documentation changes). 
-A specific release, which is just a tagged commit, must be checked out using git directly. 
-I.e. switch to  ~/.julia/v0.6/BinaryTwoStageDesigns in your user folder and checkout the tag 
-directly (git must be installed) by e.g.:
+A specific release, which is just a tagged commit, can be checked out from the
+cloned git repository.
+Switch to  ~/.julia/v0.6/BinaryTwoStageDesigns in your user folder and checkout the tag 
+directly (git must be installed), e.g., by
 
     git checkout v0.1.0
 
 Note that this will cause a warning about a 'detached HEAD' state. This is
 fine for usage of the specific version and only has implications for developers.
+Alternatively, simply download the release as .zip folder from 
+https://github.com/imbi-heidelberg/BinaryTwoStageDesigns/releases and unpack to your
+local .julia/v0.6 directory.
 
 
 
