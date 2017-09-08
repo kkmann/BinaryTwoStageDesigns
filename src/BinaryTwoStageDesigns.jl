@@ -88,6 +88,8 @@ export
   CPInterval,
   MMWInterval
 
+export adapt
+
 include("util.jl")
 
 include("Parameters.jl")
@@ -116,5 +118,7 @@ include("ConfidenceInterval.jl")
 include("ConfidenceIntervals/ECPInterval.jl")
 include("ConfidenceIntervals/CPInterval.jl")
 include("ConfidenceIntervals/MMWInterval.jl")
+
+include("adapt.jl")
 
 end # module
