@@ -47,6 +47,15 @@ function adapt(design, n1, x1star, solver; nmiss = 0)
       )
     end
   end  
+  if n1 == interimsamplesize(design) # only fix missingness
+    for x1_ in x1star:(x1star + nmiss)
+      ce_old = power(design, x1_, p0)
+      JuMP.@constraint(m, # for every possible x1_ the conditional error must be smaller than under the old design
+           sum(_cpr(x1_, n1, n, c, p0) * y[x1_, n, c] for n in ipm.nvals, c in ipm.cvals)
+        <= ce_old
+      )
+    end
+  end  
 
   JuMP.setsolver(ipm.m, solver)
   JuMP.solve(ipm.m) in (:Optimal, :UserLimit) ? nothing : error("no feasible solution reached")
