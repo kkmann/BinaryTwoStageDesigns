@@ -71,6 +71,11 @@ mutable struct IPModel
            sum((n - n1 - c + x1) * y[x1, n, c] for n in nvals, c in cvalsfinite)  # n - n1 - c + x1
         >= sum(y[x1, n, c] for n in nvals, c in cvalsfinite) # 1 iff |c(x1)| < inf
       )
+      # 7.2) c(x1) finite => c - x1 >= 0 (stage two not already fulfilled) 
+      JuMP.@constraint(m,
+            sum((c - x1) * y[x1, n, c] for n in nvals, c in cvalsfinite)  # c - x1 if c is finite
+        >= (sum(y[x1, n, c] for n in nvals, c in cvalsfinite) - 1) # 0 if |c(x1)| < inf, -1 otherwise
+      )
 
       # 8) n(x1) = n1 or nmincont => |c(x1)| = inf
       JuMP.@constraint(m,

@@ -88,7 +88,7 @@ export
   CPInterval,
   MMWInterval
 
-export adapt
+export adaptstageone, adaptstagetwo
 
 include("util.jl")
 
