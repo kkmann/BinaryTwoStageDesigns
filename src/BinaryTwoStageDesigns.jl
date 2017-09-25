@@ -90,6 +90,8 @@ export
 
 export adaptstageone, adaptstagetwo
 
+export adapt_stage_one
+
 include("util.jl")
 
 include("Parameters.jl")
@@ -120,5 +122,6 @@ include("ConfidenceIntervals/CPInterval.jl")
 include("ConfidenceIntervals/MMWInterval.jl")
 
 include("adapt.jl")
+include("adapt2.jl")
 
 end # module

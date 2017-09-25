@@ -4,6 +4,7 @@ function adaptstageone(design, data, solver)
   n1old        = interimsamplesize(design)
   tmp          = data[1:min(n1, n1old)]
   x1star       = tmp[.!DataFrames.isna.(tmp)] |> sum # number of observed resoponses on joint range
+  x1           = data[.!DataFrames.isna.(data)] |> sum # number of observed resoponses on joint range
   nmissstar    = tmp[DataFrames.isna.(tmp)] |> length # number of NA on joint range
   nmiss        = data[DataFrames.isna.(data[1:n1])] |> length
 
@@ -23,16 +24,19 @@ function adaptstageone(design, data, solver)
     return(design)
   end
   # fix missingness (locally constant second stage on possible stage one outcomes)
-  if nmiss > 0
-    for x1_ in (x1star + 1):(x1star + nmiss), n in ipm.nvals, c in ipm.cvals
-      if !((c - 1) in ipm.cvals) # c - 1 not available, cannot produce locally constant second stage
-        JuMP.@constraint(m,
-          y[x1_, n, c] == 0 
-        )  
-      else # c must be increasing with x1 !
-        JuMP.@constraint(m,
-          y[x1_, n, c] - y[x1_ - 1, n, c - 1] >= 0 
-        )
+  if nmiss >= 1
+    for x1_ in (x1star + 1):(x1star + nmiss)
+      println(x1_) 
+      for n in ipm.nvals, c in ipm.cvals
+        if !((c - 1) in ipm.cvals) # c - 1 not available, cannot produce locally constant second stage
+          JuMP.@constraint(m,
+            y[x1_, n, c] == 0 
+          )  
+        else # c must be increasing with x1 !
+          JuMP.@constraint(m,
+            y[x1_, n, c] - y[x1_ - 1, n, c - 1] == 0 
+          )
+        end
       end
     end
   end
@@ -58,6 +62,13 @@ function adaptstageone(design, data, solver)
            sum(dbinom(dx1, dn1, p0) * _cpr(x1_ + dx1, n1, n, c, p0) * y[x1_ + dx1, n, c] for n in ipm.nvals, c in ipm.cvals, dx1 in 0:dn1) 
         <= ce_old
       )
+      # for numerical reasons, a conditional error of 0 might not always lead to
+      # early stopping as well
+      if ce_old == 0 # manually enforce early stopping if conditional error is 0
+        JuMP.@constraint(m,
+          sum(1 - y[x1_ + dx1, n1, Inf] for dx1 in 0:(x1 - x1star)) <= 0 # must stop early!
+        )
+      end
     end
   end  
   if n1 == interimsamplesize(design) # only fix missingness
@@ -78,6 +89,8 @@ function adaptstageone(design, data, solver)
 
 end
 
+
+
 function adaptstagetwo(design, data, solver)
 
   n1 = interimsamplesize(design)
@@ -95,10 +108,6 @@ function adaptstagetwo(design, data, solver)
   tmp          = data[(n1 + 1):min(nnew, nold)] # joint range
   x2star       = tmp[.!DataFrames.isna.(tmp)] |> sum # number of observed resoponses on joint range
   nmiss2star   = DataFrames.isna.(tmp) |> sum # number of NA on joint range
-
-  println(length(tmp))
-  println(x2star)
-  println(nmiss2star)
 
   if nnew == nold # nothing to do!
     return(design)
@@ -150,9 +159,11 @@ function adaptstagetwo(design, data, solver)
         # therefore the null can only be rejected if the old design would
         # always reject the null as well (CE of old: 1)
         x   = xx1 + x2 .+ 0:dn2 # possible outcomes under old design
-        for c in ipm.cvals
-          if any(x .>= c) # any non-rejection, c not valid (n must be oberserved value anyway, cf above)
-            JuMP.@constraint(m, y[xx1, nnew, c] <= 0)
+        if any(x .<= criticalvalue(xx1)) 
+          for c in ipm.cvals
+            if xx1 + x2 > c # old design could still fail, CE smaller than one, cannot reject, c invalid
+              JuMP.@constraint(m, y[xx1, nnew, c] <= 0)
+            end
           end
         end
       end
@@ -167,11 +178,6 @@ function adaptstagetwo(design, data, solver)
         # Therefore, no constraint is imposed if the old design already
         # rejected the null (CE of 1) but if it accepted it (CE of 0)
         # the new design must as well
-        println()
-        println(nnew)
-        println(dn2)
-        println(xx1 + x2)
-        println(criticalvalue(design, xx1))
         if xx1 + x2 <= criticalvalue(design, xx1) # old design does not reject null, new must also (continuation not sensible)
           for c in ipm.cvals
             if xx1 + x2 + dn2 > c # best case: all further samples successes, must still accept null
