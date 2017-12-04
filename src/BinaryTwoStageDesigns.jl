@@ -74,7 +74,7 @@ export optimaldesign
 # estimate.jl
 export 
   Estimator,
-    design, estimate, pvalue, bias, rmse, incompatibleoutcomes,
+    design, estimate, pvalue, bias, rmse, mae, incompatibleoutcomes,
   MLEstimator, # include("Estimators/mle.jl")
   RBEstimator, # inlcude("Estimators/rbe.jl")
   OCEstimator
@@ -90,7 +90,7 @@ export
 
 export adaptstageone, adaptstagetwo
 
-export adapt_stage_one
+export adapt_stage_one, adapt_stage_two
 
 include("util.jl")
 

@@ -102,6 +102,8 @@ abstract type PointAlternative <: Parameters end
 
 alternative(par::PointAlternative) = try par.p1 catch error("not implemented") end
 
+mcrv(par::PointAlternative) = try par.p1 catch error("not implemented") end
+
 mtter(par::PointAlternative) = try par.beta catch error("not implemented") end
 
 
