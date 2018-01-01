@@ -121,7 +121,6 @@ include("ConfidenceIntervals/ECPInterval.jl")
 include("ConfidenceIntervals/CPInterval.jl")
 include("ConfidenceIntervals/MMWInterval.jl")
 
-include("adapt.jl")
 include("adapt2.jl")
 
 end # module

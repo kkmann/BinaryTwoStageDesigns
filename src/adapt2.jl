@@ -1,4 +1,4 @@
-function adapt_stage_one(design, data, solver; p0 = nothing, p1 = nothing, lambda1 = 1, lambda2 = 1, grid_resolution = 0.05, mincpr = 0.5)
+function adapt_stage_one(design, data, solver; p0 = nothing, p1 = nothing, lambda1 = 10, lambda2 = 10, grid_resolution = 0.05, mincpr = 0.5)
   
   params = parameters(design)
 
@@ -113,22 +113,42 @@ function adapt_stage_one(design, data, solver; p0 = nothing, p1 = nothing, lambd
   end
 
   # compute expected absolute power difference old/new
-  JuMP.@variable(ipm.m, abs_pwr_diff[p in p_grid] >= 0)
+  # JuMP.@variable(ipm.m, abs_pwr_diff[p in p_grid] >= 0)
+  # for p in p_grid
+  #   JuMP.@constraint(ipm.m,
+  #     pwr_new(ipm, n1, p) - power(design, p) <= abs_pwr_diff[p]
+  #   )
+  #   JuMP.@constraint(ipm.m,
+  #     -(pwr_new(ipm, n1, p) - power(design, p)) <= abs_pwr_diff[p]
+  #   )
+  # end
+  # p_RV = Distributions.Beta(1, 1)
+  # JuMP.@expression(ipm.m, avg_abs_pwr_diff,
+  #   sum(abs_pwr_diff[p] * Distributions.pdf(p_RV, p) for p in p_grid)
+  # )
+
+  JuMP.@variable(ipm.m, max_abs_pwr_diff >= 0)
+  JuMP.@variable(ipm.m, max_abs_ess_diff >= 0)
   for p in p_grid
     JuMP.@constraint(ipm.m,
-      pwr_new(ipm, n1, p) - power(design, p) <= abs_pwr_diff[p]
+      pwr_new(ipm, n1, p) - power(design, p) <= max_abs_pwr_diff
     )
     JuMP.@constraint(ipm.m,
-      -(pwr_new(ipm, n1, p) - power(design, p)) <= abs_pwr_diff[p]
+      -(pwr_new(ipm, n1, p) - power(design, p)) <= max_abs_pwr_diff
+    )
+    JuMP.@constraint(ipm.m,
+      ess_new(ipm, n1, p) - mean(SampleSize(design, p)) <= max_abs_ess_diff
+    )
+    JuMP.@constraint(ipm.m,
+      -(ess_new(ipm, n1, p) - mean(SampleSize(design, p))) <= max_abs_ess_diff
     )
   end
-  p_RV = Distributions.Beta(1, 1)
-  JuMP.@expression(ipm.m, avg_abs_pwr_diff,
-    sum(abs_pwr_diff[p] * Distributions.pdf(p_RV, p) for p in p_grid)
-  )
 
   # objective: expected quadratic difference of sample size under the two designs
-  JuMP.@objective(m, :Min, diff_sample_size(design, ipm, n1) + lambda1 * avg_abs_pwr_diff + lambda2 * max_cpr_violation_2 + lambda2 * max_cpr_violation_1)  
+  # JuMP.@objective(m, :Min, diff_sample_size(design, ipm, n1) + lambda1 * diff_pwr(design, ipm, n1) + lambda2 * max_cpr_violation_2 + lambda2 * max_cpr_violation_1)  
+  JuMP.@objective(m, :Min, 
+    max_abs_ess_diff + lambda1 * max_abs_pwr_diff + lambda2 * max_cpr_violation_1 + lambda2 * max_cpr_violation_2
+  )  
 
   JuMP.setsolver(ipm.m, solver)
   JuMP.solve(ipm.m) in (:Optimal, :UserLimit) ? nothing : error("no feasible solution reached")
@@ -250,6 +270,30 @@ function diff_sample_size(design, ipm, n1; alpha = 1, beta = 1)
   return dn
 end
 
+function diff_pwr(design, ipm, n1; alpha = 1, beta = 1) 
+  # compute expected relative absolute deviation from sample size of original design
+  # for old design n() and new n'()
+  # default uses uniform beta binomial distributions, alpha and beta of
+  # beta mixture can be adjusted though
+  dn     = JuMP.AffExpr(0.0)
+  n1_old = interimsamplesize(design)
+  pdf_X1(x1, p) = Distributions.pdf(Distributions.Binomial(n1_old, p), x1)
+  pdf_X1_bar(x1_bar, p) = Distributions.pdf(Distributions.Binomial(n1, p), x1_bar)
+  for x1 in 0:n1_old, x1_bar in 0:n1, n in ipm.nvals, c in ipm.cvals
+    JuMP.push!(dn, 
+      QuadGK.quadgk(
+        p -> abs(
+          _cpr(x1, n1_old, samplesize(design, x1), criticalvalue(design, x1), p) 
+          - _cpr(x1_bar, n1, n, c, p) 
+        ) * pdf_X1(x1, p) * pdf_X1_bar(x1_bar, p) * Distributions.pdf(Distributions.Beta(alpha, beta), p), 
+        0, 1, abstol = 0.0001
+      )[1],
+      ipm.y[x1_bar, n, c]
+    )
+  end
+  return dn
+end
+
 function cpr_new(ipm::IPModel, data, p) 
   # conditional probability to reject of new design
 
@@ -278,6 +322,22 @@ function pwr_new(ipm::IPModel, n1, p)
     )
   end
   return pwr
+end
+
+function ess_new(ipm::IPModel, n1, p) 
+
+  X1  = Distributions.Binomial(n1, p)
+  x1_range = collect(0:n1)
+  ess = JuMP.AffExpr(0.0)
+  for x1 in x1_range, n in ipm.nvals, c in ipm.cvals
+    JuMP.push!(ess, 
+      Distributions.pdf(X1, x1) * n,
+      ipm.y[x1, n, c]
+    )
+  end
+
+  return ess
+
 end
 
 function cpr_old(design::Design, data, p) 
