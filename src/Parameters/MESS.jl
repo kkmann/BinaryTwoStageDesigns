@@ -19,6 +19,12 @@ type one and two error rate constraints (Minimal Expected Sample Size).
     
     > [2] Kunzmann K and Kieser M. Optimal adaptive two-stage designs for single-arm trials with binary endpoint. `arxive.org` 2016; arXiv:1605.00249.
 
+# Details
+
+Please note that due to technical reasons the power constraint is actually imlemented in a relaxed way by
+adding lambda*(1-beta - power)_+ to the objective function. In practice, lambda should be large enough
+to ensure a power of 1-beta, but depending on the setting, a larger lambda might be required.
+
 # Parameters
 
 | Parameter    | Description |
@@ -46,6 +52,9 @@ mutable struct MESS{TR<:Real} <: PointAlternative
   MONOTONECONDITIONALPOWER::Bool
   minstoppingforfutility::TR
 
+  # penalty parameter for relaxing power
+  lambda::TR
+
   function MESS{TR}(
     label::String,
     samplespace::SampleSpace,
@@ -55,6 +64,7 @@ mutable struct MESS{TR<:Real} <: PointAlternative
     minconditionalpower::TR,
     MONOTONECONDITIONALPOWER::Bool,
     minstoppingforfutility::TR,
+    lambda::TR
   ) where {TR<:Real}
 
     @checkprob p0 p1 alpha beta pess minconditionalpower minstoppingforfutility
@@ -62,7 +72,7 @@ mutable struct MESS{TR<:Real} <: PointAlternative
       error("p0 must be smaller than p1") : nothing
     new(
       label, samplespace, p0, p1, alpha, beta, pess, minconditionalpower, 
-      MONOTONECONDITIONALPOWER, minstoppingforfutility
+      MONOTONECONDITIONALPOWER, minstoppingforfutility, lambda
     )
 
   end # inner constructor
@@ -77,15 +87,16 @@ function MESS(
   minstoppingforfutility::Real = 0.0,
   minconditionalpower::Real = 0.0,
   MONOTONECONDITIONALPOWER::Bool = true,
-  label::String = ""
+  label::String = "",
+  lambda = 10.0^8
 )
 
-  p0, p1, alpha, beta, pess, minstoppingforfutility, minconditionalpower = 
-    promote(p0, p1, alpha, beta, pess, minstoppingforfutility, minconditionalpower)
+  p0, p1, alpha, beta, pess, minstoppingforfutility, minconditionalpower, lambda = 
+    promote(p0, p1, alpha, beta, pess, minstoppingforfutility, minconditionalpower, lambda)
 
   MESS{typeof(p0)}(
     label, samplespace, p0, p1, alpha, beta, pess, minconditionalpower, 
-    MONOTONECONDITIONALPOWER, minstoppingforfutility
+    MONOTONECONDITIONALPOWER, minstoppingforfutility, lambda
   )
 
 end # MESS
@@ -142,14 +153,15 @@ function completemodel(ipm::IPModel, params::MESS, n1::T) where {T<:Integer}
           c  in cvals
       ) <= mtoer(params)
   )
-  # add type two error rate constraint (power)
-  JuMP.@constraint(m,
-      sum(dbinom(x1, n1, p1)*_cpr(x1, n1, n, c, p1)*y[x1, n, c] for
-          x1 in 0:n1,
-          n  in nvals,
-          c  in cvals
-      ) >= 1 - params.beta
+  JuMP.@expression(m, power, 
+    sum(dbinom(x1, n1, p1)*_cpr(x1, n1, n, c, p1)*y[x1, n, c] for 
+      x1 in 0:n1,
+      n  in nvals,
+      c  in cvals
+    )
   )
+  JuMP.@variable(m, 0 <= powerdeficit <= 1)
+  JuMP.@constraint(m, powerdeficit >= 1 - params.beta - power)
   # add conditional type two error rate constraint (power)
   for x1 in 0:n1
       # ensure monotonicity if required
@@ -182,7 +194,7 @@ function completemodel(ipm::IPModel, params::MESS, n1::T) where {T<:Integer}
           x1 in 0:n1,
           n  in nvals,
           c  in cvals
-      )
+      ) + params.lambda * powerdeficit
   )
   return true
 
@@ -192,7 +204,6 @@ end # completemodel
 function _isfeasible(design::Design, params::MESS)
 
     all(power.(design, linspace(0, null(params))) .<= mtoer(params) + .001) ? nothing : throw(InexactError())
-    all(power.(design, linspace(alternative(params), 1)) .>= 1 - mtter(params) - .001) ? nothing : throw(InexactError())
     return true
 
 end # _isfeasible

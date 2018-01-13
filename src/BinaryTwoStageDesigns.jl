@@ -74,7 +74,7 @@ export optimaldesign
 # estimate.jl
 export 
   Estimator,
-    design, estimate, pvalue, bias, rmse, incompatibleoutcomes,
+    design, estimate, pvalue, bias, rmse, mae, incompatibleoutcomes,
   MLEstimator, # include("Estimators/mle.jl")
   RBEstimator, # inlcude("Estimators/rbe.jl")
   OCEstimator
@@ -87,6 +87,10 @@ export
   ECPInterval,
   CPInterval,
   MMWInterval
+
+export adaptstageone, adaptstagetwo
+
+export adapt_stage_one, adapt_stage_two
 
 include("util.jl")
 
@@ -116,5 +120,7 @@ include("ConfidenceInterval.jl")
 include("ConfidenceIntervals/ECPInterval.jl")
 include("ConfidenceIntervals/CPInterval.jl")
 include("ConfidenceIntervals/MMWInterval.jl")
+
+include("adapt2.jl")
 
 end # module

@@ -1,130 +1,132 @@
 mutable struct IPModel
 
-    y # the binary assignment variables
-    m # the JuMP model
-    nvals
-    cvalsfinite
-    cvals
-    n1
-    ss
+  y # the binary assignment variables
+  m # the JuMP model
+  nvals
+  cvalsfinite
+  cvals
+  n1
+  ss
 
-    function IPModel(ss::SampleSpace, n1::Integer)
-        n1 <= 1           ? error("IPModel: n1 must be >= 1")                    : nothing
-        !possible(n1, ss) ? warn("IPModel: n1 not compatible with sample space") : nothing
-        nmax = maxsamplesize(ss, n1)
-        nvals = getnvals(ss, n1)
-        cvalsfinite = getcvals(ss, n1)
-        cvalsinfinite = [-Inf; Inf]
-        cvals =  [-Inf; cvalsfinite; Inf]
-        m = JuMP.Model()
-        # indicator variables y[x1, n, c] == 1 iff n(x1) = n, c(x1) = c
-        JuMP.@variable(m, y[x1 = 0:n1, n = nvals, c = cvals], Bin)
-        if !isgroupsequential(ss) # dummy variables for unimodality
-            JuMP.@variable(m, _is_mode[x1 = 0:n1], Bin)
-        else
-            JuMP.@variable(m, cont[x1 = 0:n1], Bin) # dummy variables for determining
-                                               # whether design continues
-        end
-        for x1 in 0:n1
-            if isgroupsequential(ss)
-                JuMP.@constraint(m, # lhs is one if design continues at x1
-                    sum(y[x1, n, c] for n in nvals, c in cvalsinfinite) - (1 - cont[x1]) == 0
-                )
-            end
-            JuMP.@constraint(m, # functional constraint: exactly one non-zero entry in (y) per x1
-                sum(y[x1, n, c] for n in nvals, c in cvals) == 1
-            )
-            JuMP.@constraint(m, # functional constraint: exactly one non-zero entry in (y) per x1
-                n*sum(y[x1, n, c] for n in nvals, c in cvals) >= n1
-            )
-            if x1 > 0 # contiguous stopping for futility
-                JuMP.@constraint(m,
-                    sum(y[x1 - 1, n, Inf] for n in nvals) - sum(y[x1, n, Inf] for n in nvals) >= 0
-                )
-            end
-            if (x1 < n1)
-                JuMP.@constraint(m, # contiguous stopping for efficacy
-                    sum(y[x1 + 1, n, -Inf] for n in nvals) - sum(y[x1, n1, -Inf] for n in nvals) >= 0
-                )
-            end
-            for n in nvals
-                if isgroupsequential(ss)
-                    JuMP.@constraint(m, # groupsequential designs can only have fixed decision with early stopping
-                        sum(y[x1, n1, c] for c in cvalsinfinite) == sum(y[x1, n, c] for n in nvals, c in cvalsinfinite)
-                    )
-                end
-                for c in cvals
-                    if isfinite(c)
-                        if c >= n
-                            JuMP.@constraint(m, y[x1, n, c] == 0)
-                        end
-                    end
-                    if isfinite(c) & (n == n1) # c finite => n > n1
-                        JuMP.@constraint(m, y[x1, n, c] == 0)
-                    end
-                    if (x1 > c) & (c != -Inf) # decision is fixed but c is not valid
-                        JuMP.@constraint(m, y[x1, n, c] == 0)
-                    end
-                    if !possible(n1, n, c, ss) # sample space constraints
-                        JuMP.@constraint(m,
-                            y[x1, n, c] == 0
-                        )
-                    end
-                    if isgroupsequential(ss) & isfinite(c)
-                        if x1 < n1
-                            JuMP.@constraint(m, # n, c must be equal for all x1 with finite c
-                                y[x1, n, c] - y[x1 + 1, n, c] - (2 - cont[x1] - cont[x1 + 1]) <= 0
-                            )
-                            JuMP.@constraint(m, # n, c must be equal for all x1 with finite c
-                                y[x1, n, c] - y[x1 + 1, n, c] + (2 - cont[x1] - cont[x1 + 1]) >= 0
-                            )
-                        end
-                    end
-                end
-            end
-            if !isgroupsequential(ss)
-                for x1_ in 1:x1
-                    JuMP.@constraint(m,
-                        sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
-                            n in nvals[2:end],
-                            c in cvals
-                        ) - 3*nmax*_is_mode[x1] >= -3*nmax
-                    )
-                end
-                for x1_ in (x1 + 1):n1
-                    JuMP.@constraint(m,
-                        sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
-                            n in nvals[2:end],
-                            c in cvals
-                        ) + 3*nmax*_is_mode[x1] <= 3*nmax
-                    )
-                end
-            end
-        end
-        if !isgroupsequential(ss)
-            JuMP.@constraint(m, # unimodality
-                sum(_is_mode[x1] for x1 in 0:n1) >= 1 # at least one mode (can be on boundary as well!)
-            )
-        end
-        # ensure that stopping early regions are anchored at the boundaries
-        # 1) If there is any stopping for futiltiy (n = n1, c = Inf), you must 
-        # also stop early for futility at x1 = 0
-        # together with the other constraints, this ensures that stopping for futility
-        # is contiguous and achored at the left boundary of x1 = 0:n1
-        JuMP.@constraint(m,
-          sum(y[x1, n, Inf] for x1 in 0:n1, n in nvals) - 2 * nmax * sum(y[0, n, Inf] for n in nvals) <= 0   
-        )
-        # 2) If there is any stopping for efficacy (n = n1, c = -Inf), you must 
-        # also stop early for efficacy at x1 = n1
-        # together with the other constraints, this ensures that stopping for efficacy
-        # is contiguous and achored at the right boundary of x1 = 0:n1
-        JuMP.@constraint(m,
-          sum(y[x1, n, -Inf] for x1 in 0:n1, n in nvals) - 2 * nmax * sum(y[n1, n, -Inf] for n in nvals) <= 0   
-        )
-        new(y, m, nvals, cvalsfinite, cvals, n1, ss)
-    end
+  function IPModel(ss::SampleSpace, n1::Integer)
     
-end
+    # plausibility checks
+    n1 <= 1           ? error("IPModel: n1 must be >= 1")                    : nothing
+    !possible(n1, ss) ? warn("IPModel: n1 not compatible with sample space") : nothing
+    
+    # extract parameters 
+    nmax          = maxsamplesize(ss, n1)
+    nvals         = getnvals(ss, n1)
+    cvalsfinite   = getcvals(ss, n1)
+    cvalsinfinite = [-Inf; Inf]
+    cvals         = [-Inf; cvalsfinite; Inf]
+    nmincont      = max(n1, ss.nmincont)
+    m             = JuMP.Model()
+
+    # indicator variables y[x1, n, c] == 1 iff n(x1) = n, c(x1) = c
+    JuMP.@variable(m, y[x1 = 0:n1, n = nvals, c = cvals], Bin)
+
+    for x1 in 0:n1
+      # 1) SOS1 constraint (exactly one nonzero entry per x1)
+      # JuMP.addSOS1(m, reshape(y[x1, nvals, cvals], length(nvals)*length(cvals)))
+      JuMP.@constraint(m,
+        sum(y[x1, n, c] for n in nvals, c in cvals) == 1
+      )
+
+      # 2) c = -inf (early rejection of null) => n = nmincont (minimal sample size upon continuation)
+      # implicitly assumes that smaller sample sizes are better - sensible!
+      JuMP.@constraint(m,
+        y[x1, nmincont, -Inf] - sum(y[x1, n, -Inf] for n in nvals) >= 0
+      )
+
+      # 3) c = inf (early futility stopping) => n = n1 (no second stage)
+      # implicitly assumes that smaller sample sizes are better - sensible!
+      JuMP.@constraint(m,
+        y[x1, n1, Inf] - sum(y[x1, n, Inf] for n in nvals) >= 0
+      )
+
+      # 4) contiguous stopping for futility, if c(x1) = inf => c(x1 - 1) = inf
+      if x1 > 0
+        JuMP.@constraint(m,
+          y[x1 - 1, n1, Inf] - y[x1, n1, Inf] >= 0
+        )
+      end
+
+      # 5) contiguous stopping for efficacy, if c(x1) = -inf => c(x1 + 1) = -inf
+      if (x1 < n1)
+        JuMP.@constraint(m,
+          y[x1 + 1, nmincont, -Inf] - y[x1, nmincont, -Inf] >= 0
+        )
+      end
+
+      # 6) c(x1) finite => n > n1
+      JuMP.@constraint(m,
+           (1 - sum(y[x1, n1, c] for c in cvalsfinite)) # 1 iff |c(x1)| == inf and n(x1) > n1
+         - sum(y[x1, n, c] for n in nvals, c in cvalsfinite) # 1 iff |c(x1)| < inf
+        >= 0
+      )
+
+      # 7) c(x1) finite => n - n1 > c - x1 (or |c(x1)| < inf  => n - n1 - c + x1 >= 1)
+      JuMP.@constraint(m,
+           sum((n - n1 - c + x1) * y[x1, n, c] for n in nvals, c in cvalsfinite)  # n - n1 - c + x1
+        >= sum(y[x1, n, c] for n in nvals, c in cvalsfinite) # 1 iff |c(x1)| < inf
+      )
+      # 7.2) c(x1) finite => c - x1 >= 0 (stage two not already fulfilled) 
+      JuMP.@constraint(m,
+            sum((c - x1) * y[x1, n, c] for n in nvals, c in cvalsfinite)  # c - x1 if c is finite
+        >= (sum(y[x1, n, c] for n in nvals, c in cvalsfinite) - 1) # 0 if |c(x1)| < inf, -1 otherwise
+      )
+
+      # 8) n(x1) = n1 or nmincont => |c(x1)| = inf
+      JuMP.@constraint(m,
+           sum(y[x1, n1, c] + y[x1, nmincont, c] for c in cvalsinfinite)  
+        >= sum(y[x1, n1, c] + y[x1, nmincont, c] for c in cvals) # 1 iff n(x1) is n1 or nmincont
+      )
+
+    end
+
+    # 9) sample space specific constraints
+    JuMP.@constraint(m,
+      sum(Real(!possible(n1, n, c, ss)) * y[x1, n, c] for x1 in 0:n1, n in nvals, c in cvalsfinite) == 0 # no impossible configuration should be assigned
+    )
+
+    # Group sequential? second stage must be locally constant
+    if isgroupsequential(ss)
+      for x1 in 1:n1, n in nvals, c in cvalsfinite
+        JuMP.@constraint(m, 
+          sum(y[x1, nn, c] for nn in nvals, c in cvalsinfinite) + y[x1, n, c] >= y[x1 - 1, n, c] # either early stopping or same n/c
+        )
+      end
+    else # unimodal n
+      JuMP.@variable(m, _is_mode[x1 = 0:n1], Bin)
+      for x1 in 0:n1
+        for x1_ in 1:x1
+          JuMP.@constraint(m,
+            sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
+              n in nvals[2:end],
+              c in cvals
+            ) - 3*nmax*_is_mode[x1] >= -3*nmax
+          )
+        end
+        for x1_ in (x1 + 1):n1
+          JuMP.@constraint(m,
+            sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
+              n in nvals[2:end],
+              c in cvals
+            ) + 3*nmax*_is_mode[x1] <= 3*nmax
+          )
+        end
+      end
+      JuMP.@constraint(m, # at least one mode (can be on boundary as well!)
+        sum(_is_mode[x1] for x1 in 0:n1) >= 1 
+      )
+    end
+
+    new(y, m, nvals, cvalsfinite, cvals, n1, ss)
+
+  end # constructor
+
+end # IPModel
 
 getnvals(ipm::IPModel, n1::Integer) = getnvals(ipm.ss, n1)
 getcvals(ipm::IPModel, n1::Integer) = getcvals(ipm.ss, n1)

@@ -151,6 +151,16 @@ function rmse(estimator::Estimator, p::T) where {T<:Real}
 
 end
 
+function mae(estimator::Estimator, p::T) where {T<:Real}
+  
+    supp     = support(design(estimator))
+    return sum(
+      pdf.(design(estimator), supp[:, 1], supp[:, 2], p) .*
+        abs.(estimate.(estimator, supp[:, 1], supp[:, 2]) .- p)
+    )
+  
+  end
+
 """
     incompatibleoutcomes(estimator::Estimator)
 

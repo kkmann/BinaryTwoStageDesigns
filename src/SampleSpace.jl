@@ -14,6 +14,7 @@ mutable struct SampleSpace{TI<:Integer,TR<:Real}
   maxvariables::TI
   GS::Bool # group sequential ?
   specialnvalues::Vector{TI} # required for additional values always included in nvals
+  specialcvalues::Vector{TI}
 
   function SampleSpace{TI,TR}(
     n1range::Vector{TI}, 
@@ -29,7 +30,7 @@ mutable struct SampleSpace{TI<:Integer,TR<:Real}
     maximum(n1range) > nmax ? error("maximal n1 must be <= nmax") : nothing
     maxvariables < 100      ? error("maxvariables must be >= 100") : nothing
     maxnfact = (maxnfact == Inf) ? nmax / minimum(n1range) : maxnfact
-    new(sort(n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS, convert(Vector{TI}, zeros(0)))
+    new(sort(n1range), nmax, n2min, maxnfact, nmincont, maxvariables, GS, convert(Vector{TI}, zeros(0)), convert(Vector{TI}, zeros(0)))
 
   end # inner constructor (SampleSpace)
 
@@ -234,6 +235,11 @@ function getcvals(
         frac = 1
     end
     cvalsfinite = round.(collect(0:frac:(nmax - 1)))
+    for scval in ss.specialcvalues # ensure that all special cvals are contained!
+      if !(scval in cvalsfinite) & (scval >= n1) & (scval <= nmax)
+          push!(cvalsfinite, scval)
+      end
+    end
     return cvalsfinite
 
 end # getcvals
