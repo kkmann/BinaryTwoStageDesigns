@@ -165,12 +165,12 @@ function completemodel(ipm::IPModel, params::MESS, n1::T) where {T<:Integer}
   # add conditional type two error rate constraint (power)
   for x1 in 0:n1
       # ensure monotonicity if required
-      if x1 >= 1 & hasmonotoneconditionalpower(params)
-          JuMP.@constraint(m,
-              sum(_cpr(x1, n1, n, c, p1)*y[x1, n, c] - _cpr(x1 - 1, n1, n, c, p1)*y[x1 - 1, n, c] for
-                  n  in nvals, c in cvals
-              ) >= 0
-          )
+      if (x1 >= 1) & hasmonotoneconditionalpower(params)
+        JuMP.@constraint(m,
+            sum(_cpr(x1, n1, n, c, p1)*y[x1, n, c] - _cpr(x1 - 1, n1, n, c, p1)*y[x1 - 1, n, c] for
+                n in nvals, c in cvals
+            ) >= 0
+        )
       end
       JuMP.@constraint(m,
           sum(_cpr(x1, n1, n, c, p1)*y[x1, n, c] for

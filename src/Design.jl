@@ -656,7 +656,7 @@ function _cpr(x1, n1, n, c, p)
     if x1 > c
         return(1.0)
     end
-    if n - n1 + x1 <= c
+    if n - n1 <= c - x1
         return(0.0)
     end # TODO: simplify
     return 1 - Distributions.cdf(Distributions.Binomial(n - n1, p), convert(Int64, c - x1))
