@@ -50,6 +50,8 @@ mutable struct MESS{TR<:Real} <: PointAlternative
   pess::TR
   minconditionalpower::TR
   MONOTONECONDITIONALPOWER::Bool
+  monotoneconditionalpowerpivots
+  UNIMODAL::Bool
   minstoppingforfutility::TR
 
   # penalty parameter for relaxing power
@@ -63,6 +65,8 @@ mutable struct MESS{TR<:Real} <: PointAlternative
     pess::TR,
     minconditionalpower::TR,
     MONOTONECONDITIONALPOWER::Bool,
+    monotoneconditionalpowerpivots,
+    UNIMODAL::Bool,
     minstoppingforfutility::TR,
     lambda::TR
   ) where {TR<:Real}
@@ -72,7 +76,7 @@ mutable struct MESS{TR<:Real} <: PointAlternative
       error("p0 must be smaller than p1") : nothing
     new(
       label, samplespace, p0, p1, alpha, beta, pess, minconditionalpower, 
-      MONOTONECONDITIONALPOWER, minstoppingforfutility, lambda
+      MONOTONECONDITIONALPOWER, monotoneconditionalpowerpivots, UNIMODAL, minstoppingforfutility, lambda
     )
 
   end # inner constructor
@@ -87,8 +91,10 @@ function MESS(
   minstoppingforfutility::Real = 0.0,
   minconditionalpower::Real = 0.0,
   MONOTONECONDITIONALPOWER::Bool = true,
+  monotoneconditionalpowerpivots = [p1],
+  UNIMODAL::Bool = true,
   label::String = "",
-  lambda = 10.0^8
+  lambda = 10.0^9
 )
 
   p0, p1, alpha, beta, pess, minstoppingforfutility, minconditionalpower, lambda = 
@@ -96,7 +102,7 @@ function MESS(
 
   MESS{typeof(p0)}(
     label, samplespace, p0, p1, alpha, beta, pess, minconditionalpower, 
-    MONOTONECONDITIONALPOWER, minstoppingforfutility, lambda
+    MONOTONECONDITIONALPOWER, monotoneconditionalpowerpivots, UNIMODAL, minstoppingforfutility, lambda
   )
 
 end # MESS
@@ -107,6 +113,8 @@ maxsamplesize(params::MESS) = maxsamplesize(params.samplespace)
 isgroupsequential(params::MESS) = isgroupsequential(params.ss)
 
 hasmonotoneconditionalpower(params::MESS) = params.MONOTONECONDITIONALPOWER
+
+isunimodal(params::MESS) = params.UNIMODAL
 
 minconditionalpower(params::MESS) = params.minconditionalpower
 
@@ -160,17 +168,18 @@ function completemodel(ipm::IPModel, params::MESS, n1::T) where {T<:Integer}
       c  in cvals
     )
   )
-  JuMP.@variable(m, 0 <= powerdeficit <= 1)
-  JuMP.@constraint(m, powerdeficit >= 1 - params.beta - power)
+  JuMP.@constraint(m, power >= 1 - params.beta)
   # add conditional type two error rate constraint (power)
   for x1 in 0:n1
       # ensure monotonicity if required
       if (x1 >= 1) & hasmonotoneconditionalpower(params)
-        JuMP.@constraint(m,
-            sum(_cpr(x1, n1, n, c, p1)*y[x1, n, c] - _cpr(x1 - 1, n1, n, c, p1)*y[x1 - 1, n, c] for
-                n in nvals, c in cvals
-            ) >= 0
-        )
+        for p in params.monotoneconditionalpowerpivots
+          JuMP.@constraint(m,
+              sum(_cpr(x1, n1, n, c, p)*y[x1, n, c] - _cpr(x1 - 1, n1, n, c, p)*y[x1 - 1, n, c] for
+                  n in nvals, c in cvals
+              ) >= 0
+          )
+        end
       end
       JuMP.@constraint(m,
           sum(_cpr(x1, n1, n, c, p1)*y[x1, n, c] for
@@ -194,7 +203,7 @@ function completemodel(ipm::IPModel, params::MESS, n1::T) where {T<:Integer}
           x1 in 0:n1,
           n  in nvals,
           c  in cvals
-      ) + params.lambda * powerdeficit
+      )
   )
   return true
 
@@ -204,6 +213,7 @@ end # completemodel
 function _isfeasible(design::Design, params::MESS)
 
     all(power.(design, linspace(0, null(params))) .<= mtoer(params) + .001) ? nothing : throw(InexactError())
+    (power(design, params.p1) >= 1 - params.beta - .001) ? nothing : throw(InexactError())
     return true
 
 end # _isfeasible

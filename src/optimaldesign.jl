@@ -34,7 +34,7 @@ function optimaldesign(
 )
 
     !possible(n1, samplespace(parameters)) ? warn("n1 not compatible with sample space") : nothing
-    ipm = IPModel(samplespace(parameters), n1)
+    ipm = IPModel(samplespace(parameters), n1, UNIMODAL = isunimodal(parameters))
     completemodel(ipm, parameters, n1)
     JuMP.setsolver(ipm.m, solver)
     JuMP.solve(ipm.m) in (:Optimal, :UserLimit) ? nothing : error("no feasible solution reached")
@@ -151,8 +151,7 @@ function optimaldesign(
         print("\n\n")
       catch e
       end
-      println("c(x1):")
-      println(designs[i].c)
+      println(convert(DataFrame(design[i])))
     end
     print("\n")
     if (EARLYTERMINATION == true) & (i > 3)

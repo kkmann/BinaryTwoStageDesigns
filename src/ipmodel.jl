@@ -8,7 +8,7 @@ mutable struct IPModel
   n1
   ss
 
-  function IPModel(ss::SampleSpace, n1::Integer)
+  function IPModel(ss::SampleSpace, n1::Integer; UNIMODAL::Bool = true)
     
     # plausibility checks
     n1 <= 1           ? error("IPModel: n1 must be >= 1")                    : nothing
@@ -98,28 +98,30 @@ mutable struct IPModel
         )
       end
     else # unimodal n
-      JuMP.@variable(m, _is_mode[x1 = 0:n1], Bin)
-      for x1 in 0:n1
-        for x1_ in 1:x1
-          JuMP.@constraint(m,
-            sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
-              n in nvals[2:end],
-              c in cvals
-            ) - 3*nmax*_is_mode[x1] >= -3*nmax
-          )
+      if UNIMODAL 
+        JuMP.@variable(m, _is_mode[x1 = 0:n1], Bin)
+        for x1 in 0:n1
+          for x1_ in 1:x1
+            JuMP.@constraint(m,
+              sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
+                n in nvals[2:end],
+                c in cvals
+              ) - 3*nmax*_is_mode[x1] >= -3*nmax
+            )
+          end
+          for x1_ in (x1 + 1):n1
+            JuMP.@constraint(m,
+              sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
+                n in nvals[2:end],
+                c in cvals
+              ) + 3*nmax*_is_mode[x1] <= 3*nmax
+            )
+          end
         end
-        for x1_ in (x1 + 1):n1
-          JuMP.@constraint(m,
-            sum(n*(y[x1_, n, c] - y[x1_ - 1, n, c]) for
-              n in nvals[2:end],
-              c in cvals
-            ) + 3*nmax*_is_mode[x1] <= 3*nmax
-          )
-        end
+        JuMP.@constraint(m, # at least one mode (can be on boundary as well!)
+          sum(_is_mode[x1] for x1 in 0:n1) >= 1 
+        )
       end
-      JuMP.@constraint(m, # at least one mode (can be on boundary as well!)
-        sum(_is_mode[x1] for x1 in 0:n1) >= 1 
-      )
     end
 
     new(y, m, nvals, cvalsfinite, cvals, n1, ss)
