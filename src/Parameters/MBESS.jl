@@ -198,7 +198,7 @@ function completemodel(ipm::IPModel, params::MBESS, n1::Integer)
         JuMP.@constraint(m, # add conditional type two error rate constraint (power)
             cep[x1] >= minconditionalpower(params) * (1 - sum(y[x1, n1, c] for c in cvalsinfinite)) # must be conditional on continuation!
         )
-        if x1 >= 1 & hasmonotoneconditionalpower(params)
+        if (x1 >= 1) & hasmonotoneconditionalpower(params)
             JuMP.@constraint(m, # ensure monotonicity if required
                 cep[x1] - cep[x1 - 1] >= 0
             )
