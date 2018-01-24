@@ -65,7 +65,7 @@ group-sequential designs.
 """
 isgroupsequential(par::Parameters)::Bool = error("not implemented")
 
-isunimodal(par::Parameters)::Bool = TRUE
+isunimodal(par::Parameters)::Bool = true
 
 """
     allowsstoppingforfutility(par::Parameters)::Bool
