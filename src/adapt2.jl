@@ -1,4 +1,4 @@
-function adapt_stage_one(design, data, solver; p0 = nothing, p1 = nothing, lambda1 = 10, lambda2 = 10, grid_resolution = 0.05, mincpr = 0.5)
+function adapt_stage_one(design, data, solver, ss; p0 = nothing, p1 = nothing, lambda1 = 10, lambda2 = 10, grid_resolution = 0.05, mincpr = 0.5)
   
   params = parameters(design)
 
