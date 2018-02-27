@@ -19,11 +19,11 @@ function adapt_stage_one(design, data, solver; p0 = nothing, p1 = nothing, lambd
   end
   
   # construct integer programming model
-  params.samplespace.specialcvalues = 
-    [ params.samplespace.specialcvalues; 
-      0:(maxsamplesize(params.samplespace) - 1)
+  ss.specialcvalues = 
+    [ ss.specialcvalues; 
+      0:(maxsamplesize(ss) - 1)
     ]
-  ipm = IPModel(samplespace(params), n1)
+  ipm = IPModel(ss, n1)
   m   = ipm.m
   y   = ipm.y
 
