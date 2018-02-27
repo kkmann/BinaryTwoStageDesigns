@@ -233,12 +233,13 @@ function completemodel(ipm::IPModel, params::MBESS, n1::Integer)
     elseif params.a == params.b == Inf # special case 1: easier computation!
         z       = quadgk(p -> prior(p), pmcrv, 1, abstol = .0001)[1]
         ccdf(p) = quadgk(pp -> prior(pp)/z, pmcrv, p, abstol = .001)[1]
-        cquant  = Roots.fzero(p -> (1 - ccdf(p)) - params.targetpower, pmcrv, 1) # conditional prior quantile
+        cquant  = Roots.fzero(p -> (ccdf(p)) - params.beta, pmcrv, 1) # conditional prior quantile
+        println(cquant)
         JuMP.@constraint(m, # power on conditional prior quantile
             sum(
                 dbinom(x1, n1, cquant) * _cpr(x1, n1, n, c, cquant) * y[x1, n, c]
                 for x1 in 0:n1, n in nvals, c in cvals
-            ) >= 1 - params.beta
+            ) >= params.targetpower
         )
         prior_probs = zeros(n1 + 1)
         for x1 in 0:n1
