@@ -1,4 +1,4 @@
-function adapt_stage_one(design, data, solver, ss; p0 = nothing, p1 = nothing, lambda1 = 10, lambda2 = 10, grid_resolution = 0.05, mincpr = 0.5)
+function adapt_stage_one(design, data, solver; p0 = nothing, p1 = nothing, lambda1 = 10, lambda2 = 10, grid_resolution = 0.05, mincpr = 0.5)
   
   params = parameters(design)
 
@@ -19,11 +19,11 @@ function adapt_stage_one(design, data, solver, ss; p0 = nothing, p1 = nothing, l
   end
   
   # construct integer programming model
-  ss.specialcvalues = 
-    [ ss.specialcvalues; 
-      0:(maxsamplesize(ss) - 1)
+  params.samplespace.specialcvalues = 
+    [ params.samplespace.specialcvalues; 
+      0:(maxsamplesize(params.samplespace) - 1)
     ]
-  ipm = IPModel(ss, n1)
+  ipm = IPModel(params.samplespace, n1)
   m   = ipm.m
   y   = ipm.y
 
@@ -225,7 +225,13 @@ function adapt_stage_two(design, data; p0 = nothing, p1 = nothing)
       data2   = stage_two[i, :]
       cpr_old = conditional_probability_to_reject(n2old, c2old, data2, p0)
       cpr_new = conditional_probability_to_reject(n2, c2, data2, p0)
-      if (cpr_new <= cpr_old) & (sum(dbinom.((c2 + 1):n2, n2, p0)) <= sum(dbinom.((c2old + 1):n2old, n2old, p0)))
+      # check if conditional probability of rejection is smaller
+      # but also check conditional on stage one outcome only
+      if !isfinite(c2old)
+        println(c2old)
+      end
+      # (sum(dbinom.((c2 + 1):n2, n2, p0)) <= sum(dbinom.((c2old + 1):n2old, n2old, p0)))
+      if (cpr_new <= cpr_old) & (sum(dbinom.((c2 + 1):n2, n2, p0)) <= power(design, x1, p0))
         res[i] = true
       else
         res[i] = false
