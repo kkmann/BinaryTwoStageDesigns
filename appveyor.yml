@@ -1,6 +1,6 @@
 environment:
   matrix:
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6.2-win32.exe"
+  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x86/0.6/julia-0.6.2-win32.exe"
   - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6.2-win64.exe"
 
 branches:
@@ -34,9 +34,5 @@ build_script:
   - C:\projects\julia\bin\julia -e "versioninfo();
       Pkg.clone(\"https://github.com/kkmann/BinaryTwoStageDesigns\"); Pkg.build(\"BinaryTwoStageDesigns\")"
 
-build: off
-
 test_script:
 - C:\projects\julia\bin\julia -e "Pkg.test(\"BinaryTwoStageDesigns\")"
-
-test: off
