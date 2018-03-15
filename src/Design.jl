@@ -251,7 +251,7 @@ function power(design::Design, p::T) where {T<:Real}
   n1      = interimsamplesize(design)
   X1      = Distributions.Binomial(n1, p) # stage one responses
   x1range = collect(0:n1)
-  return min(1, max(0, vecdot(Distributions.pdf(X1, x1range), power.(design, x1range, p))))
+  return min(1, max(0, vecdot(Distributions.pdf.(X1, x1range), power.(design, x1range, p))))
 
 end
 
