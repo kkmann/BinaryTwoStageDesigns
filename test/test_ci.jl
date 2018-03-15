@@ -9,7 +9,7 @@
   design = optimaldesign(10, params, solver)
   supp   = support(design)
 
-  cpe    = OCEstimator(design, solver)
+  cpe    = OCEstimator(design, qsolver)
 
   ci     = CPInterval(design, confidence = .9)
   @test minimum(coverage.(ci, linspace(0, 1))) > .85 

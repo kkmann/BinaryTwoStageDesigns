@@ -1,15 +1,9 @@
 using BinaryTwoStageDesigns
-using Base.Test
-using QuadGK
-using Roots
-using Gurobi
+using Base.Test, QuadGK, Roots, Cbc, Ipopt
 import Distributions
 
-solver = GurobiSolver(
-  MIPGap     = 10^(-6.0),
-  TimeLimit  = 300,
-  OutputFlag = 0
-)
+solver  = CbcSolver(seconds = 600)
+qsolver = IpoptSolver()
 
 include("test_Design.jl")
 

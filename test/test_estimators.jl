@@ -28,7 +28,7 @@
 
   design = optimaldesign(10, params, solver)
 
-  cpe    = OCEstimator(design, solver)
+  cpe    = OCEstimator(design, qsolver)
 
   @test maximum(rmse.(cpe, linspace(0, 1, 10))) <= 0.12
 

@@ -234,7 +234,6 @@ function completemodel(ipm::IPModel, params::MBESS, n1::Integer)
         z       = quadgk(p -> prior(p), pmcrv, 1, abstol = .0001)[1]
         ccdf(p) = quadgk(pp -> prior(pp)/z, pmcrv, p, abstol = .001)[1]
         cquant  = Roots.fzero(p -> (ccdf(p)) - params.beta, pmcrv, 1) # conditional prior quantile
-        println(cquant)
         JuMP.@constraint(m, # power on conditional prior quantile
             sum(
                 dbinom(x1, n1, cquant) * _cpr(x1, n1, n, c, cquant) * y[x1, n, c]

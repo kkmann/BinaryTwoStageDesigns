@@ -1,3 +1,4 @@
 BinaryTwoStageDesigns
-Gurobi
+Cbc
+Ipopt
 QuadGK

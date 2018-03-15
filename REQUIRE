@@ -7,3 +7,5 @@ Distributions 0.13.0
 DataFrames 0.9.1
 DataArrays 0.4.1
 MathProgBase 0.6.4
+Cbc 0.3.2
+Ipopt 0.3.0
