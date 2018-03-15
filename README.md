@@ -4,7 +4,7 @@ Windows: [![Build Status](https://ci.appveyor.com/api/projects/status/github/kku
 
 A [Julia](http://julialang.org) package implementing methods for planning and
 evaluation of exact single-arm two-stage designs with binary
-endpoint.
+endpoint. A quickstart guide is available [here](https://github.com/kkmann/BinaryTwoStageDesigns/blob/master/docs/quickstart.ipynb).
 
 ## Installation
 
