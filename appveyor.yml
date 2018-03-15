@@ -29,7 +29,6 @@ install:
 
 build_script:
 # Need to convert from shallow to complete for Pkg.clone to work
-  - echo script1
   - IF EXIST .git\shallow (git fetch --unshallow)
   - C:\projects\julia\bin\julia -e "versioninfo();
       Pkg.clone(\"https://github.com/kkmann/BinaryTwoStageDesigns\"); Pkg.build(\"BinaryTwoStageDesigns\")"

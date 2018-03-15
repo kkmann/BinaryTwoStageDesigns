@@ -1,3 +1,5 @@
+[https://ci.appveyor.com/api/projects/status/github/kkunzmann/BinaryTwoStageDesigns]
+
 # BinaryTwoStageDesigns
 
 A [Julia](http://julialang.org) package implementing methods for planning and
