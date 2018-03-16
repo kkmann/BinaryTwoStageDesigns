@@ -33,7 +33,7 @@ build_script:
       Pkg.clone(\"https://github.com/kkmann/BinaryTwoStageDesigns\"); Pkg.build(\"BinaryTwoStageDesigns\")"
 
 test_script:
-- C:\projects\julia\bin\julia -e "Pkg.test(\"BinaryTwoStageDesigns\", coverage=true)"
+  - C:\projects\julia\bin\julia -e "Pkg.test(\"BinaryTwoStageDesigns\", coverage=true)"
 
 after_test:
-- C:\projects\julia\bin\julia -e "cd(Pkg.dir(\"BinaryTwoStageDesigns\")); Pkg.add(\"Coverage\"); using Coverage; Codecov.submit(process_folder())"
+  - C:\projects\julia\bin\julia -e "cd(Pkg.dir(\"BinaryTwoStageDesigns\")); Pkg.add(\"Coverage\"); using Coverage; Codecov.submit(process_folder())"
