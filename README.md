@@ -1,5 +1,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/hb4tycw2in9xgrhh?svg=true)](https://ci.appveyor.com/project/kkmann/binarytwostagedesigns)
 
+[![codecov](https://codecov.io/gh/kkmann/BinaryTwoStageDesigns/branch/master/graph/badge.svg)](https://codecov.io/gh/kkmann/BinaryTwoStageDesigns)
+
 # BinaryTwoStageDesigns
 
 A [Julia](http://julialang.org) package implementing methods for planning and
