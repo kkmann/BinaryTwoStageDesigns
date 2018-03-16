@@ -1,4 +1,4 @@
-Windows: [![Build Status](https://ci.appveyor.com/api/projects/status/github/kkunzmann/BinaryTwoStageDesigns?svg=true)](https://ci.appveyor.com/api/projects/status/github/kkunzmann/BinaryTwoStageDesigns?svg=true)
+[![Build status](https://ci.appveyor.com/api/projects/status/hb4tycw2in9xgrhh?svg=true)](https://ci.appveyor.com/project/kkmann/binarytwostagedesigns)
 
 # BinaryTwoStageDesigns
 
