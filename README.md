@@ -1,4 +1,4 @@
-Windows: [https://ci.appveyor.com/api/projects/status/github/kkunzmann/BinaryTwoStageDesigns?svg=true](https://ci.appveyor.com/api/projects/status/github/kkunzmann/BinaryTwoStageDesigns?svg=true)
+Windows: [(https://ci.appveyor.com/api/projects/status/github/kkunzmann/BinaryTwoStageDesigns?svg=true)](https://ci.appveyor.com/api/projects/status/github/kkunzmann/BinaryTwoStageDesigns?svg=true)
 
 # BinaryTwoStageDesigns
 
