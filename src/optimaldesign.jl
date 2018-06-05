@@ -118,8 +118,8 @@ function optimaldesign(
       scores[i]  = score(designs[i])
       if VERBOSE > 0
         println()
-        println("    time    n1   % done   sol. time [s]   cum. time [min]       score        best   % diff to best")
-        print(@sprintf("\r%s   %3i    %5.1f   %13i   %15.1f   %+.2e   %+.2e   %14.1f", 
+        i ? 1 : println("    time    n1   % done   sol. time [s]   cum. time [min]       score        best   % diff to best")
+        print(@sprintf("\r%s   %3i    %5.1f   %13i   %15.1f   %+.2e   %+.2e   %14.1f\n\r", 
           Dates.format(t0i, "HH:MM:SS"), 
           n1range[i], 
           i / length(n1range) * 100, 
@@ -129,7 +129,6 @@ function optimaldesign(
           scores[findmin(scores)[2]],
           reldiff(scores[i], scores[findmin(scores)[2]]) * 100
         ))
-        println()
       end
     catch e
       println()
