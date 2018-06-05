@@ -117,8 +117,7 @@ function optimaldesign(
       designs[i] = optimaldesign(n1range[i], parameters, solver)
       scores[i]  = score(designs[i])
       if VERBOSE > 0
-        println()
-        i ? 1 : println("    time    n1   % done   sol. time [s]   cum. time [min]       score        best   % diff to best")
+        i == 1 ? println("    time    n1   % done   sol. time [s]   cum. time [min]       score        best   % diff to best") : nothing
         print(@sprintf("\r%s   %3i    %5.1f   %13i   %15.1f   %+.2e   %+.2e   %14.1f\n\r", 
           Dates.format(t0i, "HH:MM:SS"), 
           n1range[i], 
@@ -131,9 +130,7 @@ function optimaldesign(
         ))
       end
     catch e
-      println()
-      print(@sprintf("\r%s   %3i   error: %s, continuing...", Dates.format(t0i, "HH:MM:SS"), n1range[i], e))
-      println()
+      print(@sprintf("\r%s   %3i   error: %s, continuing...\n\r", Dates.format(t0i, "HH:MM:SS"), n1range[i], e))
       scores[i] = Inf
     end
     if VERBOSE > 1
@@ -152,10 +149,10 @@ function optimaldesign(
       end
       println(convert(DataFrame(design[i])))
     end
-    print("\n")
     if (EARLYTERMINATION == true) & (i > 3)
       try
         if all(reldiff.(scores[[i - 2; i - 1; i]], scores[findmin(scores)[2]]) .>= .05)
+          print("\n")
           info("terminating optimization early")
           break
         end
