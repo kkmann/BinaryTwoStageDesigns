@@ -1,4 +1,4 @@
-# __precompile__()
+__precompile__()
 
 module BinaryTwoStageDesigns
 
@@ -66,7 +66,7 @@ export
     expectedtransformedpower, expectedcost, expectedbenefit
 
 export 
-  MBESS
+  MBESS, MBESS2
 
 # optimal.jl
 export optimaldesign
@@ -107,6 +107,7 @@ include("IPModel.jl")
 include("Parameters/MESS.jl")
 include("Parameters/LiuScore.jl")
 include("Parameters/MBESS.jl")
+include("Parameters/MBESS2.jl")
 include("Parameters/EB.jl")
 
 include("optimaldesign.jl")
