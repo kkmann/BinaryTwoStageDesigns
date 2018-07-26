@@ -13,6 +13,7 @@ import Distributions, Distributions.minimum, Distributions.maximum,
 import DataFrames, DataFrames.DataFrame
 import DataArrays
 import MathProgBase
+import CSV
 
 
 # Parameters.jl
