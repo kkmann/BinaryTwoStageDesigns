@@ -282,13 +282,13 @@ function expectedpower(
       p -> prior(p),  # f(p)
       mcrv,           # p_min
       1,              # p_max
-      abstol = 0.001  # tolerance
+      atol    = 0.001  # tolerance
   )[1]
   res = QuadGK.quadgk(
       p -> prior(p)*power(design, x1, p)/z, # f(p)
       mcrv,         # p_min
       1,             # p_max
-      abstol = 0.001 # tolerance
+      atol    = 0.001 # tolerance
   )[1]
   return min(1, max(0, res)) # guarantee bounds!
 
@@ -314,13 +314,13 @@ function expectedpower(design::Design, prior::Function; mcrv::Real = BinaryTwoSt
       p -> prior(p),             # f(p)
       mcrv,  # p_min
       1,                         # p_max
-      abstol = 0.001             # tolerance
+      atol    = 0.001             # tolerance
   )[1]
   res = QuadGK.quadgk(
       p -> prior(p)*power(design, p)/z, # f(p)
       mcrv,    # p_min
       1,                           # p_max
-      abstol = 0.001               # tolerance
+      atol    = 0.001               # tolerance
   )[1]
   return min(1, max(0, res)) # guarantee bounds!
 
@@ -526,7 +526,7 @@ function jeffreysprior(design::Design)
     
   end
   
-  z = QuadGK.quadgk(sqrtfi, 0, 1, abstol = 0.001)[1] # exact integration from 0 to 1 is expensive!
+  z = QuadGK.quadgk(sqrtfi, 0, 1, atol    = 0.001)[1] # exact integration from 0 to 1 is expensive!
   
   function prior{T<:Real}(p::T)::Real
       
@@ -579,7 +579,7 @@ function writecsv(filename::String, design::Design; label::String = "")
 
   df = DataFrames.DataFrame(design)
   label != "" ? df[:design] = label : nothing
-  DataFrames.writetable(filename, df)
+  CSV.write(filename, df)
   return df
 
 end
@@ -606,7 +606,7 @@ function writepropertiescsv(
     end
   end
   label != "" ? df[:design] = label : nothing
-  DataFrames.writetable(filename, df)
+  CSV.write(filename, df)
   return df
 
 end
@@ -669,7 +669,7 @@ function _cprprior(x1, n1, n, c, p0, prior)
     if n - n1 + x1 <= c
         return 0.0
     end
-    z = QuadGK.quadgk(p -> prior(p)*dbinom(c - x1, n - n1, p), p0, 1.0, abstol = 1e-4)[1]
+    z = QuadGK.quadgk(p -> prior(p)*dbinom(c - x1, n - n1, p), p0, 1.0, atol = 1e-4)[1]
     cposterior(p) = prior(p)*dbinom(c - x1, n - n1, p)/z
-    return QuadGK.quadgk(p -> cposterior(p)*_cpr(x1, n1, n, c, p), p0, 1.0, abstol = 1e-4)[1]
+    return QuadGK.quadgk(p -> cposterior(p)*_cpr(x1, n1, n, c, p), p0, 1.0, atol = 1e-4)[1]
 end
